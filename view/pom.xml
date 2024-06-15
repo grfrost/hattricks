@@ -32,11 +32,13 @@ questions.
     <version>1.0</version>
     <packaging>jar</packaging>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>23</maven.compiler.source>
-        <maven.compiler.target>23</maven.compiler.target>
-    </properties>
+ <!-- this required to inherit parent properties -->
+   <parent>
+     <groupId>oracle.code</groupId>
+     <version>1.0</version>
+     <artifactId>hat.hattricks</artifactId>
+   </parent>
+
 
     <dependencies>
         <dependency>
@@ -56,7 +58,7 @@ questions.
                         <phase>install</phase>
                         <configuration>
                             <target>
-                                <copy file="target/hat-example-view-1.0.jar" todir="../../maven-build"/>
+                                <copy file="target/hat-example-view-1.0.jar" todir="${hat.target}"/>
                             </target>
                         </configuration>
                         <goals>
