@@ -44,58 +44,74 @@
 package heal;
 
 import java.awt.Polygon;
+import java.awt.Rectangle;
 import java.util.Arrays;
 
-public class Path extends XYList {
-    int x1=Integer.MAX_VALUE;
-    int y1=Integer.MAX_VALUE;
-    int x2=Integer.MIN_VALUE;
-    int y2=Integer.MIN_VALUE;
+public class Path  {
 
-    void add(int x,int y) {
-        super.add(x, y);
-        x1 = Math.min(x, x1);
-        y1 = Math.min(y, y1);
-        x2 = Math.max(x, x2);
-        y2 = Math.max(y, y2);
-    }
+    XYListArrayBacked xyList = new XYListArrayBacked();
+    Rectangle rectangle = new Rectangle(Integer.MAX_VALUE,Integer.MAX_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE);
     Path(){
-    }
-    Path (int x, int y){
-        super(x,y);
     }
     public Polygon getPolygon() {
         Polygon p = new Polygon();
-        for (int i=0;i<length();i++){
-            XY xy = (XYList.XY)xy(i);
+        for (int i=0;i<xyList.length();i++){
+            XYList.XY xy = xyList.xy(i);
             p.addPoint(xy.x(), xy.y());
         }
         return p;
     }
-
-    public void extendTo(int x, int y){
-        add(xy[length()*XYList.STRIDE-(2-XYList.Xidx)],
-                xy[length()*XYList.STRIDE-(2-XYList.Yidx)], x, y);
+    public void add(int x, int y){
+        if (xyList.length()>0) {
+            var lastxy = xyList.xy(xyList.length() - 1);
+            var lastx = xyList.xy[xyList.length() * XYListArrayBacked.STRIDE - (2 - XYListArrayBacked.Xidx)];
+            var lasty = xyList.xy[xyList.length() * XYListArrayBacked.STRIDE - (2 - XYListArrayBacked.Yidx)];
+            // add(xyList.xy[xyList.length()* XYListArrayBacked.STRIDE-(2- XYListArrayBacked.Xidx)],
+            //       xyList.xy[xyList.length()* XYListArrayBacked.STRIDE-(2- XYListArrayBacked.Yidx)], x, y);
+            // add(lastxy.x(),lastxy.y(), x, y);
+            add(lastx, lasty, x, y);
+        }else{
+            xyList.add(x, y);
+            rectangle.add(x,y);
+        }
     }
-
     public Path close(){
-        extendTo(xy[0], xy[1]);
-        xy = Arrays.copyOf(xy, length() * XYList.STRIDE);
+        add(xyList.xy[0], xyList.xy[1]);
+        xyList.xy = Arrays.copyOf(xyList.xy, xyList.length() * XYListArrayBacked.STRIDE);
         return this;
     }
 
-    public void add(int x1, int y1, int x2, int y2) {
+    int x1(){
+        return rectangle.x;
+    }
+    int y1(){
+        return rectangle.y;
+    }
+    int width(){
+        return rectangle.width;
+    }
+    int height(){
+        return rectangle.height;
+    }
+    int x2(){
+        return x1()+width();
+    }
+    int y2(){
+        return y1()+height();
+    }
+
+    private void add(int x1, int y1, int x2, int y2) {
         int x = x1;
         int y = y1;
         int w = x2 - x;
         int h = y2 - y;
         int dx1 = Integer.compare(w, 0);
-        int dy1 =Integer.compare(h, 0);
+        int dy1 = Integer.compare(h, 0);
         int dx2 = dx1;
         int dy2 = 0;
         int longest = Math.abs(w);
         int shortest = Math.abs(h);
-        if (!(longest > shortest)) {
+        if (longest <= shortest) {
             longest = Math.abs(h);
             shortest = Math.abs(w);
             dy2 = Integer.compare(h, 0);
@@ -103,9 +119,10 @@ public class Path extends XYList {
         }
         int numerator = longest >> 1;
         for (int i = 0; i <= longest; i++) {
-            add(x, y);
+            xyList.add(x, y);
+            rectangle.add(x,y);
             numerator += shortest;
-            if (!(numerator < longest)) {
+            if (numerator >= longest) {
                 numerator -= longest;
                 x += dx1;
                 y += dy1;

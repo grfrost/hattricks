@@ -60,7 +60,6 @@ import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.io.InputStream;
 
 public class HealingBrushDisplay extends Display {
     boolean orig = false;
@@ -100,7 +99,9 @@ public class HealingBrushDisplay extends Display {
                         orig = true;
                         repaint();
                         transform.inverseTransform(e.getPoint(), ptDst);
-                        selectionPath = new Path((int) ptDst.getX(), (int) ptDst.getY());
+                        selectionPath = new Path();
+                        selectionPath.add((int)ptDst.getX(), (int) ptDst.getY());
+
                     } catch (NoninvertibleTransformException e1) {
                         // TODO Auto-generated catch block
                         e1.printStackTrace();
@@ -116,7 +117,7 @@ public class HealingBrushDisplay extends Display {
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     try {
                         transform.inverseTransform(e.getPoint(), ptDst);
-                        selectionPath.extendTo((int) ptDst.getX(), (int) ptDst.getY());
+                        selectionPath.add((int) ptDst.getX(), (int) ptDst.getY());
                         repaint();
 
                     } catch (NoninvertibleTransformException e1) {
@@ -134,8 +135,8 @@ public class HealingBrushDisplay extends Display {
             g.drawPolygon(selectionPath.getPolygon());
             if (matchPath != null) {
                 g.setColor(Color.BLUE);
-                for (int i = 0; i < matchPath.length(); i++) {
-                    XYList.XY p = (XYList.XY) matchPath.xy(i);
+                for (int i = 0; i < matchPath.xyList.length(); i++) {
+                    XYList.XY p = (XYList.XY) matchPath.xyList.xy(i);
                     g.drawRect(p.x(), p.y(), 4, 4);
                 }
             }

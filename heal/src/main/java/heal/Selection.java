@@ -46,17 +46,9 @@ package heal;
 public class Selection{
     final ImageData imageData;
     final Path path;
-    final int width;
-    final int height;
 
     public Selection(ImageData imageData, Path path) {
         this.path = path;
         this.imageData = imageData;
-        this.width=path.x2-path.x1;
-        this.height=path.y2-path.y1;
-    }
-
-    public boolean contains(int x, int y) {
-        return (!(x > path.x2 || x + width < path.x1 || y > path.y2 || y + height < path.y1));
     }
 }
