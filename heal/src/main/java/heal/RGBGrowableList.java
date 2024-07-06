@@ -45,19 +45,19 @@ package heal;
 
 import java.util.Arrays;
 
-class RGBListArrayBacked implements RGBList {
+class RGBGrowableList implements RGBList {
     final static int INIT=32;
     final static int STRIDE= 3;
     final static int Ridx= 0;
     final static int Gidx= 1;
     final static int Bidx= 2;
+
     int length;
     int[] rgb = new int[INIT*STRIDE];
-    private RGB cursor = new RGB(this);
+
     @Override
     public RGB rgb(long idx) {
-        cursor.set((int)idx);
-        return cursor;
+        return new RGB(this, (int)idx);
     }
 
     @Override
@@ -70,17 +70,12 @@ class RGBListArrayBacked implements RGBList {
     }
 
     static public class RGB implements RGBList.RGB{
-        RGBListArrayBacked rgbList;
-        int idx=-1;
-        RGB(RGBListArrayBacked rgbList){
+        RGBGrowableList rgbList;
+        final int idx;
+        RGB(RGBGrowableList rgbList, int idx){
             this.rgbList = rgbList;
-        }
-
-        public RGB set(int idx) {
             this.idx = idx;
-            return this;
         }
-
         @Override
         public int r() {
             return rgbList.rgb[idx*STRIDE+Ridx];
@@ -131,7 +126,7 @@ class RGBListArrayBacked implements RGBList {
 
     void add(int r,int g, int b){
         if (length*STRIDE== rgb.length){
-            rgb = Arrays.copyOf(rgb, rgb.length*STRIDE);
+            rgb = Arrays.copyOf(rgb, rgb.length*2);
         }
         set(length, r, g, b);
         length++;
@@ -141,11 +136,6 @@ class RGBListArrayBacked implements RGBList {
         add( ((v >> 16) & 0xFF), ((v >> 8) & 0xFF), ((v >> 0) & 0xFF));
     }
 
-    RGBListArrayBacked(){
-    }
-
-    RGBListArrayBacked(RGBListArrayBacked list){
-        length = list.length;
-        rgb = Arrays.copyOf(list.rgb, list.rgb.length);
+    RGBGrowableList(){
     }
 }

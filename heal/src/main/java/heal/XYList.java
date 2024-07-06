@@ -33,10 +33,8 @@ public interface XYList extends IncompleteBuffer {
     interface XY extends Buffer.Struct{
         int x();
         int y();
-        int idx();
         void y(int y);
         void x(int x);
-        void idx(int idx);
     }
     int length();
     void length(int length );
@@ -45,7 +43,7 @@ public interface XYList extends IncompleteBuffer {
     Schema<XYList> schema= Schema.of(XYList.class, s->s
             .arrayLen("length")
             .array("xy", xy->xy
-                    .fields("idx","x","y")
+                    .fields("x","y")
             )
     );
 

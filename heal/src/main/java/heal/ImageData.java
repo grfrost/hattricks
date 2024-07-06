@@ -47,12 +47,22 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 
 public class ImageData{
+    final BufferedImage bufferedImage;
     final int width;
     final int height;
     final int[] data;
-    public ImageData(BufferedImage img) {
-        this.width=img.getWidth();
-        this.height=img.getHeight();
-        this.data = ((DataBufferInt) (img.getRaster().getDataBuffer())).getData();
+    public ImageData(BufferedImage bufferedImage) {
+        this.bufferedImage = bufferedImage;
+        this.width=bufferedImage.getWidth();
+        this.height=bufferedImage.getHeight();
+        this.data = ((DataBufferInt) (bufferedImage.getRaster().getDataBuffer())).getData();
+    }
+
+    public int get(int x, int y) {
+        return this.data[y*this.width+x];
+    }
+
+    public void set(int x, int y, int rgb) {
+        this.data[y*this.width+x]=rgb;
     }
 }

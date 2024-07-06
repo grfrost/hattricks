@@ -66,7 +66,7 @@ public class HealingBrushDisplay extends Display {
     Path selectionPath = null;
     Path matchPath = null;
     BufferedImage img;
-
+    ImageData imageData;
     public HealingBrushDisplay() {
         addMouseListener(new MouseAdapter() {
             Point2D ptDst = new Point2D.Double();
@@ -74,10 +74,10 @@ public class HealingBrushDisplay extends Display {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
-                    Selection selection = new Selection(new ImageData(img), selectionPath.close());
-                    Point p = HealingBrush.getBestMatch(selection);
+
+                    Point p = HealingBrush.getBestMatch(imageData, selectionPath.close());
                     matchPath = new Path();
-                    HealingBrush.heal(selection, p.x, p.y);
+                    HealingBrush.heal(imageData,selectionPath, p.x, p.y);
                     repaint();
                     Timer t = new Timer(1000, new ActionListener() {
                         @Override
@@ -146,7 +146,7 @@ public class HealingBrushDisplay extends Display {
     public void setImage(BufferedImage img) {
         orig = true;
         super.setImage(img);
-        this.img = img;
+        this.imageData = new ImageData(img);
         orig = false;
         repaint();
     }

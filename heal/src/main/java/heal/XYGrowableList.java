@@ -46,17 +46,17 @@ package heal;
 
 import java.util.Arrays;
 
-class XYListArrayBacked implements XYList {
+public class XYGrowableList implements XYList {
     final static int INIT= 32;
     final static int STRIDE= 2;
     final static int Xidx = 0;
     final static int Yidx = 1;
     private int length;
     protected int[] xy = new int[INIT*STRIDE];
-    private XY cursor = new XY(this);
+
     @Override
     public XYList.XY xy(long idx) {
-        return cursor.set((int) idx);
+        return new XY(this, (int) idx);
     }
 
     @Override
@@ -70,14 +70,10 @@ class XYListArrayBacked implements XYList {
     }
 
     public static class XY implements XYList.XY{
-        XYListArrayBacked xyList;
-        private int idx=-1;
-        public XY(XYListArrayBacked table) {
-            this.xyList=table;
-        }
-        public XY set(int idx) {
-            this.idx = idx;
-            return this;
+        final  XYGrowableList xyList;
+        final private int idx;
+        public XY(XYGrowableList table, int idx) {
+            this.xyList=table;this.idx = idx;
         }
 
         @Override
@@ -90,10 +86,6 @@ class XYListArrayBacked implements XYList {
             return xyList.xy[idx*STRIDE+ Yidx];
         }
 
-        @Override
-        public int idx() {
-            return idx;
-        }
 
         @Override
         public void y(int y) {
@@ -103,11 +95,6 @@ class XYListArrayBacked implements XYList {
         @Override
         public void x(int x) {
             xyList.xy[idx*STRIDE+ Yidx]=x;
-        }
-
-        @Override
-        public void idx(int idx) {
-            this.idx = idx;
         }
     }
 
@@ -121,10 +108,6 @@ class XYListArrayBacked implements XYList {
         length++;
     }
 
-    XYListArrayBacked(){
-    }
-
-   XYListArrayBacked(int x, int y){
-        add(x,y);
+    XYGrowableList(){
     }
 }

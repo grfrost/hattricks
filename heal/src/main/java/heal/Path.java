@@ -49,8 +49,8 @@ import java.util.Arrays;
 
 public class Path  {
 
-    XYListArrayBacked xyList = new XYListArrayBacked();
-    Rectangle rectangle = new Rectangle(Integer.MAX_VALUE,Integer.MAX_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE);
+    XYGrowableList xyList = new XYGrowableList();
+    private Rectangle bounds = new Rectangle(Integer.MAX_VALUE,Integer.MAX_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE);
     Path(){
     }
     public Polygon getPolygon() {
@@ -63,35 +63,30 @@ public class Path  {
     }
     public void add(int x, int y){
         if (xyList.length()>0) {
-            var lastxy = xyList.xy(xyList.length() - 1);
-            var lastx = xyList.xy[xyList.length() * XYListArrayBacked.STRIDE - (2 - XYListArrayBacked.Xidx)];
-            var lasty = xyList.xy[xyList.length() * XYListArrayBacked.STRIDE - (2 - XYListArrayBacked.Yidx)];
-            // add(xyList.xy[xyList.length()* XYListArrayBacked.STRIDE-(2- XYListArrayBacked.Xidx)],
-            //       xyList.xy[xyList.length()* XYListArrayBacked.STRIDE-(2- XYListArrayBacked.Yidx)], x, y);
-            // add(lastxy.x(),lastxy.y(), x, y);
-            add(lastx, lasty, x, y);
+            XYList.XY lastxy = xyList.xy(xyList.length() - 1);
+            add(lastxy.x(), lastxy.y(), x, y);
         }else{
             xyList.add(x, y);
-            rectangle.add(x,y);
+            bounds.add(x,y);
         }
     }
     public Path close(){
         add(xyList.xy[0], xyList.xy[1]);
-        xyList.xy = Arrays.copyOf(xyList.xy, xyList.length() * XYListArrayBacked.STRIDE);
+        xyList.xy = Arrays.copyOf(xyList.xy, xyList.length() * XYGrowableList.STRIDE);
         return this;
     }
 
     int x1(){
-        return rectangle.x;
+        return bounds.x;
     }
     int y1(){
-        return rectangle.y;
+        return bounds.y;
     }
     int width(){
-        return rectangle.width;
+        return bounds.width;
     }
     int height(){
-        return rectangle.height;
+        return bounds.height;
     }
     int x2(){
         return x1()+width();
@@ -120,7 +115,7 @@ public class Path  {
         int numerator = longest >> 1;
         for (int i = 0; i <= longest; i++) {
             xyList.add(x, y);
-            rectangle.add(x,y);
+            bounds.add(x,y);
             numerator += shortest;
             if (numerator >= longest) {
                 numerator -= longest;
