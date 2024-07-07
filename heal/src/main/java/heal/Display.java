@@ -59,18 +59,18 @@ import java.awt.event.MouseWheelListener;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
-import java.awt.image.BufferedImage;
 
-public class Display extends JPanel implements MouseListener, MouseMotionListener, MouseWheelListener {
-    protected BufferedImage image;
+public abstract class Display extends JPanel implements MouseListener, MouseMotionListener, MouseWheelListener {
+    protected ImageData imageData;
     protected AffineTransform transform = new AffineTransform();
     protected float zoom = .95f; // set the zoom factor 1.0 = fit to screen
+
     protected float xOffset = 0; // 0 is centered -1 is to the left;
     protected float yOffset = 0; // 0 is centered -1 is to the top;
 
-    Point mDown;
-    Point2D mImageDown = new Point2D.Float();
-    Point2D mImageMove = new Point2D.Float();
+    Point mousePressedPosition;
+    Point2D imageRelativeMouseDownPosition = new Point2D.Float();
+    Point2D imageRelativeMovePosition = new Point2D.Float();
 
     @Override
     public void mouseReleased(MouseEvent e) {
@@ -96,9 +96,9 @@ public class Display extends JPanel implements MouseListener, MouseMotionListene
     @Override
     public void mousePressed(MouseEvent e) {
         if (SwingUtilities.isRightMouseButton(e)) {
-            mDown = e.getPoint();
+            mousePressedPosition = e.getPoint();
             try {
-                transform.inverseTransform(e.getPoint(), mImageDown);
+                imageRelativeMouseDownPosition= transform.inverseTransform(e.getPoint(), null);
             } catch (NoninvertibleTransformException e1) {
                 e1.printStackTrace();
             }
@@ -115,16 +115,16 @@ public class Display extends JPanel implements MouseListener, MouseMotionListene
     public void mouseDragged(MouseEvent e) {
         if (SwingUtilities.isRightMouseButton(e)) {
             Point rightButonPoint = e.getPoint();
-            Dimension dragDelta = new Dimension(rightButonPoint.x - mDown.x, rightButonPoint.y - mDown.y);
+            Dimension deltaFromInitialMousePress = new Dimension(rightButonPoint.x - mousePressedPosition.x, rightButonPoint.y - mousePressedPosition.y);
             try {
-                transform.inverseTransform(e.getPoint(), mImageMove);
+                imageRelativeMovePosition = transform.inverseTransform(e.getPoint(), null);
                 Dimension displaySize = getSize();
-                Dimension imageSize = new Dimension( image.getWidth(),image.getHeight());
+                Dimension imageSize = new Dimension( imageData.width,imageData.height);
                 float scale = zoom *
                         Math.min(displaySize.width / (float) imageSize.width,
                                 displaySize.height / (float) imageSize.height);
-                xOffset =  2 * (dragDelta.width / (displaySize.width - scale * imageSize.width));
-                yOffset =  2 * (dragDelta.height / (displaySize.height - scale * imageSize.height));
+                xOffset =  2 * (deltaFromInitialMousePress.width / (displaySize.width - scale * imageSize.width));
+                yOffset =  2 * (deltaFromInitialMousePress.height / (displaySize.height - scale * imageSize.height));
                 xOffset = Math.max(Math.min(xOffset, 1), -1);
                 yOffset = Math.max(Math.min(yOffset, 1), -1);
                 repaint();
@@ -134,8 +134,8 @@ public class Display extends JPanel implements MouseListener, MouseMotionListene
         }
     }
 
-
-    public Display() {
+    public Display(ImageData imageData) {
+        this.imageData = imageData;
         addMouseListener(this);
         addMouseWheelListener(this);
         addMouseMotionListener(this);
@@ -146,36 +146,24 @@ public class Display extends JPanel implements MouseListener, MouseMotionListene
         Graphics2D g2d = (Graphics2D) g;
         g2d.setBackground(Color.BLACK);
         g2d.fillRect(0, 0, getWidth(), getHeight());
-        if (image != null) {
-            paintImage(g2d);
+        if (imageData != null) {
+            Dimension displaySize = getSize();
+            Dimension imageSize = new Dimension( imageData.width,imageData.height);
+            AffineTransform safeTransform = g2d.getTransform();
+            transform.setToIdentity();
+            double scale = zoom *
+                    Math.min(displaySize.width / (double) imageSize.width,
+                            displaySize.height / (double) imageSize.height);
+            transform.translate((1 + xOffset) * (displaySize.width - imageSize.width * scale) / 2,
+                    (1 + yOffset) * (displaySize.height - imageSize.height * scale) / 2);
+            transform.scale(scale, scale);
+            g2d.transform(transform);
+            g.drawImage(imageData.bufferedImage, 0, 0, imageSize.width, imageSize.height, null);
+            paintInScale(g2d);
+            g2d.setTransform(safeTransform);
         }
     }
 
-    public void paintImage(Graphics2D g) {
-
-        Dimension displaySize = getSize();
-        Dimension imageSize = new Dimension( image.getWidth(),image.getHeight());
-        AffineTransform tx = g.getTransform();
-        transform.setToIdentity();
-        double scale = zoom *
-                Math.min(displaySize.width / (double) imageSize.width,
-                        displaySize.height / (double) imageSize.height);
-        transform.translate((1 + xOffset) * (displaySize.width - imageSize.width * scale) / 2,
-                (1 + yOffset) * (displaySize.height - imageSize.height * scale) / 2);
-        transform.scale(scale, scale);
-        g.transform(transform);
-        g.drawImage(image, 0, 0, imageSize.width, imageSize.height, null);
-        paintInScale(g);
-        g.setTransform(tx);
-    }
-
-    protected void paintInScale(Graphics2D g) {
-
-    }
-
-    public void setImage(BufferedImage img) {
-        this.image = img;
-        repaint();
-    }
+    abstract protected void paintInScale(Graphics2D g) ;
 
 }

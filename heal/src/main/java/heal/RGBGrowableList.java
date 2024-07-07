@@ -125,8 +125,8 @@ class RGBGrowableList implements RGBList {
     }
 
     void add(int r,int g, int b){
-        if (length*STRIDE== rgb.length){
-            rgb = Arrays.copyOf(rgb, rgb.length*2);
+        if (length*STRIDE>= rgb.length){
+            rgb = Arrays.copyOf(rgb, rgb.length*STRIDE);
         }
         set(length, r, g, b);
         length++;

@@ -43,7 +43,6 @@
  */
 package heal;
 
-import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.util.Arrays;
 
@@ -53,14 +52,7 @@ public class Path  {
     private Rectangle bounds = new Rectangle(Integer.MAX_VALUE,Integer.MAX_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE);
     Path(){
     }
-    public Polygon getPolygon() {
-        Polygon p = new Polygon();
-        for (int i=0;i<xyList.length();i++){
-            XYList.XY xy = xyList.xy(i);
-            p.addPoint(xy.x(), xy.y());
-        }
-        return p;
-    }
+
     public void add(int x, int y){
         if (xyList.length()>0) {
             XYList.XY lastxy = xyList.xy(xyList.length() - 1);
@@ -127,4 +119,5 @@ public class Path  {
             }
         }
     }
+
 }

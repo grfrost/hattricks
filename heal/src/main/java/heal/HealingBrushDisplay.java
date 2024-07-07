@@ -43,13 +43,13 @@
  */
 package heal;
 
-import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -57,38 +57,30 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.NoninvertibleTransformException;
-import java.awt.geom.Point2D;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
 
 public class HealingBrushDisplay extends Display {
-    boolean orig = false;
-    Path selectionPath = null;
-    Path matchPath = null;
-    BufferedImage img;
-    ImageData imageData;
-    public HealingBrushDisplay() {
-        addMouseListener(new MouseAdapter() {
-            Point2D ptDst = new Point2D.Double();
+    volatile Path selectionPath = null;
+    volatile  Point bestMatchOffset = null;
 
-            @Override
+    public HealingBrushDisplay(ImageData imageData) {
+        super(imageData);
+        addMouseListener(new MouseAdapter() {
+           @Override
             public void mouseReleased(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
-
-                    Point p = HealingBrush.getBestMatch(imageData, selectionPath.close());
-                    matchPath = new Path();
-                    HealingBrush.heal(imageData,selectionPath, p.x, p.y);
-                    repaint();
+                    bestMatchOffset = HealingBrush.getOffsetOfBestMatch(imageData, selectionPath.close());
+                    HealingBrush.heal(imageData,selectionPath, bestMatchOffset);
                     Timer t = new Timer(1000, new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent e) {
                             selectionPath = null;
-                            matchPath = null;
+                            bestMatchOffset = null;
                             repaint();
                         }
                     });
                     t.setRepeats(false);
                     t.start();
+                    repaint();
                 }
             }
 
@@ -96,14 +88,10 @@ public class HealingBrushDisplay extends Display {
             public void mousePressed(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     try {
-                        orig = true;
-                        repaint();
-                        transform.inverseTransform(e.getPoint(), ptDst);
+                        var ptDst =  transform.inverseTransform(e.getPoint(), null);
                         selectionPath = new Path();
                         selectionPath.add((int)ptDst.getX(), (int) ptDst.getY());
-
                     } catch (NoninvertibleTransformException e1) {
-                        // TODO Auto-generated catch block
                         e1.printStackTrace();
                     }
                 }
@@ -111,15 +99,12 @@ public class HealingBrushDisplay extends Display {
 
         });
         addMouseMotionListener(new MouseMotionAdapter() {
-            Point2D ptDst = new Point2D.Double();
-
             public void mouseDragged(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     try {
-                        transform.inverseTransform(e.getPoint(), ptDst);
+                        var ptDst = transform.inverseTransform(e.getPoint(), null);
                         selectionPath.add((int) ptDst.getX(), (int) ptDst.getY());
                         repaint();
-
                     } catch (NoninvertibleTransformException e1) {
                         // TODO Auto-generated catch block
                         e1.printStackTrace();
@@ -131,43 +116,34 @@ public class HealingBrushDisplay extends Display {
 
     protected void paintInScale(Graphics2D g) {
         if (selectionPath != null) {
-            g.setColor(Color.RED);
-            g.drawPolygon(selectionPath.getPolygon());
-            if (matchPath != null) {
-                g.setColor(Color.BLUE);
-                for (int i = 0; i < matchPath.xyList.length(); i++) {
-                    XYList.XY p = (XYList.XY) matchPath.xyList.xy(i);
-                    g.drawRect(p.x(), p.y(), 4, 4);
+            Polygon selectionPolygon = new Polygon();
+            Polygon solutionPolygon = new Polygon();
+            for (int i=0;i<selectionPath.xyList.length();i++){
+                XYList.XY xy = selectionPath.xyList.xy(i);
+                selectionPolygon.addPoint(xy.x(), xy.y());
+                if (bestMatchOffset != null){
+                    solutionPolygon.addPoint(xy.x()+bestMatchOffset.x, xy.y()+bestMatchOffset.y);
                 }
+            }
+            g.setColor(Color.RED);
+            g.drawPolygon(selectionPolygon);
+            if (bestMatchOffset!=null){
+                g.setColor(Color.BLUE);
+                g.drawPolygon(solutionPolygon);
             }
         }
     }
-
-    public void setImage(BufferedImage img) {
-        orig = true;
-        super.setImage(img);
-        this.imageData = new ImageData(img);
-        orig = false;
-        repaint();
-    }
-
-    public static void main(String[] args) throws IOException {
-        JFrame f = new JFrame("Main");
-        BufferedImage originalImage = ImageIO.read(HealingBrushDisplay.class.getResourceAsStream("/images/bolton.png"));
-        BufferedImage image=null;
-        if (originalImage.getType() == BufferedImage.TYPE_INT_RGB){
-            image = originalImage;
-        }else {
-            // there must be a better way!
-            image = new BufferedImage(originalImage.getWidth(), originalImage.getHeight(), BufferedImage.TYPE_INT_RGB);
-            image.getGraphics().drawImage(originalImage, 0, 0, null);
-        }
-        f.setBounds(new Rectangle(image.getWidth(), image.getHeight()));
+    public static void main(String[] args) {
+        ImageData imageData = ImageData.of(
+                HealingBrushDisplay.class.getResourceAsStream("/images/bolton.png")
+        );
+        JFrame f = new JFrame("Healing Brush");
+        f.setBounds(new Rectangle(imageData.width, imageData.height));
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        HealingBrushDisplay healingBrushDisplay = new HealingBrushDisplay();
+        HealingBrushDisplay healingBrushDisplay = new HealingBrushDisplay(imageData);
         f.setContentPane(healingBrushDisplay);
         f.validate();
         f.setVisible(true);
-        healingBrushDisplay.setImage(image);
+
     }
 }

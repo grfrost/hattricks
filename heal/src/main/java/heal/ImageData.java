@@ -43,26 +43,53 @@
  */
 package heal;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class ImageData{
     final BufferedImage bufferedImage;
     final int width;
     final int height;
     final int[] data;
-    public ImageData(BufferedImage bufferedImage) {
+
+
+    private  ImageData(BufferedImage bufferedImage) {
         this.bufferedImage = bufferedImage;
         this.width=bufferedImage.getWidth();
         this.height=bufferedImage.getHeight();
         this.data = ((DataBufferInt) (bufferedImage.getRaster().getDataBuffer())).getData();
     }
+    static BufferedImage to(BufferedImage originalImage, int type){
+        BufferedImage image=null;
+        if (originalImage.getType() == type){
+            image = originalImage;
+        }else {
+            // there must be a better way!
+            image = new BufferedImage(originalImage.getWidth(), originalImage.getHeight(), type);
+            image.getGraphics().drawImage(originalImage, 0, 0, null);
+        }
+        return image;
+    }
+    static ImageData of(InputStream inputStream){
 
-    public int get(int x, int y) {
+        try {
+           return new ImageData(ImageData.to(ImageIO.read(inputStream),BufferedImage.TYPE_INT_RGB));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public int getXY(int x, int y) {
         return this.data[y*this.width+x];
     }
 
-    public void set(int x, int y, int rgb) {
+    public void setXY(int x, int y, int rgb) {
         this.data[y*this.width+x]=rgb;
     }
+
+
 }
