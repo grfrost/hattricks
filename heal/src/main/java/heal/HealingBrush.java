@@ -46,6 +46,7 @@
 package heal;
 
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 /*
@@ -125,9 +126,6 @@ public class HealingBrush {
                     : imageData.getXY(+selectionPath.x1() + x, selectionPath.y1() + y - 1);
         }
 
-
-
-
         System.out.println("mask " + (System.currentTimeMillis() - start) + "ms");
 /*
         int[] stencil = new int[]{-1, 1, -mask.width, mask.width};
@@ -204,31 +202,31 @@ public class HealingBrush {
         if (selectionPath.xyList.length() != 0) {
             /*
             Walk the list of xy coordinates in the path and extract a list of RGB values
-            for those coordinates. 
+            for those coordinates.
              */
             RGBGrowableList rgbList = new RGBGrowableList();
             for (int i = 0; i < selectionPath.xyList.length(); i++) {
                 XYList.XY xy = selectionPath.xyList.xy(i);
                 rgbList.addRGB(imageData.data[xy.y() * imageData.width + xy.x()]);
             }
-            int xmin = Math.max(0, selectionPath.x1() - selectionPath.width() * 10);
-            int ymin = Math.max(0, selectionPath.y1() - selectionPath.height() * 10);
-            int xmax = Math.min(imageData.width, selectionPath.x2() + selectionPath.width() * 10);
-            int ymax = Math.min(imageData.height, selectionPath.y2() + selectionPath.height() * 10);
 
-            int searchBoxMaxX = xmax - selectionPath.width();
-            int searchBoxMaxY = ymax - selectionPath.height();
-            XYList xyList = selectionPath.xyList;
-            int pathx1 = selectionPath.x1();
-            int pathy1 = selectionPath.y1();
-            int pathx2 = selectionPath.x2();
-            int pathy2 = selectionPath.y2();
-            int selectionWidth = selectionPath.width();
-            int selectionHeight = selectionPath.height();
+            /*
+              Create a search box of pad * selection (w & h), but constrain the box to bounds of the image
+             */
+            int pad = 4;
+            int widthPad = selectionPath.width() * pad;
+            int heightPad = selectionPath.height() * pad;
+
+            Rectangle searchBox =new Rectangle(
+                    Math.max(0, selectionPath.x1() - widthPad),
+                    Math.max(0, selectionPath.y1() - heightPad),
+                    Math.min(imageData.width, selectionPath.x2() + widthPad)
+                            -Math.max(0, selectionPath.x1() -widthPad)-selectionPath.width(),
+                    Math.min(imageData.height, selectionPath.y2() + heightPad)
+                            -Math.max(0, selectionPath.y1() - heightPad)- selectionPath.height());
 
 
             long searchStart = System.currentTimeMillis();
-
 
             float minSoFar = Float.MAX_VALUE;
             Point bestSoFar = new Point(0, 0);
@@ -248,16 +246,16 @@ public class HealingBrush {
 
             boolean useOriginal = false;
             if (useOriginal) {
-                for (int y = ymin; y < searchBoxMaxY; y++) {
-                    for (int x = xmin; x < searchBoxMaxX; x++) {
-                        boolean inSelection = (!(x > pathx2 || x + selectionWidth < pathx1 || y > pathy2 || y + selectionHeight < pathy1));
+                for (int y = searchBox.y; y < searchBox.y+searchBox.height; y++) {
+                    for (int x = searchBox.x; x < searchBox.y+searchBox.width; x++) {
+                        boolean inSelection = (!(x > selectionPath.x2() || x + selectionPath.width() < selectionPath.x1() || y > selectionPath.y2() || y + selectionPath.height() < selectionPath.y1()));
                         if (!inSelection) { // don't search inside the area we are healing
                             float sum = 0;
-                            for (int i = 0; i < xyList.length(); i++) {
-                                var xy = xyList.xy(i);
+                            for (int i = 0; i < selectionPath.xyList.length(); i++) {
+                                var xy = selectionPath.xyList.xy(i);
                                 var rgb = rgbList.rgb(i);
                                 int rgbFromImage = imageData.data[
-                                        (y - pathy1) * imageData.width + (x - pathx1) + xy.y() * imageData.width + xy.x()
+                                        (y - selectionPath.y1()) * imageData.width + (x - selectionPath.x1()) + xy.y() * imageData.width + xy.x()
                                         ];
                                 int dr = red(rgbFromImage) - rgb.r();
                                 int dg = green(rgbFromImage) - rgb.g();
@@ -267,31 +265,29 @@ public class HealingBrush {
 
                             if (sum < minSoFar) {
                                 minSoFar = sum;
-                                bestSoFar.setLocation(x - pathx1, y - pathy1);
+                                bestSoFar.setLocation(x - selectionPath.x1(), y - selectionPath.y1());
                             }
                         }
                     }
                 }
             } else {
-                int searchBoxWidth = (searchBoxMaxX - xmin);
-                int searchBoxHeight = (searchBoxMaxY - ymin);
-                int range = searchBoxWidth * searchBoxHeight;
+                int range = searchBox.width * searchBox.height;
 
                 float[] sumArray = new float[range];
                 IntStream.range(0, range).parallel().forEach(id -> {
-                    int x = xmin + id % searchBoxWidth;
-                    int y = ymin + id / searchBoxWidth;
-                    boolean inSelection = (!(x > pathx2 || x + selectionWidth < pathx1 || y > pathy2 || y + selectionHeight < pathy1));
+                    int x = searchBox.x + id % searchBox.width;
+                    int y = searchBox.y + id / searchBox.width;
+                    boolean inSelection = (!(x > selectionPath.x2() || x + selectionPath.width() < selectionPath.x1() || y > selectionPath.y2() || y + selectionPath.height() < selectionPath.y1()));
                     if (inSelection) {// don't search inside the area we are healing
                         sumArray[id] = Float.MAX_VALUE;
                     } else {
                         float sum = 0;
-                        for (int i = 0; i < xyList.length(); i++) {
-                            var xy = xyList.xy(i);
+                        for (int i = 0; i < selectionPath.xyList.length(); i++) {
+                            var xy = selectionPath.xyList.xy(i);
                             var rgb = rgbList.rgb(i);
 
                             int rgbFromImage = imageData.data[
-                                    (y - pathy1) * imageData.width + (x - pathx1) + xy.y() * imageData.width + xy.x()
+                                    (y - selectionPath.y1()) * imageData.width + (x - selectionPath.x1()) + xy.y() * imageData.width + xy.x()
                                     ];
                             int dr = red(rgbFromImage) - rgb.r();
                             int dg = green(rgbFromImage) - rgb.g();
@@ -309,9 +305,9 @@ public class HealingBrush {
                         minSoFar = value;
                     }
                 }
-                int x = xmin + (id % searchBoxWidth);
-                int y = ymin + (id / searchBoxWidth);
-                bestSoFar = new Point(x - pathx1, y - pathy1);
+                int x = searchBox.x + (id % searchBox.width);
+                int y = searchBox.y + (id / searchBox.width);
+                bestSoFar = new Point(x - selectionPath.x1(), y - selectionPath.y1());
             }
             System.out.println("search " + (System.currentTimeMillis() - searchStart) + "ms");
             offset = bestSoFar;
