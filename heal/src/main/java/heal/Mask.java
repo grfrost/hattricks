@@ -9,8 +9,6 @@ import java.util.Arrays;
 
 class Mask {
     public final int[] data;
-    public final int[] dest;
-    public final int[] src;
     public final int width;
     public final int height;
 
@@ -28,9 +26,5 @@ class Mask {
         Graphics2D g = maskImg.createGraphics();
         g.setColor(Color.WHITE);
         g.fillPolygon(polygon);
-
-        src = new int[data.length];
-        dest =new int[data.length];
-
     }
 }

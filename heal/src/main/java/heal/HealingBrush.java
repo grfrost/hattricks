@@ -48,156 +48,173 @@ package heal;
 import java.awt.Point;
 import java.util.Arrays;
 import java.util.stream.IntStream;
+/*
+ From the original renderscript
 
+ float3 __attribute__((kernel)) solve1(uchar in, uint32_t x, uint32_t y) {
+  if (in > 0) {
+     float3 k = getF32_3(dest1, x - 1, y);
+     k += getF32_3(dest1, x + 1, y);
+     k += getF32_3(dest1, x, y - 1);
+     k += getF32_3(dest1, x, y + 1);
+     k += getF32_3(laplace, x, y);
+     k /= 4;
+     return k;
+  }
+  return rsGetElementAt_float3(dest1, x, y);;
+}
+
+
+float3 __attribute__((kernel)) solve2(uchar in, uint32_t x, uint32_t y) {
+  if (in > 0) {
+    float3 k = getF32_3(dest2, x - 1, y);
+    k += getF32_3(dest2, x + 1, y);
+    k += getF32_3(dest2, x, y - 1);
+    k += getF32_3(dest2, x, y + 1);
+       k += getF32_3(laplace, x, y);
+       k /= 4;
+       return k;
+  }
+  return getF32_3(dest2, x, y);;
+}
+
+float3 __attribute__((kernel))extractBorder(int2 in) {
+  return convert_float3(rsGetElementAt_uchar4(image, in.x, in.y).xyz);
+}
+
+float __attribute__((kernel)) bordercorrelation(uint32_t x, uint32_t y) {
+  float sum = 0;
+  for(int i = 0 ; i < borderLength; i++) {
+    int2  coord = rsGetElementAt_int2(border_coords,i);
+    float3 orig = convert_float3(rsGetElementAt_uchar4(image, coord.x + x, coord.y + y).xyz);
+    float3 candidate = rsGetElementAt_float3(border, i).xyz;
+    sum += distance(orig, candidate);
+  }
+  return sum;
+}
+ */
 public class HealingBrush {
-    public static void heal(ImageData imageData, Path selectionPath, Point healPositionOffset ) {
+    static int red(int rgb){
+        return  (rgb >> 16) & 0xff;
+    }
+    static int green(int rgb){
+        return  (rgb >> 8) & 0xff;
+    }
+    static int blue(int rgb){
+        return  rgb & 0xff;
+    }
+
+    static int rgb(int r, int g, int b){
+        return  ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+    }
+
+
+    public static void heal(ImageData imageData, Path selectionPath, Point healPositionOffset) {
 
         long start = System.currentTimeMillis();
         Mask mask = new Mask(selectionPath);
+        var src = new int[mask.data.length];
+        var dest = new int[mask.data.length];
+
         for (int i = 0; i < mask.data.length; i++) { //parallel
             int x = i % mask.width;
             int y = i / mask.width;
-            mask.src[i] = imageData.getXY(selectionPath.x1() + x + healPositionOffset.x,selectionPath.y1() + y - 1 + healPositionOffset.y) ;
-            mask.dest[i] =(mask.data[i] != 0)
-                    ? mask.src[i]
-                    :imageData.getXY(+ selectionPath.x1() + x,selectionPath.y1() + y - 1);
+            src[i] = imageData.getXY(selectionPath.x1() + x + healPositionOffset.x, selectionPath.y1() + y - 1 + healPositionOffset.y);
+            dest[i] = (mask.data[i] != 0)
+                    ? src[i]
+                    : imageData.getXY(+selectionPath.x1() + x, selectionPath.y1() + y - 1);
         }
+
+
+
+
         System.out.println("mask " + (System.currentTimeMillis() - start) + "ms");
+/*
+        int[] stencil = new int[]{-1, 1, -mask.width, mask.width};
 
-        RGBList srclap = laplacian(mask);
+        int[] laplaced= new int[dest.length];
 
-      //  displayLapacian(srclap, mask);
+        boolean laplacian = true;
+        if (laplacian) {
+            start = System.currentTimeMillis();
 
-        solve(mask, (RGBGrowableList) srclap);
+            for (int p = 0; p < src.length; p++) { //parallel
+                int x = p % mask.width;
+                int y = p / mask.width;
 
+                    int r = 0, g = 0, b = 0;
+                if (x > 0 && x < mask.width - 1 && y > 0 && y < mask.height - 1) {
+                    for (int offset : stencil) {
+                        var v = src[p + offset];
+                        r += red(v);
+                        g += green(v);
+                        b += blue(v);
+                    }
+                }
+                    laplaced[p]=rgb(r, g, b);
+
+                }
+            }
+
+        System.out.println("laplacian " + (System.currentTimeMillis() - start) + "ms");
+        boolean solve = false;
+        if (solve) {
+
+            var tmp = new int[dest.length];
+            start = System.currentTimeMillis();
+            for (int i = 0; i < 500; i++) {
+                for (int p = 0; p < mask.width * mask.height; p++) { // parallel
+                    int x = p % mask.width;
+                    int y = p / mask.width;
+                    if (x > 0 && x < mask.width - 1 && y > 0 && y < mask.height - 1 && mask.data[p] != 0) {
+                     //   var rgb = rgbList.rgb(p);
+
+                        var r = red(laplaced[i]);//rgb.r();
+                        var g = green(laplaced[i]);//rgb.g();
+                        var b = blue(laplaced[i]);//rgb.b();
+                        for (int offset : stencil) {
+                            var v = dest[p + offset];
+                            r += red(v);
+                            g += green(v);
+                            b += blue(v);
+                        }
+                        tmp[p] = rgb((r + 2) / 4, (g + 2) / 4, (b + 2) / 4);
+                    }
+                }
+                var swap = tmp;
+                tmp = dest;
+                dest = swap;
+            }
+            System.out.println("solve " + (System.currentTimeMillis() - start) + "ms");
+        }
+ */
         start = System.currentTimeMillis();
         for (int i = 0; i < mask.data.length; i++) { //parallel
             int x = i % mask.width;
             int y = i / mask.width;
-            imageData.setXY( selectionPath.x1() + x,selectionPath.y1() + y - 1, mask.dest[i] );
+            imageData.setXY(selectionPath.x1() + x, selectionPath.y1() + y - 1, dest[i]);
         }
         System.out.println("heal2 " + (System.currentTimeMillis() - start) + "ms");
     }
 
-    static void solve(Mask mask, RGBGrowableList lap_rgb) {
-        int r, g, b, v;
-        var dest = mask.dest;
-        var tmp = Arrays.copyOf(dest, mask.dest.length);
-        long start = System.currentTimeMillis();
-        for (int i = 0; i < 500; i++) {
-            for (int p = 0; p < mask.width * mask.height; p++) { // parallel
-                int x = p % mask.width;
-                int y = p / mask.width;
-                if (x > 0 && x < mask.width - 1 && y > 0 && y < mask.height - 1 && mask.data[p] != 0) {
-                    v = dest[p - 1];
-                    r = ((v >> 16) & 0xff);
-                    g = ((v >> 8) & 0xff);
-                    b = ((v >> 0) & 0xff);
-
-                    v = dest[p + 1];
-                    r += ((v >> 16) & 0xff);
-                    g += ((v >> 8) & 0xff);
-                    b += ((v >> 0) & 0xff);
-
-                    v = dest[p - mask.width];
-                    r += ((v >> 16) & 0xff);
-                    g += ((v >> 8) & 0xff);
-                    b += ((v >> 0) & 0xff);
-
-                    v = dest[p + mask.width];
-                    r += ((v >> 16) & 0xff);
-                    g += ((v >> 8) & 0xff);
-                    b += ((v >> 0) & 0xff);
-
-                 //   var rgb = lap_rgb.rgb(p);
-
-                   // r += rgb.r();//(lap_rgb.rgb[p * RGBGrowableList.STRIDE + RGBGrowableList.Ridx]);
-                   // g += rgb.g();//(lap_rgb.rgb[p * RGBGrowableList.STRIDE + RGBGrowableList.Gidx]);
-                   // b += rgb.b();//(lap_rgb.rgb[p * RGBGrowableList.STRIDE + RGBGrowableList.Bidx]);
-                     r += (lap_rgb.rgb[p * RGBGrowableList.STRIDE + RGBGrowableList.Ridx]);
-                     g += (lap_rgb.rgb[p * RGBGrowableList.STRIDE + RGBGrowableList.Gidx]);
-                     b += (lap_rgb.rgb[p * RGBGrowableList.STRIDE + RGBGrowableList.Bidx]);
-                    r = (r + 2) / 4;
-                    g = (g + 2) / 4;
-                    b = (b + 2) / 4;
-                    tmp[p] = (((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF));
-                }
-            }
-            var swap = tmp;
-            tmp = dest;
-            dest = swap;
-        }
-     //   System.arraycopy(from,0,mask.dest,0,mask.dest.length);
-        System.out.println("solve " + (System.currentTimeMillis() - start) + "ms");
-    }
-
-
-    static void displayLapacian(RGBGrowableList lap_rgb,  Mask mask) {
-        for (int i = 0; i < lap_rgb.length(); i++) {
-            var rgb = lap_rgb.rgb(i);
-            if (mask.data[rgb.idx] != 0) {
-                mask.dest[rgb.idx] =
-                        (((Math.abs(rgb.r()) & 0xFF) << 16)
-                                | ((Math.abs(rgb.g()) & 0xFF) << 8)
-                                | (Math.abs(rgb.b()) & 0xFF));
-            }
-        }
-    }
-
-    static RGBGrowableList laplacian( Mask mask) {
-        RGBGrowableList rgbList = new RGBGrowableList();
-        long start = System.currentTimeMillis();
-        for (int p = 0; p < mask.width * mask.height; p++) { //parallel
-            int x = p % mask.width;
-            int y = p / mask.width;
-            if (x > 0 && x < mask.width - 1 && y > 0 && y < mask.height - 1) {
-                int v = mask.src[p];
-                int r = ((v >> 16) & 0xff) << 2;
-                int g = ((v >> 8) & 0xff) << 2;
-                int b = ((v >> 0) & 0xff) << 2;
-
-                v = mask.src[p - 1];
-                r -= ((v >> 16) & 0xff);
-                g -= ((v >> 8) & 0xff);
-                b -= ((v >> 0) & 0xff);
-
-                v = mask.src[p + 1];
-                r -= ((v >> 16) & 0xff);
-                g -= ((v >> 8) & 0xff);
-                b -= ((v >> 0) & 0xff);
-
-                v = mask.src[p - mask.width];
-                r -= ((v >> 16) & 0xff);
-                g -= ((v >> 8) & 0xff);
-                b -= ((v >> 0) & 0xff);
-
-                v = mask.src[p + mask.width];
-                r -= ((v >> 16) & 0xff);
-                g -= ((v >> 8) & 0xff);
-                b -= ((v >> 0) & 0xff);
-                rgbList.add(r, g, b);
-            } else {
-                rgbList.add(0, 0, 0);
-            }
-        }
-        System.out.println("laplacian " + (System.currentTimeMillis() - start) + "ms");
-        return rgbList;
-    }
 
 
     public static Point getOffsetOfBestMatch(ImageData imageData, Path selectionPath) {
         Point offset = null;
         if (selectionPath.xyList.length() != 0) {
-            int xmin = Math.max(0, selectionPath.x1() - selectionPath.width() * 3);
-            int ymin = Math.max(0, selectionPath.y1() - selectionPath.height() * 3);
-            int xmax = Math.min(imageData.width, selectionPath.x2()+ selectionPath.width() * 3);
-            int ymax = Math.min(imageData.height, selectionPath.y2() + selectionPath.height() * 3);
-
+            /*
+            Walk the list of xy coordinates in the path and extract a list of RGB values
+            for those coordinates. 
+             */
             RGBGrowableList rgbList = new RGBGrowableList();
             for (int i = 0; i < selectionPath.xyList.length(); i++) {
                 XYList.XY xy = selectionPath.xyList.xy(i);
                 rgbList.addRGB(imageData.data[xy.y() * imageData.width + xy.x()]);
             }
+            int xmin = Math.max(0, selectionPath.x1() - selectionPath.width() * 10);
+            int ymin = Math.max(0, selectionPath.y1() - selectionPath.height() * 10);
+            int xmax = Math.min(imageData.width, selectionPath.x2() + selectionPath.width() * 10);
+            int ymax = Math.min(imageData.height, selectionPath.y2() + selectionPath.height() * 10);
 
             int searchBoxMaxX = xmax - selectionPath.width();
             int searchBoxMaxY = ymax - selectionPath.height();
@@ -212,28 +229,39 @@ public class HealingBrush {
 
             long searchStart = System.currentTimeMillis();
 
-            boolean useOriginal = false;
+
             float minSoFar = Float.MAX_VALUE;
             Point bestSoFar = new Point(0, 0);
+
+              /*
+                  float __attribute__((kernel)) bordercorrelation(uint32_t x, uint32_t y) {
+                    float sum = 0;
+                    for(int i = 0 ; i < borderLength; i++) {
+                       int2  coord = rsGetElementAt_int2(border_coords,i);
+                       float3 orig = convert_float3(rsGetElementAt_uchar4(image, coord.x + x, coord.y + y).xyz);
+                       float3 candidate = rsGetElementAt_float3(border, i).xyz;
+                       sum += distance(orig, candidate);
+                    }
+                    return sum;
+                  }
+               */
+
+            boolean useOriginal = false;
             if (useOriginal) {
                 for (int y = ymin; y < searchBoxMaxY; y++) {
                     for (int x = xmin; x < searchBoxMaxX; x++) {
                         boolean inSelection = (!(x > pathx2 || x + selectionWidth < pathx1 || y > pathy2 || y + selectionHeight < pathy1));
                         if (!inSelection) { // don't search inside the area we are healing
-                            int sdx = x - pathx1;
-                            int sdy = y - pathy1;
-                            int sdxyoffset = sdy * imageData.width + sdx;
                             float sum = 0;
                             for (int i = 0; i < xyList.length(); i++) {
                                 var xy = xyList.xy(i);
                                 var rgb = rgbList.rgb(i);
-                                int rgbFromImage = imageData.data[sdxyoffset + xy.y() * imageData.width + xy.x()];
-                                int r = (rgbFromImage >> 16) & 0xff;
-                                int g = (rgbFromImage >> 8) & 0xff;
-                                int b = (rgbFromImage >> 0) & 0xff;
-                                int dr = r - rgb.r();
-                                int dg = g - rgb.g();
-                                int db = b - rgb.b();
+                                int rgbFromImage = imageData.data[
+                                        (y - pathy1) * imageData.width + (x - pathx1) + xy.y() * imageData.width + xy.x()
+                                        ];
+                                int dr = red(rgbFromImage) - rgb.r();
+                                int dg = green(rgbFromImage) - rgb.g();
+                                int db = blue(rgbFromImage) - rgb.b();
                                 sum += dr * dr + dg * dg + db * db;
                             }
 
@@ -257,20 +285,17 @@ public class HealingBrush {
                     if (inSelection) {// don't search inside the area we are healing
                         sumArray[id] = Float.MAX_VALUE;
                     } else {
-                        int sdx = x - pathx1;
-                        int sdy = y - pathy1;
-                        int sdxyoffset = sdy * imageData.width + sdx;
                         float sum = 0;
                         for (int i = 0; i < xyList.length(); i++) {
                             var xy = xyList.xy(i);
                             var rgb = rgbList.rgb(i);
-                            int rgbFromImage = imageData.data[sdxyoffset + xy.y() * imageData.width + xy.x()];
-                            int r = (rgbFromImage >> 16) & 0xff;
-                            int g = (rgbFromImage >> 8) & 0xff;
-                            int b = (rgbFromImage >> 0) & 0xff;
-                            int dr = r - rgb.r();
-                            int dg = g - rgb.g();
-                            int db = b - rgb.b();
+
+                            int rgbFromImage = imageData.data[
+                                    (y - pathy1) * imageData.width + (x - pathx1) + xy.y() * imageData.width + xy.x()
+                                    ];
+                            int dr = red(rgbFromImage) - rgb.r();
+                            int dg = green(rgbFromImage) - rgb.g();
+                            int db = blue(rgbFromImage) - rgb.b();
                             sum += dr * dr + dg * dg + db * db;
                         }
                         sumArray[id] = sum;
