@@ -26,10 +26,12 @@ package heal;
 
 import hat.buffer.Buffer;
 import hat.buffer.BufferAllocator;
-import hat.buffer.IncompleteBuffer;
+import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
-public interface RGBList extends IncompleteBuffer {
+import java.lang.invoke.MethodHandles;
+
+public interface RGBList extends Buffer {
     interface RGB extends Buffer.Struct{
         int r();
         int g();
@@ -49,8 +51,8 @@ public interface RGBList extends IncompleteBuffer {
             )
     );
 
-    static RGBList create(BufferAllocator bufferAllocator, int length) {
-        RGBList table = schema.allocate(bufferAllocator,length);
+    static RGBList create(MethodHandles.Lookup lookup, BufferAllocator bufferAllocator, int length) {
+        RGBList table = schema.allocate(lookup,bufferAllocator,length);
         table.length(length);
         return table;
     }

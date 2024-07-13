@@ -26,10 +26,12 @@ package heal;
 
 import hat.buffer.Buffer;
 import hat.buffer.BufferAllocator;
-import hat.buffer.IncompleteBuffer;
+import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
-public interface XYList extends IncompleteBuffer {
+import java.lang.invoke.MethodHandles;
+
+public interface XYList extends Buffer {
     interface XY extends Buffer.Struct{
         int x();
         int y();
@@ -47,8 +49,8 @@ public interface XYList extends IncompleteBuffer {
             )
     );
 
-    static XYList create(BufferAllocator bufferAllocator, int length) {
-        XYList table = schema.allocate(bufferAllocator,length);
+    static XYList create(MethodHandles.Lookup lookup,BufferAllocator bufferAllocator, int length) {
+        XYList table = schema.allocate(lookup,bufferAllocator,length);
         table.length(length);
         return table;
     }
