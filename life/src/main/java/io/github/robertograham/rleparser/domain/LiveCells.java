@@ -1,4 +1,4 @@
-package life.rle.domain;
+package io.github.robertograham.rleparser.domain;
 
 import java.util.Objects;
 import java.util.Set;

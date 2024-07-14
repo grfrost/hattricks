@@ -1,8 +1,8 @@
-package life.rle.helper;
+package io.github.robertograham.rleparser.helper;
 
-import life.rle.domain.Coordinate;
-import life.rle.domain.StatusRun;
-import life.rle.domain.enumeration.Status;
+import io.github.robertograham.rleparser.domain.Coordinate;
+import io.github.robertograham.rleparser.domain.StatusRun;
+import io.github.robertograham.rleparser.domain.enumeration.Status;
 
 import java.util.Set;
 import java.util.regex.Matcher;

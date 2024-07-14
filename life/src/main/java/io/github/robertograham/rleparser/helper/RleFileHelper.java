@@ -1,4 +1,4 @@
-package life.rle.helper;
+package io.github.robertograham.rleparser.helper;
 
 public class RleFileHelper {
 

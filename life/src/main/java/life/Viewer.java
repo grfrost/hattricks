@@ -15,18 +15,16 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferInt;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 
 public class Viewer extends JFrame {
-    public final Life.S08Array s08Array;
+    public final Life.LifeData lifeData;
     public final MemorySegment memorySegment;
     public final MemoryLayout memoryLayout;
-    public final int width;
-    public final int height;
 
-    private final byte[] rasterData;
+    private final int[] rasterData;
 
     private final BufferedImage image;
 
@@ -39,21 +37,19 @@ public class Viewer extends JFrame {
 
     private Point to = null;
 
-    Viewer(String title, Life.S08Array s08Array, int width, int height, double scale) {
+    Viewer(String title, Life.LifeData lifeData) {
         super(title);
-        this.image = new BufferedImage(width, height*2, BufferedImage.TYPE_BYTE_GRAY);
-        this.s08Array = s08Array;
-        this.memorySegment = Buffer.getMemorySegment(s08Array);
-        this.memoryLayout = Buffer.getLayout(s08Array);
-        this.width = image.getWidth();
-        this.height = image.getHeight()/2;
-        this.scale = scale;
-        this.rasterData = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+        this.image = new BufferedImage(lifeData.width(), lifeData.height()*2, BufferedImage.TYPE_INT_RGB);
+        this.lifeData = lifeData;
+        this.memorySegment = Buffer.getMemorySegment(lifeData);
+        this.memoryLayout = Buffer.getLayout(lifeData);
+        this.scale = .1;
+        this.rasterData = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
 
         this.viewer = new JComponent() {
             @Override
             public Dimension getPreferredSize() {
-                return new Dimension(width, height);
+                return new Dimension(lifeData.width(), lifeData.height());
             }
             @Override
             public void paintComponent(Graphics g1d) {
@@ -65,11 +61,12 @@ public class Viewer extends JFrame {
                         RenderingHints.VALUE_ANTIALIAS_ON);
                 g.setRenderingHints(rh);
 
-
-                if (s08Array.from() == 0) {
-                    g.drawImage(image, 0, 0, width, height, 0, 0, width, height, this);
+                lifeData.copyTo(rasterData);
+                if (lifeData.from() == 0) {
+                    g.drawImage(image, 0, 0, lifeData.width(), lifeData.height(), 0, 0, lifeData.width(), lifeData.height(), this);
                 } else {
-                    g.drawImage(image, 0, 0, width, height, 0, height, width, 2 * height, this);
+                    g.drawImage(image, 0, 0, lifeData.width(), lifeData.height(), 0, 0, lifeData.width(), lifeData.height(), this);
+                   // g.drawImage(image, 0, 0, s08Array.width(), s08Array.height(), 0, s08Array.height(), 0, 2 * s08Array.height(), this);
                 }
 
             }
@@ -105,7 +102,7 @@ public class Viewer extends JFrame {
             }
         });
 
-        pane.setPreferredSize(new Dimension((int) (width * scale), (int) (height * scale)));
+        pane.setPreferredSize(new Dimension((int) (lifeData.width() * scale), (int) (lifeData.height() * scale)));
         this.getContentPane().add(this.pane);
         this.pack();
         this.setLocationRelativeTo(null);
@@ -119,7 +116,7 @@ public class Viewer extends JFrame {
     }
 
     public void syncWithRGB() {
-        s08Array.copyTo(rasterData);
+
         this.viewer.repaint();
     }
 

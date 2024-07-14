@@ -1,4 +1,4 @@
-package life.rle.helper;
+package io.github.robertograham.rleparser.helper;
 
 import java.io.IOException;
 import java.net.URI;

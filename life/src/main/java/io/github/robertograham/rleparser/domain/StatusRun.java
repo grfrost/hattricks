@@ -1,6 +1,6 @@
-package life.rle.domain;
+package io.github.robertograham.rleparser.domain;
 
-import life.rle.domain.enumeration.Status;
+import io.github.robertograham.rleparser.domain.enumeration.Status;
 
 import java.util.Objects;
 
