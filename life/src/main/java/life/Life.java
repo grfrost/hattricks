@@ -9,13 +9,10 @@ import hat.buffer.BufferAllocator;
 import hat.ifacemapper.Schema;
 import io.github.robertograham.rleparser.RleParser;
 import io.github.robertograham.rleparser.domain.PatternData;
-
-import java.io.File;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandles;
 import java.lang.runtime.CodeReflection;
-import java.net.URISyntaxException;
 
 import static java.lang.foreign.ValueLayout.JAVA_INT;
 
@@ -24,10 +21,7 @@ public class Life {
     public interface LifeData extends Buffer {
         int generation();
         void generation(int generation);
-        int from();
-        void from(int from);
-        int to();
-        void to(int to);
+
         int width();
         void width(int width);
         int height();
@@ -38,15 +32,13 @@ public class Life {
         void array(long idx, int b);
 
         Schema<LifeData> schema = Schema.of(LifeData.class, s32Array->s32Array
-                .fields("generation","from","to","width","height")
+                .fields("generation","width","height")
                 .arrayLen("length").array("array"));
 
         static LifeData create(MethodHandles.Lookup lookup, BufferAllocator bufferAllocator, int width, int height){
             var instance = schema.allocate(lookup,bufferAllocator, width*height*2);
             instance.generation(0);
             instance.length(width*height*2);
-            instance.from(0);
-            instance.to(width*height);
             instance.width(width);
             instance.height(height);
             return instance;
@@ -58,16 +50,12 @@ public class Life {
         default void next(){
             int generation=generation();
             generation(generation+1);
-            int from = from();
-            int to = to();
-            from(to);
-            to(from);
         }
 
         ValueLayout  valueLayout = JAVA_INT;
         long headerOffset =JAVA_INT.byteOffset()*6;
-        default LifeData copyTo(int[] ints) {
-            MemorySegment.copy(Buffer.getMemorySegment(this), valueLayout, headerOffset, ints, 0, length());
+        default LifeData copyTo(int[] ints, long offset) {
+            MemorySegment.copy(Buffer.getMemorySegment(this), valueLayout, headerOffset+offset, ints, 0, length()/2);
             return this;
         }
     }
@@ -84,11 +72,11 @@ public class Life {
                 int gid = kc.x;
                 int ALIVE = 0xffffffff;
                 int DEAD = 0x00000000;
+                int generation = lifeData.generation();
                 int width = lifeData.width();
                 int height = lifeData.height();
-                int to = gid + lifeData.to();
-                int from = gid + lifeData.from();
-
+                int from = gid + (generation%2) * kc.maxX;
+                int to = gid + ((generation+1)%2) * kc.maxX;
                 int x = gid % width;
                 int y = gid / width;
                // int half = width*height;
@@ -156,21 +144,19 @@ public class Life {
             lifeData.array(pos, LifeCompute.ALIVE);
             lifeData.array(pos+ybyWidth, LifeCompute.ALIVE);
         });
-        view.syncWithRGB();
+        view.viewer.repaint();
 
         view.waitForDoorbell();
 
         final long startMillis = System.currentTimeMillis();
         while (true) {
             accelerator.compute(cc-> LifeCompute.compute(cc, lifeData));
-
-
             lifeData.next();
-            if (lifeData.generation()%40==0) {
-                view.syncWithRGB();
+          //  if (lifeData.generation()%3==0) {
+                view.viewer.repaint();
                 final long elapsedMillis = System.currentTimeMillis() - startMillis;
                 System.out.println("Generation = " + lifeData.generation() + " generations/sec = " + ((lifeData.generation() * 1000L) / elapsedMillis));
-            }
+           // }
         }
 
     }
