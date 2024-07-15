@@ -46,8 +46,8 @@
 package heal;
 
 import hat.ComputeContext;
-import hat.buffer.F32Array;
 import hat.KernelContext;
+import hat.buffer.F32Array;
 
 import java.awt.Point;
 import java.lang.runtime.CodeReflection;
@@ -205,29 +205,38 @@ public class HealingBrush {
         System.out.println("heal2 " + (System.currentTimeMillis() - start) + "ms");
     }
 
+    @CodeReflection
+    public static float getSum(ImageData imageData, Box selectionBox, XYList selectionXYList, RGBList selectionRgbList, int x, int y) {
+        int offset = (y - selectionBox.y1()) * imageData.width + (x - selectionBox.x1());
+        float sum = 0;
+        for (int i = 0; i < selectionXYList.length(); i++) {
+            var xy = selectionXYList.xy(i);
+            var rgb = selectionRgbList.rgb(i);
+            int rgbFromImage = imageData.array(offset + xy.y() * imageData.width + xy.x());
+            int dr = red(rgbFromImage) - rgb.r();
+            int dg = green(rgbFromImage) - rgb.g();
+            int db = blue(rgbFromImage) - rgb.b();
+            sum += dr * dr + dg * dg + db * db;
+        }
+        return sum;
+    }
 
-    public static Point original(ImageData imageData, RGBList rgbList, Box searchBox, Path selectionPath) {
+    public static boolean isInSelection(Box selectionBox, int x, int y) {
+        int selectionBoxWidth = selectionBox.x2() - selectionBox.x1();
+        int selectionBoxHeight = selectionBox.y2() - selectionBox.y1();
+        return (!(x > selectionBox.x2() || x + selectionBoxWidth < selectionBox.x1() || y > selectionBox.y2() || y + selectionBoxHeight < selectionBox.y1()));
+    }
+
+    public static Point original(ImageData imageData, RGBList rgbList, Box searchBox, Box selectionBox, XYList selectionXYList) {
         float minSoFar = Float.MAX_VALUE;
         Point bestSoFar = new Point(0, 0);
         for (int y = searchBox.y1(); y < searchBox.y2(); y++) {
             for (int x = searchBox.x1(); x < searchBox.x2(); x++) {
-                boolean inSelection = (!(x > selectionPath.x2() || x + selectionPath.width() < selectionPath.x1() || y > selectionPath.y2() || y + selectionPath.height() < selectionPath.y1()));
-                if (!inSelection) { // don't search inside the area we are healing
-                    float sum = 0;
-                    for (int i = 0; i < selectionPath.xyList.length(); i++) {
-                        var xy = selectionPath.xyList.xy(i);
-                        var rgb = rgbList.rgb(i);
-                        int rgbFromImage = imageData.array(
-                                (y - selectionPath.y1()) * imageData.width + (x - selectionPath.x1()) + xy.y() * imageData.width + xy.x()
-                        );
-                        int dr = red(rgbFromImage) - rgb.r();
-                        int dg = green(rgbFromImage) - rgb.g();
-                        int db = blue(rgbFromImage) - rgb.b();
-                        sum += dr * dr + dg * dg + db * db;
-                    }
+                if (!isInSelection(selectionBox, x, y)) {// don't search inside the area we are healing
+                    float sum = getSum(imageData, selectionBox, selectionXYList, rgbList, x, y);
                     if (sum < minSoFar) {
                         minSoFar = sum;
-                        bestSoFar.setLocation(x - selectionPath.x1(), y - selectionPath.y1());
+                        bestSoFar.setLocation(x - selectionBox.x1(), y - selectionBox.y1());
                     }
                 }
             }
@@ -235,67 +244,43 @@ public class HealingBrush {
         return bestSoFar;
     }
 
-    public static Point sequential(ImageData imageData, RGBList rgbList, Box searchBox, Path selectionPath) {
+
+    public static Point sequential(ImageData imageData, RGBList rgbList, Box searchBox, Box selectionBox, XYList selectionXYList) {
         int searchBoxWidth = searchBox.x2() - searchBox.x1();
         int searchBoxHeight = searchBox.y2() - searchBox.y1();
         int range = searchBoxWidth * searchBoxHeight;
-        Point bestSoFar = new Point(0, 0);
         float minSoFar = Float.MAX_VALUE;
+        int bestId = range+1;
         for (int id = 0; id < range; id++) {
             int x = searchBox.x1() + id % searchBoxWidth;
             int y = searchBox.y1() + id / searchBoxWidth;
-            boolean inSelection = (!(x > selectionPath.x2() || x + selectionPath.width() < selectionPath.x1() || y > selectionPath.y2() || y + selectionPath.height() < selectionPath.y1()));
-            if (!inSelection) {// don't search inside the area we are healing
-
-                float sum = 0;
-                for (int i = 0; i < selectionPath.xyList.length(); i++) {
-                    var xy = selectionPath.xyList.xy(i);
-                    var rgb = rgbList.rgb(i);
-
-                    int rgbFromImage = imageData.array(
-                            (y - selectionPath.y1()) * imageData.width + (x - selectionPath.x1()) + xy.y() * imageData.width + xy.x()
-                    );
-                    int dr = red(rgbFromImage) - rgb.r();
-                    int dg = green(rgbFromImage) - rgb.g();
-                    int db = blue(rgbFromImage) - rgb.b();
-                    sum += dr * dr + dg * dg + db * db;
-                }
+            if (!isInSelection(selectionBox, x, y)) {// don't search inside the area we are healing
+                float sum = getSum(imageData, selectionBox, selectionXYList, rgbList, x, y);
                 if (sum < minSoFar) {
                     minSoFar = sum;
-                    bestSoFar.setLocation(x - selectionPath.x1(), y - selectionPath.y1());
+                    bestId = id;
+
                 }
             }
         }
-        return bestSoFar;
+        int x = searchBox.x1() + (bestId % searchBoxWidth);
+        int y = searchBox.y1() + (bestId / searchBoxWidth);
+        return new Point(x - selectionBox.x1(), y - selectionBox.y1());
     }
 
-    public static Point parallel(ImageData imageData, RGBList rgbList, Box searchBox, Path selectionPath) {
+
+    public static Point parallel(ImageData imageData, RGBList rgbList, Box searchBox, Box selectionBox, XYList selectionXYList) {
         int searchBoxWidth = searchBox.x2() - searchBox.x1();
         int searchBoxHeight = searchBox.y2() - searchBox.y1();
         int range = searchBoxWidth * searchBoxHeight;
-
         float[] sumArray = new float[range];
         IntStream.range(0, range).parallel().forEach(id -> {
             int x = searchBox.x1() + id % searchBoxWidth;
             int y = searchBox.y1() + id / searchBoxWidth;
-            boolean inSelection = (!(x > selectionPath.x2() || x + selectionPath.width() < selectionPath.x1() || y > selectionPath.y2() || y + selectionPath.height() < selectionPath.y1()));
-            if (inSelection) {// don't search inside the area we are healing
+            if (isInSelection(selectionBox, x, y)) {// don't search inside the area we are healing
                 sumArray[id] = Float.MAX_VALUE;
             } else {
-                float sum = 0;
-                for (int i = 0; i < selectionPath.xyList.length(); i++) {
-                    var xy = selectionPath.xyList.xy(i);
-                    var rgb = rgbList.rgb(i);
-
-                    int rgbFromImage = imageData.array(
-                            (y - selectionPath.y1()) * imageData.width + (x - selectionPath.x1()) + xy.y() * imageData.width + xy.x()
-                    );
-                    int dr = red(rgbFromImage) - rgb.r();
-                    int dg = green(rgbFromImage) - rgb.g();
-                    int db = blue(rgbFromImage) - rgb.b();
-                    sum += dr * dr + dg * dg + db * db;
-                }
-                sumArray[id] = sum;
+                sumArray[id] = getSum(imageData, selectionBox, selectionXYList, rgbList, x, y);
             }
         });
         float minSoFar = Float.MAX_VALUE;
@@ -309,9 +294,21 @@ public class HealingBrush {
         }
         int x = searchBox.x1() + (id % searchBoxWidth);
         int y = searchBox.y1() + (id / searchBoxWidth);
-        return new Point(x - selectionPath.x1(), y - selectionPath.y1());
+        return new Point(x - selectionBox.x1(), y - selectionBox.y1());
     }
 
+    /*
+          float __attribute__((kernel)) bordercorrelation(uint32_t x, uint32_t y) {
+            float sum = 0;
+            for(int i = 0 ; i < borderLength; i++) {
+               int2  coord = rsGetElementAt_int2(border_coords,i);
+               float3 orig = convert_float3(rsGetElementAt_uchar4(image, coord.x + x, coord.y + y).xyz);
+               float3 candidate = rsGetElementAt_float3(border, i).xyz;
+               sum += distance(orig, candidate);
+            }
+            return sum;
+          }
+       */
     @CodeReflection
     public static void bestKernel(KernelContext kc,
                                   ImageData imageData,
@@ -320,31 +317,14 @@ public class HealingBrush {
                                   Box selectionBox,
                                   XYList selectionXYList,
                                   F32Array sumArray) {
-        int searchBoxWidth = searchBox.x2() - searchBox.x1();
         int id = kc.x;
+        int searchBoxWidth = searchBox.x2() - searchBox.x1();
         int x = searchBox.x1() + id % searchBoxWidth;
         int y = searchBox.y1() + id / searchBoxWidth;
-        int selectionBoxWidth = selectionBox.x2() - selectionBox.x1();
-        int selectionBoxHeight = selectionBox.y2() - selectionBox.y1();
-        boolean inSelection = (!(x > selectionBox.x2() || x + selectionBoxWidth < selectionBox.x1()
-                || y > selectionBox.y2() || y + selectionBoxHeight < selectionBox.y1()));
-        if (inSelection) {// don't search inside the area we are healing
+        if (isInSelection(selectionBox, x, y)) {// don't search inside the area we are healing
             sumArray.array(id, Float.MAX_VALUE);
         } else {
-            float sum = 0f;
-            for (int i = 0; i < selectionXYList.length(); i++) {
-                var xy = selectionXYList.xy(i);
-                var rgb = rgbList.rgb(i);
-
-                int rgbFromImage = imageData.array(
-                        (y - selectionBox.y1()) * imageData.width + (x - selectionBox.x1()) + xy.y() * imageData.width + xy.x()
-                );
-                int dr = red(rgbFromImage) - rgb.r();
-                int dg = green(rgbFromImage) - rgb.g();
-                int db = blue(rgbFromImage) - rgb.b();
-                sum += dr * dr + dg * dg + db * db;
-            }
-            sumArray.array(id, sum);
+            sumArray.array(id,  getSum(imageData, selectionBox, selectionXYList, rgbList, x, y));
         }
     }
 
@@ -355,9 +335,9 @@ public class HealingBrush {
         int range = searchBoxWidth * searchBoxHeight;
 
         F32Array sumArray = F32Array.create(cc.accelerator, range);
-        Box selectionBox = Box.create(cc.accelerator,selectionPath.x1(),selectionPath.y1(),selectionPath.x2(),selectionPath.y2() );
+        Box selectionBox = Box.create(cc.accelerator, selectionPath.x1(), selectionPath.y1(), selectionPath.x2(), selectionPath.y2());
         XYList selectionXYList = selectionPath.xyList;
-        cc.dispatchKernel(range,kc -> bestKernel(kc, imageData, rgbList, searchBox, selectionBox, selectionXYList,sumArray));
+        cc.dispatchKernel(range, kc -> bestKernel(kc, imageData, rgbList, searchBox, selectionBox, selectionXYList, sumArray));
 
         float minSoFar = Float.MAX_VALUE;
         int id = range + 1;
@@ -397,36 +377,24 @@ public class HealingBrush {
             int x2 = Math.min(imageData.width, selectionPath.x2() + padx) - selectionPath.width();
             int y2 = Math.min(imageData.height, selectionPath.y2() + pady) - selectionPath.height();
             BoxImpl searchBox = new BoxImpl(x1, y1, x2, y2);
-
             long searchStart = System.currentTimeMillis();
-
-              /*
-                  float __attribute__((kernel)) bordercorrelation(uint32_t x, uint32_t y) {
-                    float sum = 0;
-                    for(int i = 0 ; i < borderLength; i++) {
-                       int2  coord = rsGetElementAt_int2(border_coords,i);
-                       float3 orig = convert_float3(rsGetElementAt_uchar4(image, coord.x + x, coord.y + y).xyz);
-                       float3 candidate = rsGetElementAt_float3(border, i).xyz;
-                       sum += distance(orig, candidate);
-                    }
-                    return sum;
-                  }
-               */
 
             boolean useOriginal = true;
             boolean useSequential = true;
             // if (useOriginal) {
             long originalStart = System.currentTimeMillis();
-            offset = original(imageData, rgbList, searchBox, selectionPath);
+            Box selectionBox = new BoxImpl(selectionPath.x1(), selectionPath.y1(), selectionPath.x2(), selectionPath.y2());
+            XYList selectionXYList = selectionPath.xyList;
+            offset = original(imageData, rgbList, searchBox, selectionBox, selectionXYList);
             System.out.println("original search " + (System.currentTimeMillis() - originalStart) + "ms");
             //  } else {
             //   if (useSequential) {
             long sequentialStart = System.currentTimeMillis();
-            offset = sequential(imageData, rgbList, searchBox, selectionPath);
+            offset = sequential(imageData, rgbList, searchBox, selectionBox, selectionXYList);
             System.out.println("sequential search " + (System.currentTimeMillis() - sequentialStart) + "ms");
             //    } else {
             long parallelStart = System.currentTimeMillis();
-            offset = parallel(imageData, rgbList, searchBox, selectionPath);
+            offset = parallel(imageData, rgbList, searchBox, selectionBox, selectionXYList);
             System.out.println("parallel search " + (System.currentTimeMillis() - parallelStart) + "ms");
             // }
 
