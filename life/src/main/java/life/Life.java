@@ -54,8 +54,10 @@ public class Life {
 
         ValueLayout  valueLayout = JAVA_INT;
         long headerOffset =JAVA_INT.byteOffset()*6;
-        default LifeData copyTo(int[] ints, long offset) {
-            MemorySegment.copy(Buffer.getMemorySegment(this), valueLayout, headerOffset+offset, ints, 0, length()/2);
+        default LifeData copySliceTo(int[] ints) {
+
+            long offset = headerOffset + ((long) generation() % 2) *width()*height()*valueLayout.byteOffset();
+            MemorySegment.copy(Buffer.getMemorySegment(this), valueLayout, headerOffset, ints, 0, length()/2);
             return this;
         }
     }

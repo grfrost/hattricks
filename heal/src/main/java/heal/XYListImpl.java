@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -45,81 +46,68 @@ package heal;
 
 import java.util.Arrays;
 
-class RGBArrayBackedList implements RGBList {
-    final static int STRIDE= 3;
-    final static int Ridx= 0;
-    final static int Gidx= 1;
-    final static int Bidx= 2;
-
-    int length;
-    int[] rgb;
+public class XYListImpl implements XYList {
+    final static int INIT= 32;
+    final static int STRIDE= 2;
+    final static int Xidx = 0;
+    final static int Yidx = 1;
+    private int length;
+    protected int[] xy = new int[INIT*STRIDE];
 
     @Override
-    public RGB rgb(long idx) {
-        return new RGB(this, (int)idx);
+    public XYList.XY xy(long idx) {
+        return new XY(this, (int) idx);
     }
 
     @Override
     public int length() {
         return length;
     }
+
     @Override
     public void length(int length) {
         throw new IllegalStateException("length immutable");
     }
 
-    static public class RGB implements RGBList.RGB{
-        RGBArrayBackedList rgbList;
-        final int idx;
-        RGB(RGBArrayBackedList rgbList, int idx){
-            this.rgbList = rgbList;
-            this.idx = idx;
-        }
-        @Override
-        public int r() {
-            return rgbList.rgb[idx*STRIDE+Ridx];
+    public static class XY implements XYList.XY{
+        final XYListImpl xyList;
+        final private int idx;
+        public XY(XYListImpl table, int idx) {
+            this.xyList=table;this.idx = idx;
         }
 
         @Override
-        public int g() {
-            return rgbList.rgb[idx*STRIDE+Gidx];
+        public int x() {
+            return xyList.xy[idx*STRIDE+ Xidx];
         }
 
         @Override
-        public int b() {
-                return rgbList.rgb[idx*STRIDE+Bidx];
+        public int y() {
+            return xyList.xy[idx*STRIDE+ Yidx];
+        }
+
+
+        @Override
+        public void y(int y) {
+            xyList.xy[idx*STRIDE+ Yidx] =y;
         }
 
         @Override
-        public void r(int r) {
-            rgbList.rgb[idx*STRIDE+Ridx]=r;
-        }
-
-        @Override
-        public void g(int g) {
-            rgbList.rgb[idx*STRIDE+Gidx]=g;
-        }
-
-        @Override
-        public void b(int b) {
-            rgbList.rgb[idx*STRIDE+Bidx]=b;
+        public void x(int x) {
+            xyList.xy[idx*STRIDE+ Yidx]=x;
         }
     }
-    void r(int idx, int r){
-        rgb[idx*STRIDE+Ridx]=r;
 
-    }
-    void g(int idx, int g){
-        rgb[idx*STRIDE+Gidx]=g;
 
-    }
-    void b(int idx, int b){
-        rgb[idx*STRIDE+Bidx]=b;
-
+    void add(int x,int y){
+        if (length*STRIDE>=xy.length){
+            xy = Arrays.copyOf(xy, xy.length*STRIDE);
+        }
+        xy[length*STRIDE+Xidx]=x;
+        xy[length*STRIDE+Yidx]=y;
+        length++;
     }
 
-    RGBArrayBackedList(int length){
-        this.rgb= new int[length*STRIDE];
-        this.length = length;
+    XYListImpl(){
     }
 }

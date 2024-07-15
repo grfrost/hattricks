@@ -89,7 +89,7 @@ public class HealingBrushDisplay extends Display {
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     try {
                         var ptDst =  transform.inverseTransform(e.getPoint(), null);
-                        selectionPath = new Path();
+                        selectionPath = new Path(new XYListImpl());
                         selectionPath.add((int)ptDst.getX(), (int) ptDst.getY());
                     } catch (NoninvertibleTransformException e1) {
                         e1.printStackTrace();

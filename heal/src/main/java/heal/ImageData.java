@@ -53,14 +53,20 @@ public class ImageData{
     final BufferedImage bufferedImage;
     final int width;
     final int height;
-    final int[] data;
+    final int[] arrayOfData;
 
+    int array(long idx){
+        return arrayOfData[(int)idx];
+    }
+    void array(long idx, int v){
+        arrayOfData[(int) idx]=v;
+    }
 
     private  ImageData(BufferedImage bufferedImage) {
         this.bufferedImage = bufferedImage;
         this.width=bufferedImage.getWidth();
         this.height=bufferedImage.getHeight();
-        this.data = ((DataBufferInt) (bufferedImage.getRaster().getDataBuffer())).getData();
+        this.arrayOfData = ((DataBufferInt) (bufferedImage.getRaster().getDataBuffer())).getData();
     }
     static BufferedImage to(BufferedImage originalImage, int type){
         BufferedImage image=null;
@@ -74,22 +80,17 @@ public class ImageData{
         return image;
     }
     static ImageData of(InputStream inputStream){
-
         try {
            return new ImageData(ImageData.to(ImageIO.read(inputStream),BufferedImage.TYPE_INT_RGB));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
-
-
     public int getXY(int x, int y) {
-        return this.data[y*this.width+x];
+        return this.array(y*this.width+x);
     }
 
     public void setXY(int x, int y, int rgb) {
-        this.data[y*this.width+x]=rgb;
+        this.array(y*this.width+x,rgb);
     }
-
-
 }

@@ -44,13 +44,13 @@
 package heal;
 
 import java.awt.Rectangle;
-import java.util.Arrays;
 
 public class Path  {
 
-    XYGrowableList xyList = new XYGrowableList();
+    final XYList xyList;
     private Rectangle bounds = new Rectangle(Integer.MAX_VALUE,Integer.MAX_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE);
-    Path(){
+    Path(XYList xyList){
+        this.xyList =xyList;
     }
 
     public void add(int x, int y){
@@ -58,13 +58,13 @@ public class Path  {
             XYList.XY lastxy = xyList.xy(xyList.length() - 1);
             add(lastxy.x(), lastxy.y(), x, y);
         }else{
-            xyList.add(x, y);
+            ( (XYListImpl)xyList).add(x, y);
             bounds.add(x,y);
         }
     }
     public Path close(){
-        add(xyList.xy[0], xyList.xy[1]);
-        xyList.xy = Arrays.copyOf(xyList.xy, xyList.length() * XYGrowableList.STRIDE);
+        var first = xyList.xy(0);
+        add(first.x(), first.y());
         return this;
     }
 
@@ -106,7 +106,8 @@ public class Path  {
         }
         int numerator = longest >> 1;
         for (int i = 0; i <= longest; i++) {
-            xyList.add(x, y);
+
+            ( (XYListImpl)xyList).add(x, y);
             bounds.add(x,y);
             numerator += shortest;
             if (numerator >= longest) {
@@ -119,5 +120,4 @@ public class Path  {
             }
         }
     }
-
 }

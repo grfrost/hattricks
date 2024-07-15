@@ -26,7 +26,6 @@ package heal;
 
 import hat.buffer.Buffer;
 import hat.buffer.BufferAllocator;
-import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
 import java.lang.invoke.MethodHandles;
