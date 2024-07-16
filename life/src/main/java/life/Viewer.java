@@ -13,6 +13,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferInt;
 
 public class Viewer extends JFrame {
@@ -21,6 +22,7 @@ public class Viewer extends JFrame {
     private final JScrollPane scrollPane;
     final JComponent viewer;
     final int [] intRasterData;
+    final byte [] byteRasterData;
     private final Object doorBell = new Object();
     private double scalex;
     private double scaley;
@@ -28,9 +30,19 @@ public class Viewer extends JFrame {
 
     Viewer(String title, Life.LifeData lifeData) {
         super(title);
-        this.image = new BufferedImage(lifeData.width(), lifeData.height(), BufferedImage.TYPE_INT_RGB);
-        this.intRasterData = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
         this.lifeData = lifeData;
+        if (lifeData instanceof Life.LifeDataInt) {
+            this.image = new BufferedImage(lifeData.width(), lifeData.height(), BufferedImage.TYPE_INT_RGB);
+            this.intRasterData = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+            this.byteRasterData = null;
+        }else if (lifeData instanceof Life.LifeDataByte) {
+            this.image =new BufferedImage(lifeData.width(), lifeData.height(), BufferedImage.TYPE_BYTE_GRAY);
+            this.byteRasterData = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+            this.intRasterData = null;
+        }else{
+            throw new RuntimeException("Unsupported life data type");
+        }
+
         this.scalex = 1;
         this.scaley = 1;
         this.viewer = new JComponent() {
@@ -43,7 +55,11 @@ public class Viewer extends JFrame {
                 super.paintComponent(g1d);
                 Graphics2D g2d = (Graphics2D) g1d;
                 g2d.scale(scalex, scaley);
-                lifeData.copySliceTo(intRasterData);
+                if (lifeData instanceof Life.LifeDataInt lifeDataInt) {
+                    lifeDataInt.copySliceTo(intRasterData);
+                }else  if (lifeData instanceof Life.LifeDataByte lifeDataByte) {
+                    lifeDataByte.copySliceTo(byteRasterData);
+                }
                 g2d.setBackground(Color.BLACK);
                 g2d.clearRect(0,0,this.getWidth(),this.getHeight());
                 g2d.drawImage(image, 0, 0, lifeData.width(), lifeData.height(), 0, 0, lifeData.width(), lifeData.height(), this);
