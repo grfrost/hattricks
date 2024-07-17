@@ -45,9 +45,12 @@
 
 package heal;
 
+import hat.Accelerator;
 import hat.ComputeContext;
 import hat.KernelContext;
 import hat.buffer.F32Array;
+import hat.buffer.S32Array;
+import hat.buffer.S32Array2D;
 
 import java.awt.Point;
 import java.lang.runtime.CodeReflection;
@@ -55,33 +58,6 @@ import java.util.stream.IntStream;
 
 /*
  From the original renderscript
-
- float3 __attribute__((kernel)) solve1(uchar in, uint32_t x, uint32_t y) {
-  if (in > 0) {
-     float3 k = getF32_3(dest1, x - 1, y);
-     k += getF32_3(dest1, x + 1, y);
-     k += getF32_3(dest1, x, y - 1);
-     k += getF32_3(dest1, x, y + 1);
-     k += getF32_3(laplace, x, y);
-     k /= 4;
-     return k;
-  }
-  return rsGetElementAt_float3(dest1, x, y);;
-}
-
-
-float3 __attribute__((kernel)) solve2(uchar in, uint32_t x, uint32_t y) {
-  if (in > 0) {
-    float3 k = getF32_3(dest2, x - 1, y);
-    k += getF32_3(dest2, x + 1, y);
-    k += getF32_3(dest2, x, y - 1);
-    k += getF32_3(dest2, x, y + 1);
-       k += getF32_3(laplace, x, y);
-       k /= 4;
-       return k;
-  }
-  return getF32_3(dest2, x, y);;
-}
 
 float3 __attribute__((kernel))extractBorder(int2 in) {
   return convert_float3(rsGetElementAt_uchar4(image, in.x, in.y).xyz);
@@ -98,7 +74,7 @@ float __attribute__((kernel)) bordercorrelation(uint32_t x, uint32_t y) {
   return sum;
 }
  */
-public class HealingBrush {
+public class SearchCompute {
     @CodeReflection
     static int red(int rgb) {
         return (rgb >> 16) & 0xff;
@@ -114,105 +90,15 @@ public class HealingBrush {
         return rgb & 0xff;
     }
 
-    @CodeReflection
-    static int rgb(int r, int g, int b) {
-        return ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
-    }
-
-
-    public static void heal(ImageData imageData, Path selectionPath, Point healPositionOffset) {
-
-        long start = System.currentTimeMillis();
-        Mask mask = new Mask(selectionPath);
-        var src = new int[mask.data.length];
-        var dest = new int[mask.data.length];
-
-        for (int i = 0; i < mask.data.length; i++) { //parallel
-            int x = i % mask.width;
-            int y = i / mask.width;
-            src[i] = imageData.getXY(selectionPath.x1() + x + healPositionOffset.x, selectionPath.y1() + y - 1 + healPositionOffset.y);
-            dest[i] = (mask.data[i] != 0)
-                    ? src[i]
-                    : imageData.getXY(+selectionPath.x1() + x, selectionPath.y1() + y - 1);
-        }
-
-        System.out.println("mask " + (System.currentTimeMillis() - start) + "ms");
-/*
-        int[] stencil = new int[]{-1, 1, -mask.width, mask.width};
-
-        int[] laplaced= new int[dest.length];
-
-        boolean laplacian = true;
-        if (laplacian) {
-            start = System.currentTimeMillis();
-
-            for (int p = 0; p < src.length; p++) { //parallel
-                int x = p % mask.width;
-                int y = p / mask.width;
-
-                    int r = 0, g = 0, b = 0;
-                if (x > 0 && x < mask.width - 1 && y > 0 && y < mask.height - 1) {
-                    for (int offset : stencil) {
-                        var v = src[p + offset];
-                        r += red(v);
-                        g += green(v);
-                        b += blue(v);
-                    }
-                }
-                    laplaced[p]=rgb(r, g, b);
-
-                }
-            }
-
-        System.out.println("laplacian " + (System.currentTimeMillis() - start) + "ms");
-        boolean solve = false;
-        if (solve) {
-
-            var tmp = new int[dest.length];
-            start = System.currentTimeMillis();
-            for (int i = 0; i < 500; i++) {
-                for (int p = 0; p < mask.width * mask.height; p++) { // parallel
-                    int x = p % mask.width;
-                    int y = p / mask.width;
-                    if (x > 0 && x < mask.width - 1 && y > 0 && y < mask.height - 1 && mask.data[p] != 0) {
-                     //   var rgb = rgbList.rgb(p);
-
-                        var r = red(laplaced[i]);//rgb.r();
-                        var g = green(laplaced[i]);//rgb.g();
-                        var b = blue(laplaced[i]);//rgb.b();
-                        for (int offset : stencil) {
-                            var v = dest[p + offset];
-                            r += red(v);
-                            g += green(v);
-                            b += blue(v);
-                        }
-                        tmp[p] = rgb((r + 2) / 4, (g + 2) / 4, (b + 2) / 4);
-                    }
-                }
-                var swap = tmp;
-                tmp = dest;
-                dest = swap;
-            }
-            System.out.println("solve " + (System.currentTimeMillis() - start) + "ms");
-        }
- */
-        start = System.currentTimeMillis();
-        for (int i = 0; i < mask.data.length; i++) { //parallel
-            int x = i % mask.width;
-            int y = i / mask.width;
-            imageData.setXY(selectionPath.x1() + x, selectionPath.y1() + y - 1, dest[i]);
-        }
-        System.out.println("heal2 " + (System.currentTimeMillis() - start) + "ms");
-    }
 
     @CodeReflection
-    public static float getSum(ImageData imageData, Box selectionBox, XYList selectionXYList, RGBList selectionRgbList, int x, int y) {
-        int offset = (y - selectionBox.y1()) * imageData.width + (x - selectionBox.x1());
+    public static float getSum(S32Array2D imageData, Box selectionBox, XYList selectionXYList, RGBList selectionRgbList, int x, int y) {
+        int offset = (y - selectionBox.y1()) * imageData.width() + (x - selectionBox.x1());
         float sum = 0;
         for (int i = 0; i < selectionXYList.length(); i++) {
             var xy = selectionXYList.xy(i);
             var rgb = selectionRgbList.rgb(i);
-            int rgbFromImage = imageData.array(offset + xy.y() * imageData.width + xy.x());
+            int rgbFromImage = imageData.array(offset + xy.y() * imageData.width() + xy.x());
             int dr = red(rgbFromImage) - rgb.r();
             int dg = green(rgbFromImage) - rgb.g();
             int db = blue(rgbFromImage) - rgb.b();
@@ -220,7 +106,7 @@ public class HealingBrush {
         }
         return sum;
     }
-
+    @CodeReflection
     public static boolean isInSelection(Box selectionBox, int x, int y) {
         int selectionBoxWidth = selectionBox.x2() - selectionBox.x1();
         int selectionBoxHeight = selectionBox.y2() - selectionBox.y1();
@@ -311,7 +197,7 @@ public class HealingBrush {
        */
     @CodeReflection
     public static void bestKernel(KernelContext kc,
-                                  ImageData imageData,
+                                  S32Array2D s32Array2D,
                                   RGBList rgbList,
                                   Box searchBox,
                                   Box selectionBox,
@@ -324,20 +210,23 @@ public class HealingBrush {
         if (isInSelection(selectionBox, x, y)) {// don't search inside the area we are healing
             sumArray.array(id, Float.MAX_VALUE);
         } else {
-            sumArray.array(id,  getSum(imageData, selectionBox, selectionXYList, rgbList, x, y));
+            sumArray.array(id,  getSum(s32Array2D, selectionBox, selectionXYList, rgbList, x, y));
         }
     }
 
     @CodeReflection
-    public static Point bestCompute(ComputeContext cc, ImageData imageData, RGBList rgbList, Box searchBox, Path selectionPath) {
+    public static void  bestCompute(ComputeContext cc,
+                                  S32Array2D s32Array2D,  RGBList rgbList,
+                                    Box searchBox, Box selectionBox, XYList selectionXYList, XY result){
+
         int searchBoxWidth = searchBox.x2() - searchBox.x1();
         int searchBoxHeight = searchBox.y2() - searchBox.y1();
         int range = searchBoxWidth * searchBoxHeight;
 
         F32Array sumArray = F32Array.create(cc.accelerator, range);
-        Box selectionBox = Box.create(cc.accelerator, selectionPath.x1(), selectionPath.y1(), selectionPath.x2(), selectionPath.y2());
-        XYList selectionXYList = selectionPath.xyList;
-        cc.dispatchKernel(range, kc -> bestKernel(kc, imageData, rgbList, searchBox, selectionBox, selectionXYList, sumArray));
+
+        cc.dispatchKernel(range,
+                kc -> bestKernel(kc,  s32Array2D,rgbList, searchBox, selectionBox, selectionXYList, sumArray));
 
         float minSoFar = Float.MAX_VALUE;
         int id = range + 1;
@@ -350,10 +239,12 @@ public class HealingBrush {
         }
         int x = searchBox.x1() + (id % searchBoxWidth);
         int y = searchBox.y1() + (id / searchBoxWidth);
-        return new Point(x - selectionPath.x1(), y - selectionPath.y1());
+        result.x(x - selectionBox.x1());
+        result.y(y - selectionBox.y1());
+        //return new Point(x - selectionBox.x1(), y - selectionBox.y1());
     }
 
-    public static Point getOffsetOfBestMatch(ImageData imageData, Path selectionPath) {
+    public static Point getOffsetOfBestMatch(Accelerator accelerator,ImageData imageData, Path selectionPath) {
         Point offset = null;
         if (selectionPath.xyList.length() != 0) {
             /*
@@ -363,7 +254,7 @@ public class HealingBrush {
             RGBListImpl rgbList = new RGBListImpl();
             for (int i = 0; i < selectionPath.xyList.length(); i++) {
                 XYList.XY xy = selectionPath.xyList.xy(i);
-                rgbList.addRGB(imageData.array(xy.y() * imageData.width + xy.x()));
+                rgbList.addRGB(imageData.array(xy.y() * imageData.width() + xy.x()));
             }
 
             /*
@@ -374,8 +265,8 @@ public class HealingBrush {
             int pady = selectionPath.height() * pad;
             int x1 = Math.max(0, selectionPath.x1() - padx);
             int y1 = Math.max(0, selectionPath.y1() - pady);
-            int x2 = Math.min(imageData.width, selectionPath.x2() + padx) - selectionPath.width();
-            int y2 = Math.min(imageData.height, selectionPath.y2() + pady) - selectionPath.height();
+            int x2 = Math.min(imageData.width(), selectionPath.x2() + padx) - selectionPath.width();
+            int y2 = Math.min(imageData.height(), selectionPath.y2() + pady) - selectionPath.height();
             BoxImpl searchBox = new BoxImpl(x1, y1, x2, y2);
             long searchStart = System.currentTimeMillis();
 
@@ -397,6 +288,39 @@ public class HealingBrush {
             offset = parallel(imageData, rgbList, searchBox, selectionBox, selectionXYList);
             System.out.println("parallel search " + (System.currentTimeMillis() - parallelStart) + "ms");
             // }
+
+            //All data passed to accelerator needs to be iface mapped segments
+            RGBList mappedRGBList = RGBList.create(accelerator,rgbList.length);
+            for (int i=0;i<rgbList.length; i++){
+                var from = rgbList.rgb(i);
+                var to = mappedRGBList.rgb(i);
+                to.r(from.r());
+                to.g(from.g());
+                to.b(from.b());
+            }
+
+            Box  mappedSearchBox = Box.create(accelerator, searchBox.x1(),searchBox.y1(),searchBox.x2(),searchBox.y2());
+            Box  mappedSelectionBox = Box.create(accelerator, selectionPath.x1(),selectionPath.y1(),selectionPath.x2(),selectionPath.y2());
+            XY result = XY.create(accelerator,0,0);
+
+            XYList  mappedSelectionXYList = XYList.create(accelerator,selectionPath.xyList.length());
+            for (int i=0;i<mappedSelectionXYList.length();i++){
+                var from = selectionPath.xyList.xy(i);
+                var to = mappedSelectionXYList.xy(i);
+                to.x(from.x());
+                to.y(from.y());
+            }
+            S32Array2D s32Array2D = S32Array2D.create(accelerator,imageData.width(),imageData.height());
+            s32Array2D.copyFrom(imageData.arrayOfData);
+            long hatStart = System.currentTimeMillis();
+            accelerator.compute(cc->SearchCompute.bestCompute(cc,s32Array2D,mappedRGBList,mappedSearchBox,
+                    mappedSelectionBox,
+                    mappedSelectionXYList,
+                    result
+            ));
+
+            System.out.println("offset "+offset+ " result"+result.x()+","+result.y());
+            System.out.println("hat search " + (System.currentTimeMillis() - hatStart) + "ms");
 
 
             System.out.println("total search " + (System.currentTimeMillis() - searchStart) + "ms");

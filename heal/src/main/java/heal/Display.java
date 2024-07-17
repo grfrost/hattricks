@@ -119,7 +119,7 @@ public abstract class Display extends JPanel implements MouseListener, MouseMoti
             try {
                 imageRelativeMovePosition = transform.inverseTransform(e.getPoint(), null);
                 Dimension displaySize = getSize();
-                Dimension imageSize = new Dimension( imageData.width,imageData.height);
+                Dimension imageSize = new Dimension( imageData.width(),imageData.height());
                 float scale = zoom *
                         Math.min(displaySize.width / (float) imageSize.width,
                                 displaySize.height / (float) imageSize.height);
@@ -148,7 +148,7 @@ public abstract class Display extends JPanel implements MouseListener, MouseMoti
         g2d.fillRect(0, 0, getWidth(), getHeight());
         if (imageData != null) {
             Dimension displaySize = getSize();
-            Dimension imageSize = new Dimension( imageData.width,imageData.height);
+            Dimension imageSize = new Dimension( imageData.width(),imageData.height());
             AffineTransform safeTransform = g2d.getTransform();
             transform.setToIdentity();
             double scale = zoom *

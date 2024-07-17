@@ -31,30 +31,24 @@ import hat.ifacemapper.Schema;
 
 import java.lang.invoke.MethodHandles;
 
-public interface XYList extends Buffer {
-    interface XY extends Buffer.Struct{
-        int x();
-        int y();
-        void y(int y);
-        void x(int x);
-    }
-    int length();
-    void length(int length );
-    XY xy(long idx);
+public interface XY extends Buffer {
 
-    Schema<XYList> schema= Schema.of(XYList.class, s->s
-            .arrayLen("length")
-            .array("xy", xy->xy
-                    .fields("x","y")
-            )
-    );
+    int x();
 
-    static XYList create(MethodHandles.Lookup lookup,BufferAllocator bufferAllocator, int length) {
-        XYList table = schema.allocate(lookup,bufferAllocator,length);
-        table.length(length);
-        return table;
+    void x(int x);
+
+    int y();
+    void y(int y);
+
+    Schema<XY> schema = Schema.of(XY.class, s -> s.fields("x", "y"));
+
+    static XY create(MethodHandles.Lookup lookup, BufferAllocator bufferAllocator, int x,int y) {
+        XY xy = schema.allocate(lookup, bufferAllocator);
+        xy.x(x);
+        xy.y(y);
+        return xy;
     }
-    static XYList create(Accelerator accelerator, int length) {
-        return create(accelerator.lookup,accelerator,length);
+    static XY create(Accelerator accelerator, int x, int y) {
+       return create(accelerator.lookup,accelerator,x,y);
     }
 }

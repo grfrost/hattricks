@@ -24,6 +24,7 @@
  */
 package heal;
 
+import hat.Accelerator;
 import hat.buffer.Buffer;
 import hat.buffer.BufferAllocator;
 import hat.ifacemapper.Schema;
@@ -54,5 +55,8 @@ public interface RGBList extends Buffer {
         RGBList table = schema.allocate(lookup,bufferAllocator,length);
         table.length(length);
         return table;
+    }
+    static RGBList create(Accelerator accelerator, int length) {
+        return create(accelerator.lookup,accelerator,length);
     }
 }

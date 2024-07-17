@@ -43,29 +43,59 @@
  */
 package heal;
 
+import hat.buffer.S32Array;
+import hat.buffer.S32Array2D;
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class ImageData{
+public class ImageData implements S32Array2D {
     final BufferedImage bufferedImage;
-    final int width;
-    final int height;
+     int widthField;
+     int heightField;
     final int[] arrayOfData;
 
-    int array(long idx){
+    @Override
+    public int width() {
+        return widthField;
+    }
+
+    @Override
+    public void width(int width) {
+        this.widthField = width;
+    }
+
+    @Override
+    public int height() {
+        return heightField;
+    }
+
+    @Override
+    public void height(int height) {
+        this.heightField = height;
+    }
+
+    public int length() {
+        return width()*height();
+    }
+
+
+    @Override
+    public int array(long idx){
         return arrayOfData[(int)idx];
     }
-    void array(long idx, int v){
+    @Override
+    public void array(long idx, int v){
         arrayOfData[(int) idx]=v;
     }
 
     private  ImageData(BufferedImage bufferedImage) {
         this.bufferedImage = bufferedImage;
-        this.width=bufferedImage.getWidth();
-        this.height=bufferedImage.getHeight();
+        this.widthField=bufferedImage.getWidth();
+        this.heightField=bufferedImage.getHeight();
         this.arrayOfData = ((DataBufferInt) (bufferedImage.getRaster().getDataBuffer())).getData();
     }
     static BufferedImage to(BufferedImage originalImage, int type){
@@ -87,10 +117,10 @@ public class ImageData{
         }
     }
     public int getXY(int x, int y) {
-        return this.array(y*this.width+x);
+        return this.array(y*this.widthField+x);
     }
 
     public void setXY(int x, int y, int rgb) {
-        this.array(y*this.width+x,rgb);
+        this.array(y*this.widthField+x,rgb);
     }
 }

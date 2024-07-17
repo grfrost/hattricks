@@ -43,14 +43,14 @@
  */
 package heal;
 
-import javax.swing.JFrame;
+import hat.Accelerator;
+
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Polygon;
-import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -58,18 +58,19 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.NoninvertibleTransformException;
 
-public class HealingBrushDisplay extends Display {
+public class Viewer extends Display {
     volatile Path selectionPath = null;
     volatile  Point bestMatchOffset = null;
-
-    public HealingBrushDisplay(ImageData imageData) {
+    public final Accelerator accelerator;
+    public Viewer(ImageData imageData, Accelerator accelerator) {
         super(imageData);
+        this.accelerator = accelerator;
         addMouseListener(new MouseAdapter() {
            @Override
             public void mouseReleased(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
-                    bestMatchOffset = HealingBrush.getOffsetOfBestMatch(imageData, selectionPath.close());
-                    HealingBrush.heal(imageData,selectionPath, bestMatchOffset);
+                    bestMatchOffset = SearchCompute.getOffsetOfBestMatch(accelerator, imageData, selectionPath.close());
+                    HealCompute.heal(accelerator,imageData,selectionPath, bestMatchOffset);
                     Timer t = new Timer(1000, new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent e) {
@@ -132,18 +133,5 @@ public class HealingBrushDisplay extends Display {
                 g.drawPolygon(solutionPolygon);
             }
         }
-    }
-    public static void main(String[] args) {
-        ImageData imageData = ImageData.of(
-                HealingBrushDisplay.class.getResourceAsStream("/images/bolton.png")
-        );
-        JFrame f = new JFrame("Healing Brush");
-        f.setBounds(new Rectangle(imageData.width, imageData.height));
-        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        HealingBrushDisplay healingBrushDisplay = new HealingBrushDisplay(imageData);
-        f.setContentPane(healingBrushDisplay);
-        f.validate();
-        f.setVisible(true);
-
     }
 }
