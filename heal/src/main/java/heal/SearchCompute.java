@@ -215,6 +215,20 @@ public class SearchCompute {
     }
 
     @CodeReflection
+    public static int getMinIdx(float[] sumArray){
+        float minSoFar = Float.MAX_VALUE;
+        int id = sumArray.length;
+        for (int i = 0; i < sumArray.length; i++) {
+            float value = sumArray[i];
+            if (value < minSoFar) {
+                id = i;
+                minSoFar = value;
+            }
+        }
+        return id;
+    }
+
+    @CodeReflection
     public static void  bestCompute(ComputeContext cc,
                                   S32Array2D s32Array2D,  RGBList rgbList,
                                     Box searchBox, Box selectionBox, XYList selectionXYList, XY result){
@@ -223,20 +237,16 @@ public class SearchCompute {
         int searchBoxHeight = searchBox.y2() - searchBox.y1();
         int range = searchBoxWidth * searchBoxHeight;
 
-        F32Array sumArray = F32Array.create(cc.accelerator, range);
+        F32Array sumArrayF32 = F32Array.create(cc.accelerator, range);
 
         cc.dispatchKernel(range,
-                kc -> bestKernel(kc,  s32Array2D,rgbList, searchBox, selectionBox, selectionXYList, sumArray));
+                kc -> bestKernel(kc,  s32Array2D,rgbList, searchBox, selectionBox, selectionXYList, sumArrayF32));
 
-        float minSoFar = Float.MAX_VALUE;
-        int id = range + 1;
-        for (int i = 0; i < range; i++) {
-            float value = sumArray.array(i);
-            if (value < minSoFar) {
-                id = i;
-                minSoFar = value;
-            }
-        }
+        float[] sumArray = new float[range];
+        sumArrayF32.copyTo(sumArray);
+        int id = getMinIdx(sumArray);
+
+
         int x = searchBox.x1() + (id % searchBoxWidth);
         int y = searchBox.y1() + (id / searchBoxWidth);
         result.x(x - selectionBox.x1());
