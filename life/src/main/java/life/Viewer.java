@@ -14,64 +14,44 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.awt.image.DataBufferInt;
 
 public class Viewer extends JFrame {
-    public final Life.LifeData lifeData;
+    public final LifeSupport lifeSupport;
+    public final LifeData lifeData;
     private final BufferedImage image;
     private final JScrollPane scrollPane;
     final JComponent viewer;
-    final int [] intRasterData;
-    final byte [] byteRasterData;
+    final byte [] rasterData;
     private final Object doorBell = new Object();
-    private double scalex;
-    private double scaley;
+    private double scale;
+
     private Point to = null;
 
-    Viewer(String title, Life.LifeData lifeData) {
+    Viewer(String title, LifeSupport lifeSupport, LifeData lifeData) {
         super(title);
+        this.lifeSupport = lifeSupport;
         this.lifeData = lifeData;
-        if (lifeData instanceof Life.LifeDataInt) {
-            this.image = new BufferedImage(lifeData.width(), lifeData.height(), BufferedImage.TYPE_INT_RGB);
-            this.intRasterData = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
-            this.byteRasterData = null;
-        }else if (lifeData instanceof Life.LifeDataByte) {
-            this.image =new BufferedImage(lifeData.width(), lifeData.height(), BufferedImage.TYPE_BYTE_GRAY);
-            this.byteRasterData = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
-            this.intRasterData = null;
-        }else{
-            throw new RuntimeException("Unsupported life data type");
-        }
-
-        this.scalex = 1;
-        this.scaley = 1;
+        this.image =new BufferedImage(lifeData.width(), lifeData.height(), BufferedImage.TYPE_BYTE_GRAY);
+        this.rasterData = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+        this.scale = 1;
         this.viewer = new JComponent() {
             @Override
             public Dimension getPreferredSize() {
-                return new Dimension((int)(image.getWidth()*scalex), (int)(image.getHeight()*scalex));
+                return new Dimension((int)(image.getWidth()*scale), (int)(image.getHeight()*scale));
             }
             @Override
             public void paintComponent(Graphics g1d) {
                 super.paintComponent(g1d);
                 Graphics2D g2d = (Graphics2D) g1d;
-                g2d.scale(scalex, scaley);
-                if (lifeData instanceof Life.LifeDataInt lifeDataInt) {
-                    lifeDataInt.copySliceTo(intRasterData);
-                }else  if (lifeData instanceof Life.LifeDataByte lifeDataByte) {
-                    lifeDataByte.copySliceTo(byteRasterData);
-                }
+                g2d.scale(scale, scale);
+                lifeData.copySliceTo(rasterData, lifeSupport.to());
                 g2d.setBackground(Color.BLACK);
                 g2d.clearRect(0,0,this.getWidth(),this.getHeight());
                 g2d.drawImage(image, 0, 0, lifeData.width(), lifeData.height(), 0, 0, lifeData.width(), lifeData.height(), this);
                 g2d.dispose();
             }
         };
-        this.scrollPane = new JScrollPane(this.viewer) {
-            public void paintComponent(Graphics g) {
-                super.paintComponent(g);
-            }
-        };
-
+        this.scrollPane = new JScrollPane(this.viewer);
         viewer.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -82,14 +62,8 @@ public class Viewer extends JFrame {
             }
         });
         viewer.addMouseWheelListener( e -> {
-                if (e.getWheelRotation() < 0) {
-                    this.scalex *= 1.1;
-                    this.scaley *= 1.1;
-                } else {
-                    this.scalex *= 1 / 1.1;
-                    this.scaley *= 1 / 1.1;
-                }
-            Viewer.this.viewer.setSize(new Dimension((int) (image.getWidth()*scalex), (int) (image.getHeight()*scaley)));
+            this.scale = (e.getWheelRotation() < 0)?this.scale * 1.1:scale * 1 / 1.1;
+            Viewer.this.viewer.setSize(new Dimension((int) (image.getWidth()*scale), (int) (image.getHeight()*scale)));
             scrollPane.setViewportView(Viewer.this.viewer);
         });
         this.getContentPane().add(this.scrollPane);
@@ -103,8 +77,6 @@ public class Viewer extends JFrame {
             }
         });
     }
-
-
     public void waitForDoorbell() {
         while (to == null) {
             synchronized (doorBell) {
@@ -115,5 +87,9 @@ public class Viewer extends JFrame {
                 }
             }
         }
+    }
+
+    public void update() {
+        viewer.repaint();
     }
 }
