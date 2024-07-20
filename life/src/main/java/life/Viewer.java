@@ -16,8 +16,8 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 
 public class Viewer extends JFrame {
-    public final LifeSupport lifeSupport;
-    public final LifeData lifeData;
+    public final Life.Control control;
+    public final Life.CellGrid cellGrid;
     private final BufferedImage image;
     private final JScrollPane scrollPane;
     final JComponent viewer;
@@ -27,11 +27,11 @@ public class Viewer extends JFrame {
 
     private Point to = null;
 
-    Viewer(String title, LifeSupport lifeSupport, LifeData lifeData) {
+    Viewer(String title, Life.Control control, Life.CellGrid cellGrid) {
         super(title);
-        this.lifeSupport = lifeSupport;
-        this.lifeData = lifeData;
-        this.image =new BufferedImage(lifeData.width(), lifeData.height(), BufferedImage.TYPE_BYTE_GRAY);
+        this.control = control;
+        this.cellGrid = cellGrid;
+        this.image =new BufferedImage(cellGrid.width(), cellGrid.height(), BufferedImage.TYPE_BYTE_GRAY);
         this.rasterData = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
         this.scale = 1;
         this.viewer = new JComponent() {
@@ -44,10 +44,10 @@ public class Viewer extends JFrame {
                 super.paintComponent(g1d);
                 Graphics2D g2d = (Graphics2D) g1d;
                 g2d.scale(scale, scale);
-                lifeData.copySliceTo(rasterData, lifeSupport.to());
+                cellGrid.copySliceTo(rasterData, control.to());
                 g2d.setBackground(Color.BLACK);
                 g2d.clearRect(0,0,this.getWidth(),this.getHeight());
-                g2d.drawImage(image, 0, 0, lifeData.width(), lifeData.height(), 0, 0, lifeData.width(), lifeData.height(), this);
+                g2d.drawImage(image, 0, 0, cellGrid.width(), cellGrid.height(), 0, 0, cellGrid.width(), cellGrid.height(), this);
                 g2d.dispose();
             }
         };

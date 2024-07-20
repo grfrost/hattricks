@@ -49,12 +49,9 @@ public interface XYList extends Buffer {
             )
     );
 
-    static XYList create(MethodHandles.Lookup lookup,BufferAllocator bufferAllocator, int length) {
-        XYList table = schema.allocate(lookup,bufferAllocator,length);
+    static XYList create(Accelerator accelerator, int length) {
+        XYList table = schema.allocate(accelerator,length);
         table.length(length);
         return table;
-    }
-    static XYList create(Accelerator accelerator, int length) {
-        return create(accelerator.lookup,accelerator,length);
     }
 }

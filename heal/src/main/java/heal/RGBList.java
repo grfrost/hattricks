@@ -51,12 +51,9 @@ public interface RGBList extends Buffer {
             )
     );
 
-    static RGBList create(MethodHandles.Lookup lookup, BufferAllocator bufferAllocator, int length) {
-        RGBList table = schema.allocate(lookup,bufferAllocator,length);
+    static RGBList create(Accelerator accelerator, int length) {
+        RGBList table = schema.allocate(accelerator,length);
         table.length(length);
         return table;
-    }
-    static RGBList create(Accelerator accelerator, int length) {
-        return create(accelerator.lookup,accelerator,length);
     }
 }

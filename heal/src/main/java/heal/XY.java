@@ -42,13 +42,10 @@ public interface XY extends Buffer {
 
     Schema<XY> schema = Schema.of(XY.class, s -> s.fields("x", "y"));
 
-    static XY create(MethodHandles.Lookup lookup, BufferAllocator bufferAllocator, int x,int y) {
-        XY xy = schema.allocate(lookup, bufferAllocator);
+    static XY create(Accelerator accelerator, int x,int y) {
+        XY xy = schema.allocate(accelerator);
         xy.x(x);
         xy.y(y);
         return xy;
-    }
-    static XY create(Accelerator accelerator, int x, int y) {
-       return create(accelerator.lookup,accelerator,x,y);
     }
 }
