@@ -41,7 +41,6 @@ public interface RGBList extends Buffer {
         void b(int b);
     }
     int length();
-    void length(int length );
     RGB rgb(long idx);
 
     Schema<RGBList> schema= Schema.of(RGBList.class, s->s
@@ -52,8 +51,6 @@ public interface RGBList extends Buffer {
     );
 
     static RGBList create(Accelerator accelerator, int length) {
-        RGBList table = schema.allocate(accelerator,length);
-        table.length(length);
-        return table;
+        return schema.allocate(accelerator,length);
     }
 }

@@ -64,11 +64,6 @@ public class XYListImpl implements XYList {
         return length;
     }
 
-    @Override
-    public void length(int length) {
-        throw new IllegalStateException("length immutable");
-    }
-
     public static class XY implements XYList.XY{
         final XYListImpl xyList;
         final private int idx;

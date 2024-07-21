@@ -22,27 +22,18 @@ public class Life {
     public interface CellGrid extends Buffer {
         int width();
 
-        void width(int width);
-
         int height();
-
-        void height(int height);
 
         byte cell(long idx);
 
         void cell(long idx, byte b);
 
         Schema<CellGrid> schema = Schema.of(CellGrid.class, lifeData -> lifeData
-                .arrayLen("width", "height")
-                .stride(2)
-                .array("cell")
+                .arrayLen("width", "height").stride(2).array("cell")
         );
 
         static CellGrid create(Accelerator accelerator, int width, int height) {
-            var instance = schema.allocate(accelerator, width,height);
-            instance.width(width);
-            instance.height(height);
-            return instance;
+            return schema.allocate(accelerator, width,height);
         }
 
         ValueLayout valueLayout = JAVA_BYTE;

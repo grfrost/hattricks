@@ -64,10 +64,7 @@ class RGBListImpl implements RGBList {
     public int length() {
         return length;
     }
-    @Override
-    public void length(int length) {
-        throw new IllegalStateException("length immutable");
-    }
+
 
     static public class RGB implements RGBList.RGB{
         RGBListImpl rgbList;

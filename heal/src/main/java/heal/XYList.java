@@ -39,7 +39,7 @@ public interface XYList extends Buffer {
         void x(int x);
     }
     int length();
-    void length(int length );
+  //  void length(int length );
     XY xy(long idx);
 
     Schema<XYList> schema= Schema.of(XYList.class, s->s
@@ -50,8 +50,6 @@ public interface XYList extends Buffer {
     );
 
     static XYList create(Accelerator accelerator, int length) {
-        XYList table = schema.allocate(accelerator,length);
-        table.length(length);
-        return table;
+        return  schema.allocate(accelerator,length);
     }
 }

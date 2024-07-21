@@ -32,11 +32,8 @@ import hat.ifacemapper.Schema;
 import java.lang.invoke.MethodHandles;
 
 public interface XY extends Buffer {
-
     int x();
-
     void x(int x);
-
     int y();
     void y(int y);
 
