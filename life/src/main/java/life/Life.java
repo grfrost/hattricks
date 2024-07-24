@@ -121,23 +121,18 @@ public class Life {
         Control control = Control.create(accelerator, cellGrid);
         final Viewer viewer = new Viewer("Life", control, cellGrid);
         viewer.update();
-        viewer.waitForDoorbell();
+        viewer.waitForStart();
 
         final long startMillis = System.currentTimeMillis();
 
         for (int generation = 0; generation < Integer.MAX_VALUE; generation++) {
             accelerator.compute(cc -> Compute.compute(cc, control, cellGrid));
-
             //swap from/to
             int tmp = control.from();
             control.from(control.to());
             control.to(tmp);
-
-            viewer.update();
-
             long elapsedMs = System.currentTimeMillis() - startMillis;
-            System.out.println("Generation = " + generation
-                    + " generations/sec = " + ((generation * 1000f) / elapsedMs));
+            viewer.setGeneration(generation, ((generation * 1000f) / elapsedMs));
         }
     }
 }
