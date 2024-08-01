@@ -11,15 +11,6 @@ import hat.ifacemapper.Schema;
 import java.lang.invoke.MethodHandles;
 import java.lang.runtime.CodeReflection;
 
-import static chess.Main.ChessData.Board.BISHOP;
-import static chess.Main.ChessData.Board.BLACK_BIT;
-import static chess.Main.ChessData.Board.EMPTY;
-import static chess.Main.ChessData.Board.HOME_BIT;
-import static chess.Main.ChessData.Board.KING;
-import static chess.Main.ChessData.Board.KNIGHT;
-import static chess.Main.ChessData.Board.PAWN;
-import static chess.Main.ChessData.Board.QUEEN;
-import static chess.Main.ChessData.Board.ROOK;
 import static chess.Main.ChessData.Board.WHITE_BIT;
 
 
@@ -46,31 +37,99 @@ public class Main {
             this.seq = seq;
         }
 
-        public String fg(String string){
-            return "\u001b[" + FG+seq + "m"+string+"\u001b[" + FG+ "0m";
-        }
-        public String bg(String string){
-            return "\u001b[" + BG+seq + "m"+string+"\u001b[" + BG+  "0m";
-        }
-        public String fg(char ch){
-            return "\u001b[" + FG+seq + "m"+ch+"\u001b[" + FG+ "0m";
-        }
-        public String bg(char ch){
-            return "\u001b[" + BG+seq + "m"+ch+"\u001b[" + BG+  "0m";
+        public String fg(String string) {
+            return "\u001b[" + FG + seq + "m" + string + "\u001b[" + FG + "0m";
         }
 
+        public String bg(String string) {
+            return "\u001b[" + BG + seq + "m" + string + "\u001b[" + BG + "0m";
+        }
+
+        public String fg(char ch) {
+            return "\u001b[" + FG + seq + "m" + ch + "\u001b[" + FG + "0m";
+        }
+
+        public String bg(char ch) {
+            return "\u001b[" + BG + seq + "m" + ch + "\u001b[" + BG + "0m";
+        }
+    }
+
+    enum PIECE {
+        EMPTY(0,' ', ' '),
+        PAWN(1,'\u2659', '\u265f'),
+        KNIGHT(2,'\u2658', '\u265e'),
+        BISHOP(3,'\u2657', '\u265d'),
+        ROOK(4,'\u2656', '\u265c'),
+        QUEEN(6,'\u2655', '\u265b'),
+        KING(7,'\u2654', '\u265a');
+
+        static boolean isPawn(int square) {
+            return PAWN.is(square);
+        }
+
+        static boolean isKnight(int square) {
+            return KING.is(square);
+        }
+
+        static boolean isBishop(int square) {
+            return (BISHOP.is(square));
+        }
+
+        static boolean isRook(int square) {
+            return  ROOK.is(square);
+        }
+
+        static boolean isKing(int square) {
+            return (KING.is(square));
+        }
+
+        static boolean isQueen(int square) {
+            return (QUEEN.is(square));
+        }
+
+        public  final char whiteUnicode;
+        public final char blackUnicode;
+        public final int value;
+
+        PIECE(int value, char whiteUnicode, char blackUnicode) {
+            this.value = value;
+            this.whiteUnicode = whiteUnicode;
+            this.blackUnicode = blackUnicode;
+        }
+
+        public boolean is(int square) {
+            return ((square & 0xf) == value);
+        }
+
+        static public boolean isWhite(int square){
+            return ((square & WHITE_BIT) == WHITE_BIT);
+        }
+
+         public char unicode(int square){
+            return isWhite(square)?whiteUnicode:blackUnicode;
+        }
+
+        static public PIECE of(int bits) {
+            if (isKing(bits)) return PIECE.KING;
+            else if (isQueen(bits)) return PIECE.QUEEN;
+            else if (isRook(bits)) return PIECE.ROOK;
+            else if (isBishop(bits)) return PIECE.BISHOP;
+            else if (isKnight(bits)) return PIECE.KNIGHT;
+            else if (isPawn(bits)) return PIECE.PAWN;
+            else return EMPTY;
+        }
     }
 
 
     public interface ChessData extends Buffer {
          interface Board extends Buffer.Struct {
-            byte EMPTY = (byte) 0x00;
-            byte PAWN = (byte) 0x01;
-            byte KNIGHT = (byte) 0x02;
-            byte BISHOP = (byte) 0x03;
-            byte ROOK = (byte) 0x04;
-            byte QUEEN = (byte) 0x06;
-            byte KING = (byte) 0x07;
+            byte EMPTY = (byte) PIECE.EMPTY.value;
+            byte PAWN = (byte) PIECE.PAWN.value;
+            byte KNIGHT = (byte) PIECE.KNIGHT.value;
+            byte BISHOP = (byte) PIECE.BISHOP.value;
+            byte ROOK = (byte) PIECE.ROOK.value;
+            byte QUEEN = (byte) PIECE.QUEEN.value;
+            byte KING = (byte) PIECE.KING.value;
             byte HOME_BIT = (byte) 0x80;
             byte WHITE_BIT = (byte) 0x40;
             byte BLACK_BIT = (byte) 0x20;
@@ -123,6 +182,7 @@ public class Main {
                  square((long)(7 * 8) + 4, (byte)(KING|WHITE_BIT|HOME_BIT));
                  return this;
              }
+
             default String asString() {
                 StringBuilder stringBuilder = new StringBuilder();
                 stringBuilder.append("   | 1  2  3  4  5  6  7  8 |").append('\n');
@@ -131,29 +191,13 @@ public class Main {
                     stringBuilder.append(' ').append(ch).append(' ').append('|');
                     for (int col = 0; col < 8; col++) {
                         byte square = this.square(row * 8 + col);
-
                         var background = ((col+row) % 2 == 0)?TerminalColors.BLACK: TerminalColors.DARKGREY;
+                        String backGroundChar = background.bg(" ");
                        // stringBuilder.append(color);
                         //https://en.wikipedia.org/wiki/Chess_symbols_in_Unicode
-                        stringBuilder.append(background.bg(" "));
-                        if (square == EMPTY) {
-                            stringBuilder.append(background.bg(" "));
-                        }else if ((square&0xf) == PAWN) {
-                                stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2659':'\u265f'));
-                        }else if ((square&0xf) == ROOK) {
-                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2656':'\u265c'));
-                        }else if ((square&0xf) == BISHOP) {
-                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2657':'\u265D'));
-                        }else if ((square&0xf) == KNIGHT) {
-                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2658':'\u265e'));
-                        }else if ((square&0xf) == QUEEN) {
-                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2655':'\u265b'));
-                        }else if ((square&0xf) == KING) {
-                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2654':'\u265a'));
-                        } else {
-                            stringBuilder.append("?");
-                        }
-                        stringBuilder.append(background.bg(" "));
+                        stringBuilder.append(backGroundChar);
+                        stringBuilder.append(background.bg(PIECE.of(square).unicode(square)));
+                        stringBuilder.append(backGroundChar);
                     }
                     stringBuilder.append('|').append('\n');
                 }
@@ -195,7 +239,6 @@ public class Main {
                 }
             }
         }
-
 
         @CodeReflection
         static public void init(final ComputeContext cc, ChessData chessData) {
