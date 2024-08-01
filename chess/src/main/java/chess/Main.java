@@ -14,6 +14,7 @@ import java.lang.runtime.CodeReflection;
 import static chess.Main.ChessData.Board.BISHOP;
 import static chess.Main.ChessData.Board.BLACK_BIT;
 import static chess.Main.ChessData.Board.EMPTY;
+import static chess.Main.ChessData.Board.HOME_BIT;
 import static chess.Main.ChessData.Board.KING;
 import static chess.Main.ChessData.Board.KNIGHT;
 import static chess.Main.ChessData.Board.PAWN;
@@ -62,18 +63,18 @@ public class Main {
 
 
     public interface ChessData extends Buffer {
-        public interface Board extends Buffer.Struct {
-            public static final byte EMPTY = (byte) 0x00;
-            public static final byte PAWN = (byte) 0x01;
-            public static final byte KNIGHT = (byte) 0x02;
-            public static final byte BISHOP = (byte) 0x03;
-            public static final byte ROOK = (byte) 0x04;
-            public static final byte QUEEN = (byte) 0x06;
-            public static final byte KING = (byte) 0x07;
-            public static final byte HOME_BIT = (byte) 0x80;
-            public static final byte WHITE_BIT = (byte) 0x40;
-            public static final byte BLACK_BIT = (byte) 0x20;
-            public static final byte CHECK_BIT = (byte) 0x10;
+         interface Board extends Buffer.Struct {
+            byte EMPTY = (byte) 0x00;
+            byte PAWN = (byte) 0x01;
+            byte KNIGHT = (byte) 0x02;
+            byte BISHOP = (byte) 0x03;
+            byte ROOK = (byte) 0x04;
+            byte QUEEN = (byte) 0x06;
+            byte KING = (byte) 0x07;
+            byte HOME_BIT = (byte) 0x80;
+            byte WHITE_BIT = (byte) 0x40;
+            byte BLACK_BIT = (byte) 0x20;
+            byte CHECK_BIT = (byte) 0x10;
             byte square(long idx);
 
             void square(long idx, byte square);
@@ -93,11 +94,38 @@ public class Main {
             short spare();
 
             void spare(short spare);
+            default Board init() {
+                 for (int row = 2; row < 6; row++) {
+                     for (int col = 0; col < 8; col++) {
+                         square(row * 8 + col, EMPTY);
+                     }
+                 }
+                 for (int col = 0; col < 8; col++) {
+                     square((long)(1 * 8) + col, (byte)(PAWN|BLACK_BIT|HOME_BIT));
+                     square((long)(6 * 8) + col, (byte)(PAWN|WHITE_BIT|HOME_BIT));
+                 }
 
+                 square((long)(0 * 8) + 0, (byte)(ROOK|BLACK_BIT|HOME_BIT));
+                 square((long)(0 * 8) + 7, (byte)(ROOK|BLACK_BIT|HOME_BIT));
+                 square((long)(7 * 8) + 0, (byte)(ROOK|WHITE_BIT|HOME_BIT));
+                 square((long)(7 * 8) + 7, (byte)(ROOK|WHITE_BIT|HOME_BIT));
+                 square((long)(0 * 8) + 1, (byte)(KNIGHT|BLACK_BIT|HOME_BIT));
+                 square((long)(0 * 8) + 6, (byte)(KNIGHT|BLACK_BIT|HOME_BIT));
+                 square((long)(7 * 8) + 1, (byte)(KNIGHT|WHITE_BIT|HOME_BIT));
+                 square((long)(7 * 8) + 6, (byte)(KNIGHT|WHITE_BIT|HOME_BIT));
+                 square((long)(0 * 8) + 2, (byte)(BISHOP|BLACK_BIT|HOME_BIT));
+                 square((long)(0 * 8) + 5, (byte)(BISHOP|BLACK_BIT|HOME_BIT));
+                 square((long)(7 * 8) + 2, (byte)(BISHOP|WHITE_BIT|HOME_BIT));
+                 square((long)(7 * 8) + 5, (byte)(BISHOP|WHITE_BIT|HOME_BIT));
+                 square((long)(0 * 8) + 3, (byte)(QUEEN|BLACK_BIT|HOME_BIT));
+                 square((long)(7 * 8) + 3, (byte)(QUEEN|WHITE_BIT|HOME_BIT));
+                 square((long)(0 * 8) + 4, (byte)(KING|BLACK_BIT|HOME_BIT));
+                 square((long)(7 * 8) + 4, (byte)(KING|WHITE_BIT|HOME_BIT));
+                 return this;
+             }
             default String asString() {
-                Board board = this;
                 StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append("   | 1  2  3  4  5  6  7  8  |").append('\n');
+                stringBuilder.append("   | 1  2  3  4  5  6  7  8 |").append('\n');
                 for (int row = 0; row < 8; row++) {
                     char ch = (char) (0x61 + row);
                     stringBuilder.append(' ').append(ch).append(' ').append('|');
@@ -155,48 +183,23 @@ public class Main {
 
     public static class Compute {
         @CodeReflection
-        public static void initBoard(ChessData.Board board) {
-            for (int row = 2; row < 6; row++) {
-              for (int col = 0; col < 8; col++) {
-                  board.square(row * 8 + col, EMPTY);
-              }
-            }
-            for (int col = 0; col < 8; col++) {
-                board.square((long)(1 * 8) + col, (byte)(PAWN|BLACK_BIT));
-                board.square((long)(6 * 8) + col, (byte)(PAWN|WHITE_BIT));
-            }
-
-            board.square((long)(0 * 8) + 0, (byte)(ROOK|BLACK_BIT));
-            board.square((long)(0 * 8) + 7, (byte)(ROOK|BLACK_BIT));
-            board.square((long)(7 * 8) + 0, (byte)(ROOK|WHITE_BIT));
-            board.square((long)(7 * 8) + 7, (byte)(ROOK|WHITE_BIT));
-            board.square((long)(0 * 8) + 1, (byte)(KNIGHT|BLACK_BIT));
-            board.square((long)(0 * 8) + 6, (byte)(KNIGHT|BLACK_BIT));
-            board.square((long)(7 * 8) + 1, (byte)(KNIGHT|WHITE_BIT));
-            board.square((long)(7 * 8) + 6, (byte)(KNIGHT|WHITE_BIT));
-            board.square((long)(0 * 8) + 2, (byte)(BISHOP|BLACK_BIT));
-            board.square((long)(0 * 8) + 5, (byte)(BISHOP|BLACK_BIT));
-            board.square((long)(7 * 8) + 2, (byte)(BISHOP|WHITE_BIT));
-            board.square((long)(7 * 8) + 5, (byte)(BISHOP|WHITE_BIT));
-            board.square((long)(0 * 8) + 3, (byte)(QUEEN|BLACK_BIT));
-            board.square((long)(7 * 8) + 3, (byte)(QUEEN|WHITE_BIT));
-            board.square((long)(0 * 8) + 4, (byte)(KING|BLACK_BIT));
-            board.square((long)(7 * 8) + 4, (byte)(KING|WHITE_BIT));
-
-
-        }
-        @CodeReflection
-        public static void initData(KernelContext kc, ChessData chessData) {
+        public static void initTree(KernelContext kc, ChessData chessData) {
             if (kc.x < kc.maxX) {
                 ChessData.Board board = chessData.board(kc.x);
-                initBoard( board);
+                if (kc.x==0){
+                    board.parent((short)-1);
+                    board.firstChild((short) 10);
+                }else if (kc.x <10){
+                    board.parent((short)0);
+                    board.firstChild((short) ((kc.x-1)*10));  //1->10 2->20 etc
+                }
             }
         }
 
 
         @CodeReflection
         static public void init(final ComputeContext cc, ChessData chessData) {
-            cc.dispatchKernel(chessData.length(), kc -> Compute.initData(kc, chessData));
+            cc.dispatchKernel(chessData.length(), kc -> Compute.initTree(kc, chessData));
         }
     }
 
@@ -208,7 +211,7 @@ public class Main {
         Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
         ChessData chessData = ChessData.create(accelerator, 10001);//,101,1001,10001
         accelerator.compute(cc->Compute.init(cc, chessData));
-        ChessData.Board board = chessData.board(0);
+        ChessData.Board board = chessData.board(0).init();
         System.out.println(board.asString());
     }
 }
