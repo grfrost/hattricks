@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/hattricks.iml" filepath="$PROJECT_DIR$/hat.iml" />
+      <module fileurl="file://$PROJECT_DIR$/heal.iml" filepath="$PROJECT_DIR$/heal.iml" />
+      <module fileurl="file://$PROJECT_DIR$/view.iml" filepath="$PROJECT_DIR$/view.iml" />
+      <module fileurl="file://$PROJECT_DIR$/life.iml" filepath="$PROJECT_DIR$/life.iml" />
+      <module fileurl="file://$PROJECT_DIR$/chess.iml" filepath="$PROJECT_DIR$/chess.iml" />
+    </modules>
+  </component>
+</project>

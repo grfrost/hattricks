@@ -25,31 +25,36 @@
 package heal;
 
 import hat.Accelerator;
-import hat.buffer.Buffer;
-import hat.buffer.BufferAllocator;
-import hat.ifacemapper.Schema;
+import hat.backend.Backend;
+import hat.buffer.S32Array2D;
 
+import javax.imageio.ImageIO;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenuBar;
+import javax.swing.JTextField;
+import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 
-public interface XYList extends Buffer {
-    interface XY extends Buffer.Struct{
-        int x();
-        int y();
-        void y(int y);
-        void x(int x);
-    }
-    int length();
-  //  void length(int length );
-    XY xy(long idx);
+public class Main {
 
-    Schema<XYList> schema= Schema.of(XYList.class, s->s
-            .arrayLen("length")
-            .array("xy", xy->xy
-                    .fields("x","y")
-            )
-    );
+    public static void main(String[] args) throws IOException {
+        Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
 
-    static XYList create(Accelerator accelerator, int length) {
-        return  schema.allocate(accelerator,length);
+        var image= ImageIO.read(Main.class.getResourceAsStream(
+                "/images/raw.jpg"
+              //  "/images/bolton.png"
+        ));
+        if (image.getType() != BufferedImage.TYPE_INT_RGB){//Better way?
+            var rgbimage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+            rgbimage.getGraphics().drawImage(image, 0, 0, null);
+            image=rgbimage;
+        }
+        new Viewer(accelerator, image);
     }
+
 }

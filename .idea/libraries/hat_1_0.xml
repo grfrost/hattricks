@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="hat-1.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../babylon-grfrost-fork/hat/maven-build/hat-1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../babylon-grfrost-fork/hat/maven-build/hat-backend-opencl-1.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
