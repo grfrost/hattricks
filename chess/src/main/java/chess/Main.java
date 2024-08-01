@@ -7,28 +7,73 @@ import hat.KernelContext;
 import hat.backend.Backend;
 import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
-import hat.text.TerminalColors;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.runtime.CodeReflection;
 
+import static chess.Main.ChessData.Board.BISHOP;
+import static chess.Main.ChessData.Board.BLACK_BIT;
+import static chess.Main.ChessData.Board.EMPTY;
+import static chess.Main.ChessData.Board.KING;
+import static chess.Main.ChessData.Board.KNIGHT;
+import static chess.Main.ChessData.Board.PAWN;
+import static chess.Main.ChessData.Board.QUEEN;
+import static chess.Main.ChessData.Board.ROOK;
+import static chess.Main.ChessData.Board.WHITE_BIT;
+
 
 public class Main {
-    public static final byte EMPTY = (byte) 0x00;
-    public static final byte PAWN = (byte) 0x01;
-    public static final byte KNIGHT = (byte) 0x02;
-    public static final byte BISHOP = (byte) 0x03;
-    public static final byte ROOK = (byte) 0x04;
-    public static final byte QUEEN = (byte) 0x06;
-    public static final byte KING = (byte) 0x07;
-    public static final byte HOME_BIT = (byte) 0x80;
-    public static final byte WHITE_BIT = (byte) 0x40;
-    public static final byte BLACK_BIT = (byte) 0x20;
-    public static final byte CHECK_BIT = (byte) 0x10;
+    public enum TerminalColors {
+        NONE("0"),
+        BLACK("5;0"),
+        DARKGREEN("5;22"),
+        DARKBLUE("5;27"),
+        GREY("5;247"),
+        DARKGREY("5;244"),
+        RED("5;1"),
+        GREEN("5;77"),
+        YELLOW("5;185"),
+        BLUE("5;31"),
+        WHITE("5;251"),
+        ORANGE("5;208"),
+        PURPLE("5;133");
+        final static String FG = "38;";
+        final static String BG = "48;";
+        public final String seq;
+
+        private TerminalColors(String seq) {
+            this.seq = seq;
+        }
+
+        public String fg(String string){
+            return "\u001b[" + FG+seq + "m"+string+"\u001b[" + FG+ "0m";
+        }
+        public String bg(String string){
+            return "\u001b[" + BG+seq + "m"+string+"\u001b[" + BG+  "0m";
+        }
+        public String fg(char ch){
+            return "\u001b[" + FG+seq + "m"+ch+"\u001b[" + FG+ "0m";
+        }
+        public String bg(char ch){
+            return "\u001b[" + BG+seq + "m"+ch+"\u001b[" + BG+  "0m";
+        }
+
+    }
 
 
     public interface ChessData extends Buffer {
         public interface Board extends Buffer.Struct {
+            public static final byte EMPTY = (byte) 0x00;
+            public static final byte PAWN = (byte) 0x01;
+            public static final byte KNIGHT = (byte) 0x02;
+            public static final byte BISHOP = (byte) 0x03;
+            public static final byte ROOK = (byte) 0x04;
+            public static final byte QUEEN = (byte) 0x06;
+            public static final byte KING = (byte) 0x07;
+            public static final byte HOME_BIT = (byte) 0x80;
+            public static final byte WHITE_BIT = (byte) 0x40;
+            public static final byte BLACK_BIT = (byte) 0x20;
+            public static final byte CHECK_BIT = (byte) 0x10;
             byte square(long idx);
 
             void square(long idx, byte square);
@@ -52,37 +97,39 @@ public class Main {
             default String asString() {
                 Board board = this;
                 StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append("   |12345678|").append('\n');
+                stringBuilder.append("   | 1  2  3  4  5  6  7  8  |").append('\n');
                 for (int row = 0; row < 8; row++) {
                     char ch = (char) (0x61 + row);
                     stringBuilder.append(' ').append(ch).append(' ').append('|');
                     for (int col = 0; col < 8; col++) {
                         byte square = this.square(row * 8 + col);
 
-                        var color = ((col+row) % 2 == 0)?TerminalColors.BLACK: TerminalColors.WHITE;
+                        var background = ((col+row) % 2 == 0)?TerminalColors.BLACK: TerminalColors.DARKGREY;
                        // stringBuilder.append(color);
                         //https://en.wikipedia.org/wiki/Chess_symbols_in_Unicode
+                        stringBuilder.append(background.bg(" "));
                         if (square == EMPTY) {
-                            stringBuilder.append(color.escSequence+'#'+TerminalColors.NONE.escSequence);
+                            stringBuilder.append(background.bg(" "));
                         }else if ((square&0xf) == PAWN) {
-                                stringBuilder.append((square&WHITE_BIT)==WHITE_BIT?'\u2659':'\u265f');
+                                stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2659':'\u265f'));
                         }else if ((square&0xf) == ROOK) {
-                            stringBuilder.append((square&WHITE_BIT)==WHITE_BIT?'\u2656':'\u265c');
+                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2656':'\u265c'));
                         }else if ((square&0xf) == BISHOP) {
-                            stringBuilder.append((square&WHITE_BIT)==WHITE_BIT?'\u2657':'\u265D');
+                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2657':'\u265D'));
                         }else if ((square&0xf) == KNIGHT) {
-                            stringBuilder.append((square&WHITE_BIT)==WHITE_BIT?'\u2658':'\u265e');
+                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2658':'\u265e'));
                         }else if ((square&0xf) == QUEEN) {
-                            stringBuilder.append((square&WHITE_BIT)==WHITE_BIT?'\u2655':'\u265b');
+                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2655':'\u265b'));
                         }else if ((square&0xf) == KING) {
-                            stringBuilder.append((square&WHITE_BIT)==WHITE_BIT?'\u2654':'\u265a');
+                            stringBuilder.append(background.bg((square&WHITE_BIT)==WHITE_BIT?'\u2654':'\u265a'));
                         } else {
                             stringBuilder.append("?");
                         }
+                        stringBuilder.append(background.bg(" "));
                     }
                     stringBuilder.append('|').append('\n');
                 }
-                stringBuilder.append("   |12345678|").append('\n');
+                stringBuilder.append("   | 1  2  3  4  5  6  7  8 |").append('\n');
                 return stringBuilder.toString();
             }
         }
