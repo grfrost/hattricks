@@ -11,7 +11,6 @@ import hat.ifacemapper.Schema;
 import java.lang.invoke.MethodHandles;
 import java.lang.runtime.CodeReflection;
 
-import static chess.Main.ChessData.Board.WHITE_BIT;
 
 
 public class Main {
@@ -29,28 +28,36 @@ public class Main {
         WHITE("5;251"),
         ORANGE("5;208"),
         PURPLE("5;133");
-        final static String FG = "38;";
-        final static String BG = "48;";
-        public final String seq;
+        private final String prefix = "\u001b[";
+        private final String suffix = "m";
+        private final static String FG = "38;";
+        private final static String BG = "48;";
+
+        public final String fseq;
+        public final String bseq;
 
         private TerminalColors(String seq) {
-            this.seq = seq;
+            this.fseq = prefix+FG+seq+suffix;
+            this.bseq = prefix+BG+seq+suffix;
         }
 
         public String fg(String string) {
-            return "\u001b[" + FG + seq + "m" + string + "\u001b[" + FG + "0m";
+            return fseq +string+NONE.fseq;
         }
-
-        public String bg(String string) {
-            return "\u001b[" + BG + seq + "m" + string + "\u001b[" + BG + "0m";
-        }
-
         public String fg(char ch) {
-            return "\u001b[" + FG + seq + "m" + ch + "\u001b[" + FG + "0m";
+            return fseq +ch+NONE.fseq;
         }
-
+        public String bg(String string) {
+            return bseq +string+NONE.bseq;
+        }
         public String bg(char ch) {
-            return "\u001b[" + BG + seq + "m" + ch + "\u001b[" + BG + "0m";
+            return bseq +ch+NONE.bseq;
+        }
+        public static String fgbg(TerminalColors fg, TerminalColors bg,String string) {
+            return bg.bseq +fg.fseq +string+NONE.fseq +NONE.bseq;
+        }
+        public static String fgbg(TerminalColors fg, TerminalColors bg,char ch) {
+            return bg.bseq +fg.fseq +ch+NONE.fseq +NONE.bseq;
         }
     }
 
@@ -68,11 +75,11 @@ public class Main {
         }
 
         static boolean isKnight(int square) {
-            return KING.is(square);
+            return KNIGHT.is(square);
         }
 
         static boolean isBishop(int square) {
-            return (BISHOP.is(square));
+            return BISHOP.is(square);
         }
 
         static boolean isRook(int square) {
@@ -102,7 +109,7 @@ public class Main {
         }
 
         static public boolean isWhite(int square){
-            return ((square & WHITE_BIT) == WHITE_BIT);
+            return ((square & Main.ChessData.Board.WHITE_BIT) == Main.ChessData.Board.WHITE_BIT);
         }
 
          public char unicode(int square){
@@ -117,6 +124,10 @@ public class Main {
             else if (isKnight(bits)) return PIECE.KNIGHT;
             else if (isPawn(bits)) return PIECE.PAWN;
             else return EMPTY;
+        }
+
+        void asString(){
+
         }
     }
 
@@ -191,13 +202,12 @@ public class Main {
                     stringBuilder.append(' ').append(ch).append(' ').append('|');
                     for (int col = 0; col < 8; col++) {
                         byte square = this.square(row * 8 + col);
-                        var background = ((col+row) % 2 == 0)?TerminalColors.BLACK: TerminalColors.DARKGREY;
-                        String backGroundChar = background.bg(" ");
-                       // stringBuilder.append(color);
-                        //https://en.wikipedia.org/wiki/Chess_symbols_in_Unicode
-                        stringBuilder.append(backGroundChar);
-                        stringBuilder.append(background.bg(PIECE.of(square).unicode(square)));
-                        stringBuilder.append(backGroundChar);
+                        PIECE piece =PIECE.of(square);
+                        var background = ((col+row) % 2 == 0)?TerminalColors.GREY: TerminalColors.DARKGREY;
+                        var foreground = ((square&WHITE_BIT)==WHITE_BIT)?TerminalColors.WHITE: TerminalColors.BLACK;
+                        stringBuilder.append(background.bg(" "));
+                        stringBuilder.append(TerminalColors.fgbg(foreground,background,piece.unicode(square)));
+                        stringBuilder.append(background.bg(" "));
                     }
                     stringBuilder.append('|').append('\n');
                 }
@@ -216,12 +226,9 @@ public class Main {
                         .array("square", 64).fields("parent", "firstChild", "score", "spare")
                 )
         );
-
-
         static ChessData create(Accelerator acc, int length) {
             return schema.allocate(acc, length);
         }
-
     }
 
 
