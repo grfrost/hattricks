@@ -7,43 +7,83 @@ import hat.KernelContext;
 import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
-import java.awt.Point;
 import java.lang.runtime.CodeReflection;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-import static chess.Main.Compute.isOpponent;
 
 
 public class Main {
 
+    static public final int[] neighbourDxDy = new int[]{
+            1, -1,
+            0, -1,
+            1, -1
+            - 1, 0,
+            1, 0,
+            -1, 1,
+            0, 1,
+            1, 1
+    };
 
+
+    static public final byte EMPTY_SQUARE = (byte) 0x00;
+    static public final byte PAWN_VALUE = (byte) 0x01;
+    static public final byte KNIGHT_VALUE = (byte) 0x02;
+    static public final byte BISHOP_VALUE = (byte) 0x03;
+    static public final byte ROOK_VALUE = (byte) 0x04;
+    static public final byte QUEEN_VALUE = (byte) 0x05;
+    static public final byte KING_VALUE = (byte) 0x06;
+    static public final byte PIECE_MASK = (byte) 0b0000_0111;
+    static public final byte HOME_BIT = (byte) 0b0000_1000;
+    static public final byte BLACK_BIT = (byte) 0b0001_0000;
+    static public final byte WHITE_BIT = (byte) 0b0010_0000;
+    static public final byte COLOR_MASK = WHITE_BIT | BLACK_BIT;
+    static public final byte OFF_BOARD_SQUARE = (byte) 0b1111_1111;
+    static public final short MOVE_BIT = (short) 0b0000_0001_0000_0000;
+    static public final short CAPTURE_BIT = (short) 0b0000_0010_0000_0000;
+
+    //static public final long DIAG_BITS =          0b10011001_010011010_001011100_000111;
+
+    static char squareBitsToUnicode(byte squareBits) {
+        final char whiteChessUnicodeK=0x2654;
+        final char blackChessUnicodeK=whiteChessUnicodeK+6;
+        final char whiteUnicode[] = new char[]{
+                '0', '\u2659', '\u2658',  '\u2657', '\u2656',  '\u2655','\u2654',  ' '
+        };
+        final char blackUnicode[] = new char[]{
+                '0', '\u265f', '\u265e',  '\u265d', '\u265c',  '\u265b','\u265a',  ' '
+        };
+        byte value = (byte)(squareBits&PIECE_MASK);
+        return  value==0?' ':Compute.isWhite(squareBits)?whiteUnicode[value]:blackUnicode[value];
+    }
     public static class Compute {
         @CodeReflection
         public static boolean isWhite(byte squareBits) {
-            return (squareBits & ChessData.Board.COLOR_MASK) == ChessData.Board.WHITE_BIT;
+            return (squareBits & COLOR_MASK) == WHITE_BIT;
         }
 
         @CodeReflection
         public static boolean isBlack(byte squareBits) {
-            return (squareBits & ChessData.Board.COLOR_MASK) == ChessData.Board.BLACK_BIT;
+            return (squareBits & COLOR_MASK) == BLACK_BIT;
         }
 
         @CodeReflection
         public static boolean isOpponent(byte mySquareBits, byte opponentSquareBits) {
-            return ((mySquareBits | opponentSquareBits) & ChessData.Board.COLOR_MASK) == ChessData.Board.COLOR_MASK;
+            return ((mySquareBits | opponentSquareBits) & COLOR_MASK) == COLOR_MASK;
+        }
+
+        @CodeReflection
+        public static boolean isMyPiece(byte mySquareBits, byte opponentSquareBits) {
+            return (mySquareBits & opponentSquareBits & COLOR_MASK) == mySquareBits;
         }
 
         @CodeReflection
         public static boolean isEmpty(byte squareBits) {
-            return (squareBits & ChessData.Board.PIECE_MASK) == 0;
+            return (squareBits & PIECE_MASK) == 0;
         }
 
         @CodeReflection
         public static boolean isHome(byte squareBits) {
-            return (squareBits & ChessData.Board.HOME_BIT) == ChessData.Board.HOME_BIT;
+            return (squareBits & HOME_BIT) == HOME_BIT;
         }
 
         @CodeReflection
@@ -59,53 +99,48 @@ public class Main {
 
         @CodeReflection
         static boolean isOnBoard(int x, int y) {
-            return (x < 8 && y < 8 && x >= 0 && y>= 0);
-        }
-
-        @CodeReflection
-        static boolean isOnBoard(Point delta, int x, int y) {
-            return isOnBoard(x + delta.x, y + delta.y);
+            return (x < 8 && y < 8 && x >= 0 && y >= 0);
         }
 
         @CodeReflection
         static boolean isPawn(int squareBits) {
-            return (squareBits & ChessData.Board.PIECE_MASK) == ChessData.Board.PAWN;
+            return (squareBits & PIECE_MASK) == PAWN_VALUE;
         }
 
         @CodeReflection
         static boolean isKnight(int squareBits) {
-            return (squareBits & ChessData.Board.PIECE_MASK) == ChessData.Board.KNIGHT;
+            return (squareBits & PIECE_MASK) == KNIGHT_VALUE;
         }
 
         @CodeReflection
         static boolean isBishop(int squareBits) {
-            return (squareBits & ChessData.Board.PIECE_MASK) == ChessData.Board.BISHOP;
+            return (squareBits & PIECE_MASK) == BISHOP_VALUE;
         }
 
         @CodeReflection
         static boolean isRook(int squareBits) {
-            return (squareBits & ChessData.Board.PIECE_MASK) == ChessData.Board.ROOK;
+            return (squareBits & PIECE_MASK) == ROOK_VALUE;
         }
 
         @CodeReflection
         static boolean isKing(int squareBits) {
-            return (squareBits & ChessData.Board.PIECE_MASK) == ChessData.Board.KING;
+            return (squareBits & PIECE_MASK) == KING_VALUE;
         }
 
         @CodeReflection
         static boolean isQueen(int squareBits) {
-            return (squareBits & ChessData.Board.PIECE_MASK) == ChessData.Board.QUEEN;
+            return (squareBits & PIECE_MASK) == QUEEN_VALUE;
         }
+
         @CodeReflection
         static boolean isEmpty(int squareBits) {
-            return (squareBits & ChessData.Board.PIECE_MASK) == ChessData.Board.EMPTY;
+            return (squareBits & PIECE_MASK) == EMPTY_SQUARE;
         }
 
         @CodeReflection
         static boolean isOffBoard(int squareBits) {
-            return squareBits == ChessData.Board.OFFBOARD;
+            return squareBits == OFF_BOARD_SQUARE;
         }
-
 
 
         @CodeReflection
@@ -129,6 +164,7 @@ public class Main {
 
 
     }
+
     public enum TerminalColors {
         NONE("0"),
         BLACK("5;0"),
@@ -184,22 +220,7 @@ public class Main {
 
     public interface ChessData extends Buffer {
         interface Board extends Buffer.Struct {
-            byte EMPTY = (byte) 0x00;
-            byte PAWN = (byte) 0x01;
-            byte KNIGHT = (byte) 0x02;
-            byte BISHOP = (byte) 0x03;
-            byte ROOK = (byte) 0x04;
-            byte QUEEN = (byte) 0x06;
-            byte KING = (byte) 0x0f;
-            byte HOME_BIT = (byte) 0x80;
-            byte WHITE_BIT = (byte) 0x40;
-            byte BLACK_BIT = (byte) 0x20;
-            byte CHECK_BIT = (byte) 0x10;
-            byte PIECE_MASK = (byte) 0x0f;
-            byte COLOR_MASK = (byte) 0x30;
-            byte OFFBOARD = (byte) 0xff;
-            short MOVE_BIT = (short) 0x0100;
-            short CAPTURE_BIT = (short) 0x0200;
+
 
             byte squareBits(long idx);
 
@@ -224,63 +245,84 @@ public class Main {
             default void setSquareBits(int x, int y, byte squareBits) {
                 squareBits(y * 8 + x, squareBits);
             }
+
             default byte getSquareBits(int x, int y) {
-                return Compute.isOnBoard(x,y) ?squareBits(y * 8 + x):ChessData.Board.OFFBOARD;
+                return Compute.isOnBoard(x, y) ? squareBits(y * 8 + x) : OFF_BOARD_SQUARE;
             }
 
-            default void validMoves(byte col){
-                for (int y = 0; y < 7; y++) {
-                    for (int x = 0; x < 7; x++) {
-                         byte squareBits = getSquareBits(x, y);
-                         if (!Compute.isEmpty(squareBits)) {
-                             if (isOpponent(col, squareBits)) {
-                                PIECE piece = PIECE.of(squareBits);
-                                MoveList moveList  = piece.moveList;
-                                if (piece.symmetrical){
-                                    // ROOK,BISHOP,QUEEN,KING
-                                   // boolean[] blocked =
-                                }else{
-                                    // PAWN, KNIGHT
-                                }
-                             }
-                         }
+            default void validMoves(byte squareBits, int fromx, int fromy) {
 
+                PIECE piece = PIECE.of(squareBits);
+                String squareBitsStr = Integer.toBinaryString(squareBits);
+                if (piece.count > 0) {
+                    boolean[] blocked = new boolean[8];
+                    for (int v = 1; v <= piece.count; v++) {
+                        byte bit = (byte)0b1000_0000;
+                        for (int neighbourDxDyIdx = 0; neighbourDxDyIdx < 7; neighbourDxDyIdx++) {
+
+                            if (!blocked[neighbourDxDyIdx]) {
+                                int x = fromx + v*neighbourDxDy[neighbourDxDyIdx*2];
+                                int y = fromy + v*neighbourDxDy[neighbourDxDyIdx*2 + 1];
+                                String compassBitsStr = Integer.toBinaryString((int)(piece.compassBits&0xff));
+                                String bitStr = Integer.toBinaryString((int)(bit&0xff));
+                                if ((piece.compassBits&(byte)bit) != 0) {
+                                    if (Compute.isOnBoard(x, y)) {
+                                        var xyBits = getSquareBits(x, y);
+                                        String xyBitsStr = Integer.toBinaryString(xyBits);
+
+                                        if (Compute.isEmpty(xyBits)) {
+                                            System.out.println(fromx + "," + fromy + " can move to " + x + "," + y);
+                                        } else if (Compute.isOpponent(xyBits, squareBits)) {
+                                            blocked[v] = true;
+                                            System.out.println(fromx + "," + fromy + " can move/take on " + x + "," + y);
+                                        } else {
+                                            blocked[v] = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        bit>>=1;
                     }
+                } else {
+
                 }
+
+
             }
 
             default Board init() {
                 for (int y = 2; y < 6; y++) {
                     for (int x = 0; x < 8; x++) {
-                        setSquareBits(x, y, EMPTY);
+                        setSquareBits(x, y, EMPTY_SQUARE);
                     }
                 }
 
                 for (int x = 0; x < 8; x++) {
-                    setSquareBits(x, 1, (byte) (PAWN | BLACK_BIT | HOME_BIT));
-                    setSquareBits(x, 6, (byte) (PAWN | WHITE_BIT | HOME_BIT));
+                    setSquareBits(x, 1, (byte) (PAWN_VALUE | BLACK_BIT | HOME_BIT));
+                    setSquareBits(x, 6, (byte) (PAWN_VALUE | WHITE_BIT | HOME_BIT));
                 }
 
-                setSquareBits(0,0, (byte) (ROOK | BLACK_BIT | HOME_BIT));
-                setSquareBits(7,0, (byte) (ROOK | BLACK_BIT | HOME_BIT));
-                setSquareBits(0,7, (byte) (ROOK | WHITE_BIT | HOME_BIT));
-                setSquareBits(7,7, (byte) (ROOK | WHITE_BIT | HOME_BIT));
+                setSquareBits(0, 0, (byte) (ROOK_VALUE | BLACK_BIT | HOME_BIT));
+                setSquareBits(7, 0, (byte) (ROOK_VALUE | BLACK_BIT | HOME_BIT));
+                setSquareBits(0, 7, (byte) (ROOK_VALUE | WHITE_BIT | HOME_BIT));
+                setSquareBits(7, 7, (byte) (ROOK_VALUE | WHITE_BIT | HOME_BIT));
 
-                setSquareBits(1,0, (byte) (KNIGHT | BLACK_BIT | HOME_BIT));
-                setSquareBits(6,0, (byte) (KNIGHT | BLACK_BIT | HOME_BIT));
-                setSquareBits(1,7, (byte) (KNIGHT | WHITE_BIT | HOME_BIT));
-                setSquareBits(6,7, (byte) (KNIGHT | WHITE_BIT | HOME_BIT));
+                setSquareBits(1, 0, (byte) (KNIGHT_VALUE | BLACK_BIT | HOME_BIT));
+                setSquareBits(6, 0, (byte) (KNIGHT_VALUE | BLACK_BIT | HOME_BIT));
+                setSquareBits(1, 7, (byte) (KNIGHT_VALUE | WHITE_BIT | HOME_BIT));
+                setSquareBits(6, 7, (byte) (KNIGHT_VALUE | WHITE_BIT | HOME_BIT));
 
-                setSquareBits(2,0, (byte) (BISHOP | BLACK_BIT | HOME_BIT));
-                setSquareBits(5,0, (byte) (BISHOP | BLACK_BIT | HOME_BIT));
-                setSquareBits(2,7, (byte) (BISHOP | WHITE_BIT | HOME_BIT));
-                setSquareBits(5,7, (byte) (BISHOP | WHITE_BIT | HOME_BIT));
+                setSquareBits(2, 0, (byte) (BISHOP_VALUE | BLACK_BIT | HOME_BIT));
+                setSquareBits(5, 0, (byte) (BISHOP_VALUE | BLACK_BIT | HOME_BIT));
+                setSquareBits(2, 7, (byte) (BISHOP_VALUE | WHITE_BIT | HOME_BIT));
+                setSquareBits(5, 7, (byte) (BISHOP_VALUE | WHITE_BIT | HOME_BIT));
 
-                setSquareBits(3,0, (byte) (QUEEN | BLACK_BIT | HOME_BIT));
-                setSquareBits(3,7, (byte) (QUEEN | WHITE_BIT | HOME_BIT));
+                setSquareBits(3, 0, (byte) (QUEEN_VALUE | BLACK_BIT | HOME_BIT));
+                setSquareBits(3, 7, (byte) (QUEEN_VALUE | WHITE_BIT | HOME_BIT));
 
-                setSquareBits(4,0, (byte) (KING | BLACK_BIT | HOME_BIT));
-                setSquareBits(4,7, (byte) (KING | WHITE_BIT | HOME_BIT));
+                setSquareBits(4, 0, (byte) (KING_VALUE | BLACK_BIT | HOME_BIT));
+                setSquareBits(4, 7, (byte) (KING_VALUE | WHITE_BIT | HOME_BIT));
                 return this;
             }
 
@@ -291,11 +333,11 @@ public class Main {
                     char ch = (char) (0x61 + y);
                     stringBuilder.append(' ').append(ch).append(' ').append('|');
                     for (int x = 0; x < 8; x++) {
-                        byte squareBits = this.getSquareBits(x,y);
-                        PIECE piece = PIECE.of(squareBits);
+                        byte squareBits = this.getSquareBits(x, y);
                         var background = ((x + y) % 2 == 0) ? TerminalColors.GREY : TerminalColors.DARKGREY;
                         stringBuilder.append(background.bg(" "));
-                        stringBuilder.append(TerminalColors.fgbg(Compute.isWhite(squareBits) ? TerminalColors.WHITE : TerminalColors.BLACK, background, piece.unicode(Compute.isWhite(squareBits))));
+                        char unicode = squareBitsToUnicode(squareBits);
+                          stringBuilder.append(TerminalColors.fgbg(Compute.isWhite(squareBits) ? TerminalColors.WHITE : TerminalColors.BLACK, background, unicode));
                         stringBuilder.append(background.bg(" "));
                     }
                     stringBuilder.append('|').append('\n');
@@ -321,52 +363,32 @@ public class Main {
         }
     }
 
+    public static final byte DIAGS = (byte) 0b1010_0101;
+    public static final byte COLROWS = (byte) 0b0101_01010;
+    public static final byte DIAGS_OR_COLROWS = (byte) (DIAGS | COLROWS);
 
     enum PIECE {
-        EMPTY(ChessData.Board.EMPTY,false,false, false, ' ', ' ', new MoveListImpl()),
-        PAWN(ChessData.Board.PAWN,false,false,false, '\u2659', '\u265f', new MoveListImpl()
-                .add(0, 1, ChessData.Board.WHITE_BIT | ChessData.Board.MOVE_BIT)
-                .add(0, 2, ChessData.Board.WHITE_BIT | ChessData.Board.HOME_BIT | ChessData.Board.MOVE_BIT)
-                .add(0, -1, ChessData.Board.BLACK_BIT | ChessData.Board.MOVE_BIT)
-                .add(0, -2, ChessData.Board.BLACK_BIT | ChessData.Board.HOME_BIT | ChessData.Board.MOVE_BIT)
-                .add(1, 1, ChessData.Board.WHITE_BIT | ChessData.Board.CAPTURE_BIT)
-                .add(-1, 1, ChessData.Board.WHITE_BIT | ChessData.Board.CAPTURE_BIT)
-                .add(1, -1, ChessData.Board.BLACK_BIT | ChessData.Board.CAPTURE_BIT)
-                .add(-1, -1, ChessData.Board.BLACK_BIT | ChessData.Board.CAPTURE_BIT)
-        ),
-        KNIGHT(ChessData.Board.KNIGHT, false, false, false, '\u2658', '\u265e', new MoveListImpl()
-                .add(2, 1)
-                .add(-2, 1)
-                .add(2, -1)
-                .add(-2, -1)
-        ),
-        BISHOP(ChessData.Board.BISHOP,true,true, false, '\u2657', '\u265d', new MoveListImpl().add(false, true, 8)),
-        ROOK(ChessData.Board.ROOK,true, false, true, '\u2656', '\u265c', new MoveListImpl().add(true, false, 8)),
-        QUEEN(ChessData.Board.QUEEN,true,true, true, '\u2655', '\u265b', new MoveListImpl().add(true, true, 1)),
-        KING(ChessData.Board.KING,true, true, true,  '\u2654', '\u265a', new MoveListImpl().add(true, true, 2)),
-        OFFBOARD(ChessData.Board.OFFBOARD,false,false, false, ' ', ' ', new MoveListImpl());
+        EMPTY(EMPTY_SQUARE, (byte) 0, false, 0),
+        PAWN(PAWN_VALUE, (byte) 0, false, 0),
+        KNIGHT(KNIGHT_VALUE, (byte) 0, true, 0),
+        BISHOP(BISHOP_VALUE, DIAGS, false, 7),
+        ROOK(ROOK_VALUE, COLROWS, true, 7),
+        QUEEN(QUEEN_VALUE, DIAGS_OR_COLROWS, false, 7),
+        KING(KING_VALUE, DIAGS_OR_COLROWS, false, 1),
+        OFFBOARD(OFF_BOARD_SQUARE, (byte) 0, false,0);
 
-        public final char whiteUnicode;
-        public final char blackUnicode;
+
         public final int value;
-        public final boolean symmetrical;
-        public final boolean diags;
-        public final boolean rowcols;
-        public final MoveList moveList;
+        public final byte compassBits;
+        public final boolean knight;
 
+        public final int count;
 
-        PIECE(int value, boolean symmetrical, boolean diags, boolean rowcols,char whiteUnicode, char blackUnicode, MoveList moveList) {
+        PIECE(int value, byte compassBits, boolean knight, int count) {
             this.value = value;
-            this.symmetrical = symmetrical;
-            this.diags = diags;
-            this.rowcols = rowcols;
-            this.whiteUnicode = whiteUnicode;
-            this.blackUnicode = blackUnicode;
-            this.moveList = moveList;
-        }
-
-        public char unicode(boolean white) {
-            return white ? whiteUnicode : blackUnicode;
+            this.compassBits = compassBits;
+            this.knight = knight;
+            this.count = count;
         }
 
         static public PIECE of(int squareBits) {
@@ -462,124 +484,6 @@ public class Main {
         }
     }
 
-    interface MoveList extends Buffer {
-        interface XY extends Buffer.Struct {
-            byte x();
-
-            void x(byte x);
-
-            byte y();
-
-            void y(byte y);
-
-            short ctrl();
-
-            void ctrl(short ctrl);
-        }
-
-        int length();
-
-        XY xy(long idx);
-
-        Schema<MoveList> schema = Schema.of(MoveList.class, chessData -> chessData
-                .arrayLen("length").array("xy", xy -> xy.fields("x", "y", "ctrl")));
-
-        static MoveList create(Accelerator acc, int length, PIECE piece) {
-            var moveList = schema.allocate(acc,piece.moveList.length());
-            for (int i = 0; i < length; i++) {
-               XY from = piece.moveList.xy(i);
-               XY to = moveList.xy(i);
-               to.x(from.x());
-               to.y(from.y());
-               to.ctrl(from.ctrl());
-           }
-            return moveList;
-        }
-    }
-
-
-
-    public static class MoveListImpl implements MoveList {
-        public static class XYImpl implements MoveList.XY {
-            byte x;
-            byte y;
-            short ctrl;
-
-            @Override
-            public byte x() {
-                return x;
-            }
-
-            @Override
-            public void x(byte x) {
-                this.x = x;
-            }
-
-            @Override
-            public byte y() {
-                return y;
-            }
-
-            @Override
-            public void y(byte y) {
-                this.y = y;
-            }
-
-            @Override
-            public short ctrl() {
-                return ctrl;
-            }
-
-            @Override
-            public void ctrl(short ctrl) {
-                this.ctrl = ctrl;
-            }
-
-            public XYImpl(int x, int y, int ctrl) {
-                x((byte) x);
-                y((byte) y);
-                ctrl((short) ctrl);
-            }
-        }
-
-        List<MoveList.XY> xys = new ArrayList<>();
-
-        @Override
-        public int length() {
-            return xys.size();
-        }
-
-        @Override
-        public MoveList.XY xy(long idx) {
-            return xys.get((int) idx);
-        }
-
-        MoveListImpl add(int x, int y, int ctrl) {
-            xys.add(new MoveListImpl.XYImpl(x, y, ctrl));
-            return this;
-        }
-
-        MoveListImpl add(int x, int y) {
-            return add(x, y, ChessData.Board.MOVE_BIT | ChessData.Board.CAPTURE_BIT);
-        }
-
-        MoveListImpl add(boolean colrows, boolean diags, int n) {
-            for (int v = 1; v< n; v++){
-                if (diags){
-                    add(-v, v);
-                    add(v, -v);
-                }
-                if (colrows){
-                    add(0, v);
-                    add(0, -v);
-                    add(v, 0);
-                    add(-v, 0);
-                }
-            }
-            return this;
-        }
-    }
-
     public static void main(String[] args) {
         boolean headless = Boolean.getBoolean("headless") || (args.length > 0 && args[0].equals("--headless"));
         // Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
@@ -588,33 +492,14 @@ public class Main {
         //accelerator.compute(cc -> Compute.init(cc, chessData));
         ChessData.Board board = chessData.board(0).init();
         for (int i = 0; i < 64; i++) {
-            byte squareBits = board.squareBits(i);
-            PIECE piece = PIECE.of(squareBits);
             int x = i % 8;
             int y = i / 8;
-            Map<Integer, List<Point>> indexToPossibleMoves = new HashMap<>();
-            switch (piece) {
-                case PIECE.PAWN: {
-                    List<Point> possibleMoves = new ArrayList<>();
-
-                    if (Compute.isWhite(squareBits))
-                        if ((squareBits & ChessData.Board.HOME_BIT) == ChessData.Board.HOME_BIT) {
-                            if ((squareBits & ChessData.Board.WHITE_BIT) == ChessData.Board.WHITE_BIT) {
-                                //   if ()
-                                //byte toSquareBits = board.square();
-                                possibleMoves.add(new Point(x, y));
-                            }
-                        }
-                    break;
-                }
-                case PIECE.KNIGHT: {
-                    break;
-                }
-                default: {
-
+            byte squareBits = board.getSquareBits(x, y);
+            if (!Compute.isEmpty(squareBits)) {
+                if (Compute.isMyPiece(WHITE_BIT, squareBits)) {
+                    board.validMoves(squareBits, x, y);
                 }
             }
-
         }
         System.out.println(board.asString());
     }
