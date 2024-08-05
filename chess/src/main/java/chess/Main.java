@@ -257,15 +257,17 @@ public class Main {
                 if (piece.count > 0) {
                     boolean[] blocked = new boolean[8];
                     for (int v = 1; v <= piece.count; v++) {
-                        byte bit = (byte)0b1000_0000;
-                        for (int neighbourDxDyIdx = 0; neighbourDxDyIdx < 7; neighbourDxDyIdx++) {
+                        int compassBit = 0b1000_0000;
+                        int compassBits = piece.compassBits&0xff;
+                          for (int neighbourDxDyIdx = 0; neighbourDxDyIdx < 7; neighbourDxDyIdx++) {
+                              String compassBitsStr = Integer.toBinaryString(compassBits);
+                              String bitStr = Integer.toBinaryString(compassBit);
 
-                            if (!blocked[neighbourDxDyIdx]) {
-                                int x = fromx + v*neighbourDxDy[neighbourDxDyIdx*2];
-                                int y = fromy + v*neighbourDxDy[neighbourDxDyIdx*2 + 1];
-                                String compassBitsStr = Integer.toBinaryString((int)(piece.compassBits&0xff));
-                                String bitStr = Integer.toBinaryString((int)(bit&0xff));
-                                if ((piece.compassBits&(byte)bit) != 0) {
+                              if (!blocked[neighbourDxDyIdx]) {
+                                int x = fromx + v * neighbourDxDy[neighbourDxDyIdx * 2];
+                                int y = fromy + v * neighbourDxDy[neighbourDxDyIdx * 2 + 1];
+
+                                if ((compassBits & compassBit) == compassBit) {
                                     if (Compute.isOnBoard(x, y)) {
                                         var xyBits = getSquareBits(x, y);
                                         String xyBitsStr = Integer.toBinaryString(xyBits);
@@ -281,8 +283,9 @@ public class Main {
                                     }
                                 }
                             }
+
+                            compassBit >>= 1;
                         }
-                        bit>>=1;
                     }
                 } else {
 
@@ -364,7 +367,7 @@ public class Main {
     }
 
     public static final byte DIAGS = (byte) 0b1010_0101;
-    public static final byte COLROWS = (byte) 0b0101_01010;
+    public static final byte COLROWS = (byte) 0b0101_1010;
     public static final byte DIAGS_OR_COLROWS = (byte) (DIAGS | COLROWS);
 
     enum PIECE {
