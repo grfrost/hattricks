@@ -34,16 +34,24 @@ public class Main {
     //static public final long DIAG_BITS =          0b10011001_010011010_001011100_000111;
 
     static char squareBitsToUnicode(byte squareBits) {
-        final char whiteChessUnicodeK = 0x2654;
-        final char blackChessUnicodeK = whiteChessUnicodeK + 6;
-        final char whiteUnicode[] = new char[]{
-                '0', '\u2659', '\u2658', '\u2657', '\u2656', '\u2655', '\u2654', ' '
-        };
-        final char blackUnicode[] = new char[]{
-                '0', '\u265f', '\u265e', '\u265d', '\u265c', '\u265b', '\u265a', ' '
-        };
+        final char chessKingUnicode = 0x2654;
+        /*
+         Note order for unicode chess pieces descend P -> K
+
+         WHITE P'\u2659', N'\u2658', B'\u2657', R'\u2656', Q'\u2655', K'\u2654',
+         BLACK P'\u265f', N'\u265e', B'\u265d', R'\u265c', Q'\u265b', K'\u265a',
+
+         Also if we add 6 to the WHITE unicode we get BLACK unicode of same piece
+
+         Our square bit values ascend  P=1,N=2,B=3,R=4,Q=5,K=6,
+
+         So
+           chessKingUnicode+6-value converts our 'value' to white unicode
+           chessKingUnicode+12-value converts our 'value' to black unicode
+         */
         byte value = (byte) (squareBits & PIECE_MASK);
-        return value == 0 ? ' ' : Compute.isWhite(squareBits) ? whiteUnicode[value] : blackUnicode[value];
+        return (char)(value==0?' ':Compute.isWhite(squareBits)?chessKingUnicode+6-value:chessKingUnicode+6+6-value);
+
     }
 
     public static class Compute {
