@@ -12,17 +12,8 @@ import java.lang.runtime.CodeReflection;
 
 public class Main {
 
-    static public final int[] neighbourDxDy = new int[]{
-            1, -1,
-            0, -1,
-            1, -1
-            - 1, 0,
-            1, 0,
-            -1, 1,
-            0, 1,
-            1, 1
-    };
-
+    static public final int neighbourDxDy = 0b10_10__00_10__01_10__10_00__01_00__10_01__00_01__01_01;
+    //                                        -1 -1,  0 -1,  1 -1, -1, 0,  1, 0, -1  1,  0, 1,  1, 1
 
     static public final byte EMPTY_SQUARE = (byte) 0x00;
     static public final byte PAWN_VALUE = (byte) 0x01;
@@ -268,14 +259,21 @@ public class Main {
                     int blockedBits = compassBits ^ 0xff;
                     for (int v = 1; v <= piece.count; v++) {
                         int compassBit = 0b1000_0000;
+                        int neighbourMask = 0b1111_0000_0000_0000_0000_0000_0000_0000;
+                     //   String neighbourMaskStr = Integer.toBinaryString(neighbourMask);
 
+                        for (int neighbourDxDyIdx = 7; neighbourDxDyIdx >0; neighbourDxDyIdx--) {
+                          //  String compassBitsStr = Integer.toBinaryString(compassBits);
+                          //  String blockedBitsStr = Integer.toBinaryString(blockedBits);
+                          //  String bitStr = Integer.toBinaryString(compassBit);
+                            int nb  = (neighbourMask & neighbourDxDy);
+                        //    String neighbourDxDyStr = Integer.toBinaryString(neighbourDxDy);
+                         //   String nbStr = Integer.toBinaryString(nb);
+                            int nbshifted = nb >>> neighbourDxDyIdx*4;
+                          //  String nbShiftedStr = Integer.toBinaryString(nbshifted);
+                            int x = ((nbshifted>>>2)&0b11)-1;
+                            int y = (nbshifted&0b11)-1;
 
-                        for (int neighbourDxDyIdx = 0; neighbourDxDyIdx < 7; neighbourDxDyIdx++) {
-                            String compassBitsStr = Integer.toBinaryString(compassBits);
-                            String blockedBitsStr = Integer.toBinaryString(blockedBits);
-                            String bitStr = Integer.toBinaryString(compassBit);
-                            int x = fromx + v * neighbourDxDy[neighbourDxDyIdx * 2];
-                            int y = fromy + v * neighbourDxDy[neighbourDxDyIdx * 2 + 1];
                             if (!Compute.isOnBoard(x, y)) {
                             //    System.out.println(fromx + "," + fromy + " board bounds blocks  " + x + "," + y);
                             } else if ((compassBit & blockedBits) == compassBit) {
@@ -295,7 +293,8 @@ public class Main {
                             }
 
 
-                            compassBit >>= 1;
+                            compassBit >>>= 1;
+                          //  neighbourMask>>= 4;
                         }
                     }
                 } else {
