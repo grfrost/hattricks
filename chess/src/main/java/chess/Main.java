@@ -10,7 +10,6 @@ import hat.ifacemapper.Schema;
 import java.lang.runtime.CodeReflection;
 
 
-
 public class Main {
 
     static public final int[] neighbourDxDy = new int[]{
@@ -44,17 +43,18 @@ public class Main {
     //static public final long DIAG_BITS =          0b10011001_010011010_001011100_000111;
 
     static char squareBitsToUnicode(byte squareBits) {
-        final char whiteChessUnicodeK=0x2654;
-        final char blackChessUnicodeK=whiteChessUnicodeK+6;
+        final char whiteChessUnicodeK = 0x2654;
+        final char blackChessUnicodeK = whiteChessUnicodeK + 6;
         final char whiteUnicode[] = new char[]{
-                '0', '\u2659', '\u2658',  '\u2657', '\u2656',  '\u2655','\u2654',  ' '
+                '0', '\u2659', '\u2658', '\u2657', '\u2656', '\u2655', '\u2654', ' '
         };
         final char blackUnicode[] = new char[]{
-                '0', '\u265f', '\u265e',  '\u265d', '\u265c',  '\u265b','\u265a',  ' '
+                '0', '\u265f', '\u265e', '\u265d', '\u265c', '\u265b', '\u265a', ' '
         };
-        byte value = (byte)(squareBits&PIECE_MASK);
-        return  value==0?' ':Compute.isWhite(squareBits)?whiteUnicode[value]:blackUnicode[value];
+        byte value = (byte) (squareBits & PIECE_MASK);
+        return value == 0 ? ' ' : Compute.isWhite(squareBits) ? whiteUnicode[value] : blackUnicode[value];
     }
+
     public static class Compute {
         @CodeReflection
         public static boolean isWhite(byte squareBits) {
@@ -250,39 +250,50 @@ public class Main {
                 return Compute.isOnBoard(x, y) ? squareBits(y * 8 + x) : OFF_BOARD_SQUARE;
             }
 
+            static String algebraic(int x, int y){
+                return Character.toString(x+65)+Integer.toString(y+1);
+            }
+            static String note(int fromx, int fromy, String msg,int tox, int toy){
+                return algebraic(fromx,fromy)+msg+ algebraic(tox,toy);
+            }
+
             default void validMoves(byte squareBits, int fromx, int fromy) {
 
                 PIECE piece = PIECE.of(squareBits);
                 String squareBitsStr = Integer.toBinaryString(squareBits);
+
                 if (piece.count > 0) {
-                    boolean[] blocked = new boolean[8];
+                    // boolean[] blocked = new boolean[8];
+                    int compassBits = piece.compassBits & 0xff;
+                    int blockedBits = compassBits ^ 0xff;
                     for (int v = 1; v <= piece.count; v++) {
                         int compassBit = 0b1000_0000;
-                        int compassBits = piece.compassBits&0xff;
-                          for (int neighbourDxDyIdx = 0; neighbourDxDyIdx < 7; neighbourDxDyIdx++) {
-                              String compassBitsStr = Integer.toBinaryString(compassBits);
-                              String bitStr = Integer.toBinaryString(compassBit);
 
-                              if (!blocked[neighbourDxDyIdx]) {
-                                int x = fromx + v * neighbourDxDy[neighbourDxDyIdx * 2];
-                                int y = fromy + v * neighbourDxDy[neighbourDxDyIdx * 2 + 1];
 
-                                if ((compassBits & compassBit) == compassBit) {
-                                    if (Compute.isOnBoard(x, y)) {
-                                        var xyBits = getSquareBits(x, y);
-                                        String xyBitsStr = Integer.toBinaryString(xyBits);
+                        for (int neighbourDxDyIdx = 0; neighbourDxDyIdx < 7; neighbourDxDyIdx++) {
+                            String compassBitsStr = Integer.toBinaryString(compassBits);
+                            String blockedBitsStr = Integer.toBinaryString(blockedBits);
+                            String bitStr = Integer.toBinaryString(compassBit);
+                            int x = fromx + v * neighbourDxDy[neighbourDxDyIdx * 2];
+                            int y = fromy + v * neighbourDxDy[neighbourDxDyIdx * 2 + 1];
+                            if (!Compute.isOnBoard(x, y)) {
+                            //    System.out.println(fromx + "," + fromy + " board bounds blocks  " + x + "," + y);
+                            } else if ((compassBit & blockedBits) == compassBit) {
+                              //  System.out.println(fromx + "," + fromy + " pattern blocks  " + x + "," + y);
+                            } else {
+                                var xyBits = getSquareBits(x, y);
+                                String xyBitsStr = Integer.toBinaryString(xyBits);
+                                if (Compute.isEmpty(xyBits)) {
+                                    System.out.println(note(fromx ,fromy," can move to ", x,y));
+                                } else if (Compute.isOpponent(xyBits, squareBits)) {
+                                    blockedBits |= compassBit;
+                                    System.out.println(note(fromx ,fromy," can move/take to ", x,y));
 
-                                        if (Compute.isEmpty(xyBits)) {
-                                            System.out.println(fromx + "," + fromy + " can move to " + x + "," + y);
-                                        } else if (Compute.isOpponent(xyBits, squareBits)) {
-                                            blocked[v] = true;
-                                            System.out.println(fromx + "," + fromy + " can move/take on " + x + "," + y);
-                                        } else {
-                                            blocked[v] = true;
-                                        }
-                                    }
+                                } else {
+                                    blockedBits |= compassBit;
                                 }
                             }
+
 
                             compassBit >>= 1;
                         }
@@ -331,21 +342,21 @@ public class Main {
 
             default String asString() {
                 StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append("   | 1  2  3  4  5  6  7  8 |").append('\n');
+                stringBuilder.append("   | a  b  c  d  e  f  g  h |").append('\n');
                 for (int y = 0; y < 8; y++) {
-                    char ch = (char) (0x61 + y);
+                    char ch = (char) (0x31 + y);
                     stringBuilder.append(' ').append(ch).append(' ').append('|');
                     for (int x = 0; x < 8; x++) {
                         byte squareBits = this.getSquareBits(x, y);
                         var background = ((x + y) % 2 == 0) ? TerminalColors.GREY : TerminalColors.DARKGREY;
                         stringBuilder.append(background.bg(" "));
                         char unicode = squareBitsToUnicode(squareBits);
-                          stringBuilder.append(TerminalColors.fgbg(Compute.isWhite(squareBits) ? TerminalColors.WHITE : TerminalColors.BLACK, background, unicode));
+                        stringBuilder.append(TerminalColors.fgbg(Compute.isWhite(squareBits) ? TerminalColors.WHITE : TerminalColors.BLACK, background, unicode));
                         stringBuilder.append(background.bg(" "));
                     }
                     stringBuilder.append('|').append('\n');
                 }
-                stringBuilder.append("   | 1  2  3  4  5  6  7  8 |").append('\n');
+                stringBuilder.append("   | a  b  c  d  e  f  g  h |").append('\n');
                 return stringBuilder.toString();
             }
         }
@@ -378,7 +389,7 @@ public class Main {
         ROOK(ROOK_VALUE, COLROWS, true, 7),
         QUEEN(QUEEN_VALUE, DIAGS_OR_COLROWS, false, 7),
         KING(KING_VALUE, DIAGS_OR_COLROWS, false, 1),
-        OFFBOARD(OFF_BOARD_SQUARE, (byte) 0, false,0);
+        OFFBOARD(OFF_BOARD_SQUARE, (byte) 0, false, 0);
 
 
         public final int value;
