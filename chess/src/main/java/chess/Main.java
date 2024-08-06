@@ -12,9 +12,9 @@ import java.lang.runtime.CodeReflection;
 
 public class Main {
 
-    static public final int neighbourDxDy = 0b10_10__00_10__01_10__10_00__01_00__10_01__00_01__01_01;
+    static public final int neighbourDxDy = 0b00_00__01_00__10_00__00_01__10_01__00_10__01_10__01_01;
     //                                        -1 -1,  0 -1,  1 -1, -1, 0,  1, 0, -1  1,  0, 1,  1, 1
-
+    //                                          nw     n      ne     w      e      sw     s      se
     static public final byte EMPTY_SQUARE = (byte) 0x00;
     static public final byte PAWN_VALUE = (byte) 0x01;
     static public final byte KNIGHT_VALUE = (byte) 0x02;
