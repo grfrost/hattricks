@@ -166,10 +166,6 @@ public class Main {
 
             void spare(short spare);
 
-            default void setSquareBits(int x, int y, byte squareBits) {
-                squareBits(y * 8 + x, squareBits);
-            }
-
             default byte getSquareBits(int x, int y) {
                 return Compute.isOnBoard(x, y) ? squareBits(y * 8 + x) : OFF_BOARD_SQUARE;
             }
@@ -183,52 +179,40 @@ public class Main {
             }
 
             default void validMoves(byte squareBits, int fromx, int fromy) {
-
                 PIECE piece = PIECE.of(squareBits);
-                String squareBitsStr = Integer.toBinaryString(squareBits);
-
                 if (piece.count > 0) {
-                    // boolean[] blocked = new boolean[8];
                     int compassBits = piece.compassBits & 0xff;
                     int blockedBits = compassBits ^ 0xff;
                     for (int v = 1; v <= piece.count; v++) {
                         int compassBit = 0b1000_0000;
-                        int neighbourMask = 0b1111_0000_0000_0000_0000_0000_0000_0000;
-                        //   String neighbourMaskStr = Integer.toBinaryString(neighbourMask);
 
+                        //                     nw    n   ne   w     e   sw    s   se
+                        int neighbourMask = 0b1111_0000_0000_0000_0000_0000_0000_0000;
                         for (int neighbourDxDyIdx = 7; neighbourDxDyIdx > 0; neighbourDxDyIdx--) {
-                            //  String compassBitsStr = Integer.toBinaryString(compassBits);
-                            //  String blockedBitsStr = Integer.toBinaryString(blockedBits);
-                            //  String bitStr = Integer.toBinaryString(compassBit);
                             int nb = (neighbourMask & neighbourDxDy);
-                            //    String neighbourDxDyStr = Integer.toBinaryString(neighbourDxDy);
-                            //   String nbStr = Integer.toBinaryString(nb);
-                            int nbshifted = nb >>> neighbourDxDyIdx * 4;
-                            //  String nbShiftedStr = Integer.toBinaryString(nbshifted);
+                            int nbshifted = nb >>> (neighbourDxDyIdx * 4);
                             int x = ((nbshifted >>> 2) & 0b11) - 1;
                             int y = (nbshifted & 0b11) - 1;
+                            var compassPoints = new String[]{"nw","n", "ne", "w", "e", "sw", "s","se"};
+                            System.out.println(compassPoints[neighbourDxDyIdx]+" x=" + x + ", y=" + y);
 
                             if (!Compute.isOnBoard(x, y)) {
                                 //    System.out.println(fromx + "," + fromy + " board bounds blocks  " + x + "," + y);
                             } else if ((compassBit & blockedBits) == compassBit) {
                                 //  System.out.println(fromx + "," + fromy + " pattern blocks  " + x + "," + y);
                             } else {
-                                var xyBits = getSquareBits(x, y);
+                                var xyBits = squareBits(y*8+x);
                                 String xyBitsStr = Integer.toBinaryString(xyBits);
                                 if (Compute.isEmpty(xyBits)) {
                                     System.out.println(note(fromx, fromy, " can move to ", x, y));
                                 } else if (Compute.isOpponent(xyBits, squareBits)) {
                                     blockedBits |= compassBit;
                                     System.out.println(note(fromx, fromy, " can move/take to ", x, y));
-
                                 } else {
                                     blockedBits |= compassBit;
                                 }
                             }
-
-
                             compassBit >>>= 1;
-                            //  neighbourMask>>= 4;
                         }
                     }
                 } else {
@@ -241,35 +225,35 @@ public class Main {
             default Board init() {
                 for (int y = 2; y < 6; y++) {
                     for (int x = 0; x < 8; x++) {
-                        setSquareBits(x, y, EMPTY_SQUARE);
+                        squareBits((long)(y*8+x), EMPTY_SQUARE);
                     }
                 }
 
                 for (int x = 0; x < 8; x++) {
-                    setSquareBits(x, 1, (byte) (PAWN_VALUE | BLACK_BIT | HOME_BIT));
-                    setSquareBits(x, 6, (byte) (PAWN_VALUE | WHITE_BIT | HOME_BIT));
+                    squareBits((long)(1*8+x), (byte) (PAWN_VALUE | BLACK_BIT | HOME_BIT));
+                    squareBits((long)(6*8+x), (byte) (PAWN_VALUE | WHITE_BIT | HOME_BIT));
                 }
 
-                setSquareBits(0, 0, (byte) (ROOK_VALUE | BLACK_BIT | HOME_BIT));
-                setSquareBits(7, 0, (byte) (ROOK_VALUE | BLACK_BIT | HOME_BIT));
-                setSquareBits(0, 7, (byte) (ROOK_VALUE | WHITE_BIT | HOME_BIT));
-                setSquareBits(7, 7, (byte) (ROOK_VALUE | WHITE_BIT | HOME_BIT));
+                squareBits((long)(0*8+0), (byte) (ROOK_VALUE | BLACK_BIT | HOME_BIT));
+                squareBits((long)(0*8+7), (byte) (ROOK_VALUE | BLACK_BIT | HOME_BIT));
+                squareBits((long)(7*8+0), (byte) (ROOK_VALUE | WHITE_BIT | HOME_BIT));
+                squareBits((long)(7*8+7), (byte) (ROOK_VALUE | WHITE_BIT | HOME_BIT));
 
-                setSquareBits(1, 0, (byte) (KNIGHT_VALUE | BLACK_BIT | HOME_BIT));
-                setSquareBits(6, 0, (byte) (KNIGHT_VALUE | BLACK_BIT | HOME_BIT));
-                setSquareBits(1, 7, (byte) (KNIGHT_VALUE | WHITE_BIT | HOME_BIT));
-                setSquareBits(6, 7, (byte) (KNIGHT_VALUE | WHITE_BIT | HOME_BIT));
+                squareBits((long)(0*8+1), (byte) (KNIGHT_VALUE | BLACK_BIT | HOME_BIT));
+                squareBits((long)(0*8+6), (byte) (KNIGHT_VALUE | BLACK_BIT | HOME_BIT));
+                squareBits((long)(7*8+1), (byte) (KNIGHT_VALUE | WHITE_BIT | HOME_BIT));
+                squareBits((long)(7*8+6), (byte) (KNIGHT_VALUE | WHITE_BIT | HOME_BIT));
 
-                setSquareBits(2, 0, (byte) (BISHOP_VALUE | BLACK_BIT | HOME_BIT));
-                setSquareBits(5, 0, (byte) (BISHOP_VALUE | BLACK_BIT | HOME_BIT));
-                setSquareBits(2, 7, (byte) (BISHOP_VALUE | WHITE_BIT | HOME_BIT));
-                setSquareBits(5, 7, (byte) (BISHOP_VALUE | WHITE_BIT | HOME_BIT));
+                squareBits((long)(0*8+2), (byte) (BISHOP_VALUE | BLACK_BIT | HOME_BIT));
+                squareBits((long)(0*8+5), (byte) (BISHOP_VALUE | BLACK_BIT | HOME_BIT));
+                squareBits((long)(7*8+2), (byte) (BISHOP_VALUE | WHITE_BIT | HOME_BIT));
+                squareBits((long)(7*8+5), (byte) (BISHOP_VALUE | WHITE_BIT | HOME_BIT));
 
-                setSquareBits(3, 0, (byte) (QUEEN_VALUE | BLACK_BIT | HOME_BIT));
-                setSquareBits(3, 7, (byte) (QUEEN_VALUE | WHITE_BIT | HOME_BIT));
+                squareBits((long)(0*8+3), (byte) (QUEEN_VALUE | BLACK_BIT | HOME_BIT));
+                squareBits((long)(7*8+3), (byte) (QUEEN_VALUE | WHITE_BIT | HOME_BIT));
 
-                setSquareBits(4, 0, (byte) (KING_VALUE | BLACK_BIT | HOME_BIT));
-                setSquareBits(4, 7, (byte) (KING_VALUE | WHITE_BIT | HOME_BIT));
+                squareBits((long)(0*8+4), (byte) (KING_VALUE | BLACK_BIT | HOME_BIT));
+                squareBits((long)(7*8+4), (byte) (KING_VALUE | WHITE_BIT | HOME_BIT));
                 return this;
             }
 

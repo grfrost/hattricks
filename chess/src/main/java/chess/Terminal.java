@@ -9,50 +9,25 @@ public class Terminal {
     public final static String escFG = esc + "38;";
     public final static String escBG = esc + "48;";
     static final char chessKingUnicode = 0x2654;
-    public static String rgb(int rgb) {
-        return "5;" + rgb + suffix;
-    }
-    public static String rgb(int r, int g, int b) {
-        return "2;" + r + ";" + g + ";" + b + suffix;
-    }
-    public static String fg(int rgb) {
-        return escFG + rgb(rgb);
-    }
-    public static String fg(int r, int g, int b) {
-        return escFG + rgb(r, g, b);
-    }
-    public static String bg(int r, int g, int b) {
-        return escBG + rgb(r, g, b);
-    }
-    public static String bg(int rgb) {
-        return escBG + rgb(rgb);
-    }
+
     public Terminal bg(int r, int g, int b, Consumer<Terminal> consumer) {
-        str(bg(r, g, b));
+        str(escBG +  "2;" + r + ";" + g + ";" + b + suffix);
         consumer.accept(this);
         return str(escBG + "0"+suffix);
     }
-    public Terminal fg(int rgb, Consumer<Terminal> consumer) {
-        str(fg(rgb));
-        consumer.accept(this);
-        return str(escFG + "0"+suffix);
-    }
+
     public Terminal fg(int r, int g, int b, Consumer<Terminal> consumer) {
-        str(fg(r, g, b));
+        str(escFG +  "2;" + r + ";" + g + ";" + b + suffix);
         consumer.accept(this);
         return str(escFG + "0"+suffix);
     }
 
-    public Terminal redOnGreen(Consumer<Terminal> consumer) {
-        return fg(250, 0, 0, fg -> fg.bg(0, 100, 0, consumer));
+    public Terminal border(Consumer<Terminal> consumer) {
+        return fg(0, 250, 0, fg -> fg.bg(128, 128, 128, consumer));
     }
-    public Terminal onGrey(int level, Consumer<Terminal> consumer) {
-        return bg(level, level, level,consumer);
-    }
-    public Terminal bg(int rgb, Consumer<Terminal> consumer) {
-        str(bg(rgb));
-        consumer.accept(this);
-        return str(escBG + "0"+suffix);
+    public Terminal square(int x,int y, Consumer<Terminal> consumer) {
+        int grey = 64 + (((x + y) % 2) * 64);
+        return bg(grey, grey, grey,consumer);
     }
 
     public Terminal ch(char ch) {
@@ -99,13 +74,13 @@ public class Terminal {
         return str(s).nl();
     }
     public Terminal board(Main.ChessData.Board board) {
-        space(3).redOnGreen(_->str("| a  b  c  d  e  f  g  h |")).nl();
+        space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
-            final int finaly = y;
-            redOnGreen( _ -> space().ch(0x31 + finaly).space().bar());
+            final int finaly = 7-y;
+            border(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
                 byte squareBits = board.getSquareBits(x, y);
-                onGrey(64 + (((x + y) % 2) * 64), _ -> {
+                square(x,y, _ -> {
                     space();
                     if (Main.Compute.isEmpty(squareBits)) {
                         space();
@@ -124,17 +99,15 @@ public class Terminal {
                           *   chessKingUnicode+6-value converts our 'value' to white unicode
                           *   chessKingUnicode+12-value converts our 'value' to black unicode
                           */
-
-                        ch(Main.Compute.isWhite(squareBits)
-                                ? chessKingUnicode + 6 - (squareBits & Main.PIECE_MASK)
-                                : chessKingUnicode + 6 + 6 - (squareBits & Main.PIECE_MASK));
+                        int offset =   Main.Compute.isWhite(squareBits)?12:6;
+                        ch(chessKingUnicode + offset - (squareBits & Main.PIECE_MASK));
                     }
                     space();
                 });
             }
-            redOnGreen(_ -> bar()).nl();
+            border(_ -> bar()).nl();
         }
-        space(3).redOnGreen(bg -> bg.str("| a  b  c  d  e  f  g  h |")).nl();
+        space(3).border(bg -> bg.str("| a  b  c  d  e  f  g  h |")).nl();
         return this;
     }
 
