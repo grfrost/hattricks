@@ -12,6 +12,29 @@ import java.lang.runtime.CodeReflection;
 
 public class Main {
 
+    // DxDy move lists
+    // We can encode up to 8 4 bit patterns comprised of pairs of bits such that  00=-1 01=0 10=1 11=2
+    // In each case the encodings allow -1,0,1,2
+    // We use this pattern to map the four bits to two dx,dy's
+    //  int dxdy = (0b1111 & moveList) >>> (idx*4);
+    //  int dy = (dxdy & 0b11) - 1;
+    //  dxdy>>>=2;
+    //  int dx = (dxdy & 0b11) - 1;
+    //
+    //                                              nw     n      ne     w      e      sw      s     se
+    //                                            -1,-1,  0,-1,  1,-1  -1, 0   1, 0, -1, 1,  0, 1   1, 1
+    public final static int compassMovesDxDy =  0b00_00__01_00__10_00__00_01__10_01__00_10__01_10__01_01;
+
+    //      f = -1 for white +1 for black       0,2f   0,1f  -1,1f  1,1f
+    //                                                <----------------->
+    //                                          <----------------------->
+    public final static int pawnMovesDxDy =  0b01_11__01_10__00_10__10_10;
+
+    //                                           2, 1   1, 2   1, 2   2, 1   2, 1   1, 2   1, 2   2, 1
+    //                                           -  -   -  -   +  -   +  -   -  +   -  +   +  +   +  +
+    public final static int knightMovesDxDy = 0b11_01__10_11__00_11__11_10__11_01__10_11__00_11__11_10;
+
+
     public static final byte DIAGS = (byte) 0b1010_0101;
     public static final byte COLROWS = (byte) 0b0101_1010;
     public static final byte ALL_POINTS = (byte) 0b1111_1111;
@@ -125,9 +148,7 @@ public class Main {
         }
 
         public static int dxdy(int movesDxDy,int moveIndex) {
-
-            int dxdy = 0b1111&(movesDxDy>>>(moveIndex * 4));
-           return dxdy;
+           return 0b1111&(movesDxDy>>>(moveIndex * 4));
         }
     }
 
@@ -229,9 +250,7 @@ public class Main {
                             boolean valid = (compassBits&(1<<moveIdx))==compassBits;
                             // check if the bit is set for this compassPoint in compassBits
                             if (valid) {
-                                //                                nw     n      ne     w      e      sw      s     se
-                                //                              -1 -1,  0 -1,  1 -1, -1, 0,  1, 0, -1  1,  0, 1,  1, 1
-                                final int compassMovesDxDy =  0b00_00__01_00__10_00__00_01__10_01__00_10__01_10__01_01;
+
 
                                 int dxdy = Compute.dxdy(compassMovesDxDy, moveIdx);
                                 int dy = (dxdy & 0b11) - 1;
@@ -263,17 +282,7 @@ public class Main {
                     int forward = Compute.isWhite(fromBits)?-1:1;
                     int home = Compute.isWhite(fromBits)?6:1;
 
-                    final int pawnMovesDxDy =  0b01_11__01_10__00_10__10_10;
-                    //                       0 2f   0,1f  -1 1f,  1 1f
-                    // 00=-1 01=0 10=1 11=2
-                    /*
-                     *  We have to check
-                     *    x  ,y+(2*forward)   (if home)  01_11
-                     *    x-1,y+(1*forward)              00_10
-                     *    x+1,y+(1*forward)              10_10
-                     *    x  ,y+(1*forward)              01_10
 
-                     */
                     int count = (fromy==home)?4:3;  // four moves if home else three
                     for (int moveIdx=0; moveIdx<count; moveIdx++) {
                         int dxdy = Compute.dxdy(pawnMovesDxDy, moveIdx);
@@ -310,9 +319,7 @@ public class Main {
                     }
 
                 }else if(pieceValue==KNIGHT_VALUE){
-                    final int knightMovesDxDy =  0b11_01__10_11__00_11__11_10__11_01__10_11__00_11__11_10;
-                    //                              2  1   1  2   1  2   2  1   2  1   1  2   1  2   2  1
-                    //                              -  -   -  -   +  -   +  -   -  +   -  +   +  +   +  +
+
                     // 00=-1 01=0 10=1 11=2
 
                 }
@@ -327,7 +334,7 @@ public class Main {
 
                 for (int x = 0; x < 8; x++) {
                     squareBits((long)(1*8+x), (byte) (PAWN_VALUE ));
-                    squareBits((long)(6*8+x), (byte) (PAWN_VALUE | WHITE_BIT ));
+                   // squareBits((long)(6*8+x), (byte) (PAWN_VALUE | WHITE_BIT ));
                 }
 
                 squareBits((long)(0*8+0), (byte) (ROOK_VALUE));
