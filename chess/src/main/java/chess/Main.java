@@ -240,6 +240,12 @@ public class Main {
                     System.out.println(pieceDescription);
                     int compassBits = Compute.compassBits(fromBits);
                     // compass bits has 1/0 for each eligible move relative to fromx,fromy
+                    // So we only encode the neighbours so the 3x3 grid has no center representation
+                    //
+                    //              nw n ne e w sw s se
+                    //                \ | | | | | | /
+                    //                 \\ | | | | //
+                    //                  \|| | | ||/
                     // so  diags   == 0b101_0_0_101
                     //     colrows == 0b010_1_1_010
                     //   allpoints == 0b111_1_1_111
