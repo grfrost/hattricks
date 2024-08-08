@@ -284,28 +284,10 @@ public class Main {
                                 if (Compute.isOnBoard(tox, toy)) {
                                     var toBits = squareBits(toy * 8 + tox);
                                     if (Compute.isEmpty(toBits)) {
-                                        int move = (fromx<<12|fromy<<8|tox<<4|toy);
-                                        movesArr[moves++]=(short)move;
-                                        System.out.println(piece(fromBits)+"@"+ algebraic(fromx, fromy)+" -> @"+algebraic(tox, toy));
-                                        {
-                                            int fromX = (move >>> 12) & 0xf;
-                                            int fromY = (move >>> 8) & 0xf;
-                                            int toX = (move >>> 4) & 0xf;
-                                            int toY = (move >>> 0) & 0xf;
-                                            System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " -> @" + algebraic(toX, toY));
-                                        }
+                                        movesArr[moves++]=(short)(fromx<<12|fromy<<8|tox<<4|toy);
                                     } else{
                                         if (Compute.isOpponent(toBits, fromBits)) {
-                                            int move = (fromx << 12 | fromy << 8 | tox << 4 | toy);
-                                            movesArr[moves++] = (short) move;
-                                            System.out.println(piece(fromBits) + "@" + algebraic(fromx, fromy) + " x " + piece(toBits) + " @" + algebraic(tox, toy));
-                                            {
-                                                int fromX = (move >>> 12) & 0xf;
-                                                int fromY = (move >>> 8) & 0xf;
-                                                int toX = (move >>> 4) & 0xf;
-                                                int toY = (move >>> 0) & 0xf;
-                                                System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " x " + piece(toBits) + " @" + algebraic(toX, toY));
-                                            }
+                                            movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
                                         }
                                         compassBits ^= (1<<moveIdx); //unset this compass index
                                     }
@@ -335,18 +317,7 @@ public class Main {
                             var toBits = squareBits(toy * 8 + tox);
                             if (moveIdx>1){
                                 if (Compute.isEmpty(toBits)) {
-                                    int move = (fromx<<12|fromy<<8|tox<<4|toy);
-                                    movesArr[moves++]=(short)move;
-
-                                    System.out.println(piece(fromBits)+"@"+algebraic(fromx, fromy)+ " -> @"+algebraic(toy, tox));
-                                    {
-                                        int fromX = (move >>> 12) & 0xf;
-
-                                        int fromY = (move >>> 8) & 0xf;
-                                        int toX = (move >>> 4) & 0xf;
-                                        int toY = (move >>> 0) & 0xf;
-                                        System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " -> @" + algebraic(toX, toY));
-                                    }
+                                    movesArr[moves++]=(short)(fromx<<12|fromy<<8|tox<<4|toy);
                                 }else {
                                     //System.out.println(note(fromx, fromy, " can't move (blocked)to ", x, y));
                                 }
@@ -355,16 +326,7 @@ public class Main {
                                     //System.out.println(note(fromx, fromy, " can't take (nothing)  on ", x, y));
                                 }else{
                                     if (Compute.isOpponent(toBits, fromBits)) {
-                                        int move = (fromx<<12|fromy<<8|tox<<4|toy);
-                                        movesArr[moves++]=(short)move;
-                                        System.out.println(piece(fromBits)+" @"+algebraic(fromx, fromy)+ " x "+piece(toBits)+"  @"+algebraic(toy, tox));
-                                        {
-                                            int fromX = (move >>> 12) & 0xf;
-                                            int fromY = (move >>> 8) & 0xf;
-                                            int toX = (move >>> 4) & 0xf;
-                                            int toY = (move >>> 0) & 0xf;
-                                            System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " x " + piece(toBits) + "  @" + algebraic(toX, toY));
-                                        }
+                                        movesArr[moves++]=(short)(fromx<<12|fromy<<8|tox<<4|toy);;
                                     } else {
                                       //  System.out.println(note(fromx, fromy, " can't take (own player)  on ", x, y));
                                     }
