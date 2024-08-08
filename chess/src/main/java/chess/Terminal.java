@@ -2,6 +2,18 @@ package chess;
 
 import java.util.function.Consumer;
 
+import static chess.Main.ALL_POINTS;
+import static chess.Main.BISHOP_VALUE;
+import static chess.Main.COLROWS;
+import static chess.Main.DIAGS;
+import static chess.Main.EMPTY_SQUARE;
+import static chess.Main.KING_VALUE;
+import static chess.Main.KNIGHT_VALUE;
+import static chess.Main.PAWN_VALUE;
+import static chess.Main.PIECE_MASK;
+import static chess.Main.QUEEN_VALUE;
+import static chess.Main.ROOK_VALUE;
+
 public class Terminal {
     StringBuilder stringBuilder = new StringBuilder();
     public static final String esc = "\u001b[";
@@ -79,7 +91,7 @@ public class Terminal {
             final int finaly = 7-y;
             border(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.getSquareBits(x, y);
+                byte squareBits = board.squareBits(y*8+x);
                 square(x,y, _ -> {
                     space();
                     if (Main.Compute.isEmpty(squareBits)) {
@@ -115,9 +127,53 @@ public class Terminal {
          *   chessKingUnicode+12-value converts our 'value' to black unicode
          */
         int offset =   Main.Compute.isWhite(squareBits)?12:6;
-        return Character.toString(chessKingUnicode + offset - (squareBits & Main.PIECE_MASK));
+        return Character.toString(chessKingUnicode + offset - (squareBits & PIECE_MASK));
     }
 
+    static String describe(byte squareBits){
+        StringBuilder sb = new StringBuilder();
+        if (Main.Compute.isEmpty(squareBits)){
+            sb.append("EMPTY");
+        }else {
+            int pieceValue = squareBits & PIECE_MASK;
+            if (Main.Compute.isWhite(squareBits)){
+                sb.append("WHITE ");
+            }else{
+                sb.append("BLACK ");
+            }
+            switch (pieceValue){
+                case EMPTY_SQUARE:
+                    sb.append("EMPTY");
+                    break;
+                case PAWN_VALUE:
+                    sb.append("PAWN");
+                    break;
+                case ROOK_VALUE:
+                    sb.append("ROOK");
+                    break;
+                case KNIGHT_VALUE:
+                    sb.append("KNIGHT");
+                    break;
+                case BISHOP_VALUE:
+                    sb.append("BISHOP");
+                    break;
+                case QUEEN_VALUE:
+                    sb.append("QUEEN");
+                    break;
+                case KING_VALUE:
+                    sb.append("KING");
+                    break;
+            }
+            switch (Main.Compute.compassBits(squareBits)){
+                case 0:break;
+                case ALL_POINTS:sb.append(" DIAGS and COLROWS ").append(Main.Compute.compassCount(squareBits));break;
+                case DIAGS:sb.append(" DIAGS ").append(Main.Compute.compassCount(squareBits));break;
+                case COLROWS:sb.append(" COLROWS ").append(Main.Compute.compassCount(squareBits));break;
+            }
+
+        }
+        return sb.toString();
+    }
     @Override
     public String toString() {
         return stringBuilder.toString();

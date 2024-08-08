@@ -11,6 +11,7 @@ import java.lang.runtime.CodeReflection;
 
 import static chess.Terminal.algebraic;
 import static chess.Terminal.chessKingUnicode;
+import static chess.Terminal.describe;
 import static chess.Terminal.piece;
 
 
@@ -162,10 +163,6 @@ public class Main {
         static public void init(final ComputeContext cc, ChessData chessData) {
             cc.dispatchKernel(chessData.length(), kc -> Compute.initTree(kc, chessData));
         }
-
-       // public static int dxdy(int movesDxDy,int moveIndex) {
-        //   return ;
-       // }
     }
 
     public interface ChessData extends Buffer {
@@ -192,57 +189,7 @@ public class Main {
 
             void spare(short spare);
 
-            default byte getSquareBits(int x, int y) {
-                return Compute.isOnBoard(x, y) ? squareBits(y * 8 + x) : OFF_BOARD_SQUARE;
-            }
 
-
-
-
-            static String describe(byte squareBits){
-                StringBuilder sb = new StringBuilder();
-                if (Compute.isEmpty(squareBits)){
-                    sb.append("EMPTY");
-                }else {
-                    int pieceValue = squareBits & PIECE_MASK;
-                    if (Compute.isWhite(squareBits)){
-                        sb.append("WHITE ");
-                    }else{
-                        sb.append("BLACK ");
-                    }
-                    switch (pieceValue){
-                        case EMPTY_SQUARE:
-                            sb.append("EMPTY");
-                            break;
-                        case PAWN_VALUE:
-                            sb.append("PAWN");
-                            break;
-                        case ROOK_VALUE:
-                            sb.append("ROOK");
-                            break;
-                        case KNIGHT_VALUE:
-                            sb.append("KNIGHT");
-                            break;
-                        case BISHOP_VALUE:
-                            sb.append("BISHOP");
-                            break;
-                        case QUEEN_VALUE:
-                            sb.append("QUEEN");
-                            break;
-                        case KING_VALUE:
-                            sb.append("KING");
-                            break;
-                    }
-                    switch (Compute.compassBits(squareBits)){
-                        case 0:break;
-                        case ALL_POINTS:sb.append(" DIAGS and COLROWS ").append(Compute.compassCount(squareBits));break;
-                        case DIAGS:sb.append(" DIAGS ").append(Compute.compassCount(squareBits));break;
-                        case COLROWS:sb.append(" COLROWS ").append(Compute.compassCount(squareBits));break;
-                    }
-
-                }
-                return sb.toString();
-            }
 
             default int validMoves(byte fromBits, int fromx, int fromy, int moves,short[] movesArr) {
                 int pieceValue = fromBits&PIECE_MASK;
@@ -381,10 +328,7 @@ public class Main {
                 squareBits((long)(7*8+4), (byte) (KING_VALUE | WHITE_BIT ));
                 return this;
             }
-
-
         }
-
 
         int length();
 
@@ -494,7 +438,7 @@ public class Main {
         for (int i = 0; i < 64; i++) {
             int x = i % 8;
             int y = i / 8;
-            byte squareBits = board.getSquareBits(x, y);
+            byte squareBits = board.squareBits(i);
             if (Compute.isMyPiece(squareBits, side)) {
                 moves= board.validMoves(squareBits, x, y, moves, movesArr);
             }
@@ -504,10 +448,12 @@ public class Main {
             int  move  = movesArr[moveIdx];
             int fromx = (move>>>12)&0xf;
             int fromy = (move>>>8)&0xf;
+            int from = fromy*8 + fromx;
             int tox = (move>>>4)&0xf;
             int toy = (move>>>0)&0xf;
-            byte fromBits = board.getSquareBits(fromx, fromy);
-            byte toBits = board.getSquareBits(tox, toy);
+            int to = toy*8+tox;
+            byte fromBits = board.squareBits(from);
+            byte toBits = board.squareBits(to);
             if (Compute.isPiece(toBits)) {
                 System.out.println(piece(fromBits) + "@" + algebraic(fromx, fromy) + " x " + piece(toBits) + " @" + algebraic(tox, toy));
             }else{
