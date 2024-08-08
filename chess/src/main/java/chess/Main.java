@@ -9,6 +9,10 @@ import hat.ifacemapper.Schema;
 
 import java.lang.runtime.CodeReflection;
 
+import static chess.Terminal.algebraic;
+import static chess.Terminal.chessKingUnicode;
+import static chess.Terminal.piece;
+
 
 public class Main {
 
@@ -71,9 +75,21 @@ public class Main {
 
         @CodeReflection
         public static boolean isOpponent(byte mySquareBits, byte opponentSquareBits) {
-            int myColor = (mySquareBits & WHITE_BIT);
-            int opponentColor = (opponentSquareBits & WHITE_BIT);
-            return myColor!=opponentColor;
+            if (isPiece(mySquareBits)) {
+                int myColor = (mySquareBits & WHITE_BIT);
+                int opponentColor = (opponentSquareBits & WHITE_BIT);
+                return myColor != opponentColor;
+            }
+            return false;
+        }
+        @CodeReflection
+        public static boolean isMyPiece(byte squareBits, byte myColorBit) {
+            if (isPiece(squareBits)) {
+                int myColor = (squareBits & WHITE_BIT);
+                int opponentColor = (myColorBit & WHITE_BIT);
+                return myColor == opponentColor;
+            }
+            return false;
         }
 
 
@@ -147,9 +163,9 @@ public class Main {
             cc.dispatchKernel(chessData.length(), kc -> Compute.initTree(kc, chessData));
         }
 
-        public static int dxdy(int movesDxDy,int moveIndex) {
-           return 0b1111&(movesDxDy>>>(moveIndex * 4));
-        }
+       // public static int dxdy(int movesDxDy,int moveIndex) {
+        //   return ;
+       // }
     }
 
     public interface ChessData extends Buffer {
@@ -180,13 +196,8 @@ public class Main {
                 return Compute.isOnBoard(x, y) ? squareBits(y * 8 + x) : OFF_BOARD_SQUARE;
             }
 
-            static String algebraic(int x, int y) {
-                return Character.toString(x + 65 +32) + Integer.toString(8-y);
-            }
 
-            static String note(int fromx, int fromy, String msg, int tox, int toy) {
-                return algebraic(fromx, fromy) + msg + algebraic(tox, toy);
-            }
+
 
             static String describe(byte squareBits){
                 StringBuilder sb = new StringBuilder();
@@ -233,52 +244,73 @@ public class Main {
                 return sb.toString();
             }
 
-            default void validMoves(byte fromBits, int fromx, int fromy) {
+            default int validMoves(byte fromBits, int fromx, int fromy, int moves,short[] movesArr) {
                 int pieceValue = fromBits&PIECE_MASK;
+
                 if (pieceValue >= KNIGHT_VALUE) {
                     String pieceDescription = describe(fromBits);
                     System.out.println(pieceDescription);
                     int compassBits = Compute.compassBits(fromBits);
                     // compass bits has 1/0 for each eligible move relative to fromx,fromy
-                    // So we only encode the neighbours so the 3x3 grid has no center representation
-                    //
-                    //              nw n ne e w sw s se
-                    //                \ | | | | | | /
-                    //                 \\ | | | | //
-                    //                  \|| | | ||/
-                    // so  diags   == 0b101_0_0_101
-                    //     colrows == 0b010_1_1_010
-                    //   allpoints == 0b111_1_1_111
-                    int compassCount = Compute.compassCount(fromBits);
-                    // compassCount 1 for K 7 for Q,R,B
-                    for (int v = 1; v <= compassCount; v++) {
+                    // We only encode the neighbours so the 3x3 grid has no center representation
+                    //                piece being moved
+                    //                     is here
+                    //                        v
+                    //              nw n ne e | w sw s se
+                    //                \ | | | | | | | /
+                    //                 \\ | | | | | //
+                    //                  ||| | v | |||
+                    //     diags   == 0b101_0___0_101
+                    //     colrows == 0b010_1___1_010
+                    //   allpoints == 0b111_1___1_111
+                    int slideCount = Compute.compassCount(fromBits); // 1 for K 7 for Q,R,B
+                    for (int slide = 1; slide <= slideCount; slide++) { //1 or 1,2,3,4,5,6,7
                         for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
-                            boolean valid = (compassBits&(1<<moveIdx))==compassBits;
+                            int moveBit = (1<<moveIdx); // so 0b10000000 -> 0b01000000 -> ... 0b00000001
                             // check if the bit is set for this compassPoint in compassBits
-                            if (valid) {
-
-
-                                int dxdy = Compute.dxdy(compassMovesDxDy, moveIdx);
-                                int dy = (dxdy & 0b11) - 1;
+                            // if so we can move /take in this dir
+                            if ((compassBits&moveBit)==moveBit) {
+                                // Now let's determine what a move in this dir looks like
+                                int dxdy =0b1111&(compassMovesDxDy>>>(moveIdx * 4));
+                                int dy = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
                                 dxdy>>>=2;
-                                int dx = (dxdy & 0b11) - 1;
-                                int x = fromx + v* dx;
-                                int y = fromy + v* dy;
-                                final String[]  compassPoints = new String[]{"nw", "n", "ne", "w", "e", "sw", "s", "se"};
-                                System.out.println(compassPoints[moveIdx] + " x=" + x + ", y=" + y);
-                                if (Compute.isOnBoard(x, y)) {
-                                    var toBits = squareBits(y * 8 + x);
+                                int dx = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
+
+                                int tox = fromx + slide* dx;
+                                int toy = fromy + slide* dy;
+
+                              //  final String[]  compassPoints = new String[]{"nw", "n", "ne", "w", "e", "sw", "s", "se"};
+                               // System.out.println(compassPoints[moveIdx] + " x=" + toX + ", y=" + toY);
+                                if (Compute.isOnBoard(tox, toy)) {
+                                    var toBits = squareBits(toy * 8 + tox);
                                     if (Compute.isEmpty(toBits)) {
-                                        System.out.println(note(fromx, fromy, " can move to ", x, y));
+                                        int move = (fromx<<12|fromy<<8|tox<<4|toy);
+                                        movesArr[moves++]=(short)move;
+                                        System.out.println(piece(fromBits)+"@"+ algebraic(fromx, fromy)+" -> @"+algebraic(tox, toy));
+                                        {
+                                            int fromX = (move >>> 12) & 0xf;
+                                            int fromY = (move >>> 8) & 0xf;
+                                            int toY = (move >>> 4) & 0xf;
+                                            int toX = (move >>> 0) & 0xf;
+                                            System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " -> @" + algebraic(toX, toY));
+                                        }
                                     } else{
                                         if (Compute.isOpponent(toBits, fromBits)) {
-                                            System.out.println(note(fromx, fromy, " can move/take to ", x, y));
+                                            int move = (fromx << 12 | fromy << 8 | tox << 4 | toy);
+                                            movesArr[moves++] = (short) move;
+                                            System.out.println(piece(fromBits) + "@" + algebraic(fromx, fromy) + " x " + piece(toBits) + " @" + algebraic(tox, toy));
+                                            {
+                                                int fromX = (move >>> 12) & 0xf;
+                                                int fromY = (move >>> 8) & 0xf;
+                                                int toY = (move >>> 4) & 0xf;
+                                                int toX = (move >>> 0) & 0xf;
+                                                System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " x " + piece(toBits) + " @" + algebraic(toX, toY));
+                                            }
                                         }
                                         compassBits ^= (1<<moveIdx); //unset this compass index
-
                                     }
                                 }else{
-                                    System.out.println(note(fromx, fromy, " offboard can't move to ", x, y));
+                                  //  System.out.println(note(fromx, fromy, " offboard can't move to ", toX, toY));
                                     compassBits ^= (1<<moveIdx); // unset this compass index
                                 }
                             }
@@ -291,19 +323,30 @@ public class Main {
 
                     int count = (fromy==home)?4:3;  // four moves if home else three
                     for (int moveIdx=0; moveIdx<count; moveIdx++) {
-                        int dxdy = Compute.dxdy(pawnMovesDxDy, moveIdx);
-                        int dy = (dxdy & 0b11) - 1;
+                        int dxdy =0b1111&(pawnMovesDxDy>>>(moveIdx * 4));
+                        int dy = (dxdy & 0b11) - 1; // 00->-1, 01->0, 10->1, 11->2
                         dxdy>>>=2;
-                        int dx = (dxdy & 0b11) - 1;
+                        int dx = (dxdy & 0b11) - 1; // 00->-1, 01->0, 10->1, 11->2
 
-                        int x = fromx + dx;
-                        int y = fromy + (forward* dy);
+                        int tox = fromx + dx;
+                        int toy = fromy + (forward* dy);
 
-                        if (Compute.isOnBoard(x, y)) {
-                            var toBits = squareBits(y * 8 + x);
+                        if (Compute.isOnBoard(tox, toy)) {
+                            var toBits = squareBits(toy * 8 + tox);
                             if (moveIdx>1){
                                 if (Compute.isEmpty(toBits)) {
-                                    System.out.println(note(fromx, fromy, " can move to ", x, y));
+                                    int move = (fromx<<12|fromy<<8|tox<<4|toy);
+                                    movesArr[moves++]=(short)move;
+
+                                    System.out.println(piece(fromBits)+"@"+algebraic(fromx, fromy)+ " -> @"+algebraic(toy, tox));
+                                    {
+                                        int fromX = (move >>> 12) & 0xf;
+
+                                        int fromY = (move >>> 8) & 0xf;
+                                        int toY = (move >>> 4) & 0xf;
+                                        int toX = (move >>> 0) & 0xf;
+                                        System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " -> @" + algebraic(toX, toY));
+                                    }
                                 }else {
                                     //System.out.println(note(fromx, fromy, " can't move (blocked)to ", x, y));
                                 }
@@ -312,7 +355,16 @@ public class Main {
                                     //System.out.println(note(fromx, fromy, " can't take (nothing)  on ", x, y));
                                 }else{
                                     if (Compute.isOpponent(toBits, fromBits)) {
-                                        System.out.println(note(fromx, fromy, " can take on ", x, y));
+                                        int move = (fromx<<12|fromy<<8|tox<<4|toy);
+                                        movesArr[moves++]=(short)move;
+                                        System.out.println(piece(fromBits)+" @"+algebraic(fromx, fromy)+ " x "+piece(toBits)+"  @"+algebraic(toy, tox));
+                                        {
+                                            int fromX = (move >>> 12) & 0xf;
+                                            int fromY = (move >>> 8) & 0xf;
+                                            int toY = (move >>> 4) & 0xf;
+                                            int toX = (move >>> 0) & 0xf;
+                                            System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " x " + piece(toBits) + "  @" + algebraic(toX, toY));
+                                        }
                                     } else {
                                       //  System.out.println(note(fromx, fromy, " can't take (own player)  on ", x, y));
                                     }
@@ -329,6 +381,8 @@ public class Main {
                     // 00=-1 01=0 10=1 11=2
 
                 }
+                return moves;
+
             }
 
             default Board init() {
@@ -340,7 +394,7 @@ public class Main {
 
                 for (int x = 0; x < 8; x++) {
                     squareBits((long)(1*8+x), (byte) (PAWN_VALUE ));
-                   // squareBits((long)(6*8+x), (byte) (PAWN_VALUE | WHITE_BIT ));
+                  //  squareBits((long)(6*8+x), (byte) (PAWN_VALUE | WHITE_BIT ));
                 }
 
                 squareBits((long)(0*8+0), (byte) (ROOK_VALUE));
@@ -472,16 +526,27 @@ public class Main {
         //ChessData.create(accelerator, 10001);//,101,1001,10001
         //accelerator.compute(cc -> Compute.init(cc, chessData));
         ChessData.Board board = chessData.board(0).init();
+        short[] movesArr = new short[64];
+        int moves=0;
+        byte side = WHITE_BIT;
         for (int i = 0; i < 64; i++) {
             int x = i % 8;
             int y = i / 8;
             byte squareBits = board.getSquareBits(x, y);
-            if (!Compute.isEmpty(squareBits)) {
-                if (Compute.isWhite(squareBits)) {
-                    board.validMoves(squareBits, x, y);
-                }
+            if (Compute.isMyPiece(squareBits, side)) {
+                moves= board.validMoves(squareBits, x, y, moves, movesArr);
             }
         }
         System.out.println(new Terminal().board(board));
+        for (int moveIdx = 0; moveIdx < moves; moveIdx++) {
+            int  move  = movesArr[moveIdx];
+            int fromx = (move>>>12)&0xf;
+            int fromy = (move>>>8)&0xf;
+            int tox = (move>>>4)&0xf;
+            int toy = (move>>>0)&0xf;
+            byte fromBits = board.getSquareBits(fromx, fromy);
+            byte toBits = board.getSquareBits(tox, toy);
+            System.out.println(piece(fromBits)+"@"+algebraic(fromx, fromy)+ " x "+piece(toBits)+" @"+ algebraic(tox, tox));
+        }
     }
 }

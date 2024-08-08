@@ -85,22 +85,7 @@ public class Terminal {
                     if (Main.Compute.isEmpty(squareBits)) {
                         space();
                     } else {
-                         /*
-                          * Note order for unicode chess pieces descend P -> K
-                          *
-                          * WHITE P'\u2659', N'\u2658', B'\u2657', R'\u2656', Q'\u2655', K'\u2654',
-                          * BLACK P'\u265f', N'\u265e', B'\u265d', R'\u265c', Q'\u265b', K'\u265a',
-                          *
-                          * Also if we add 6 to the WHITE unicode we get BLACK unicode of same piece
-                          *
-                          * Our square bit values ascend  P=1,N=2,B=3,R=4,Q=5,K=6,
-                          *
-                          * So
-                          *   chessKingUnicode+6-value converts our 'value' to white unicode
-                          *   chessKingUnicode+12-value converts our 'value' to black unicode
-                          */
-                        int offset =   Main.Compute.isWhite(squareBits)?12:6;
-                        ch(chessKingUnicode + offset - (squareBits & Main.PIECE_MASK));
+                        str(piece(squareBits));
                     }
                     space();
                 });
@@ -109,6 +94,28 @@ public class Terminal {
         }
         space(3).border(bg -> bg.str("| a  b  c  d  e  f  g  h |")).nl();
         return this;
+    }
+    static String algebraic(int x, int y) {
+        return Character.toString(x + 65 +32) + Integer.toString(8-y);
+    }
+
+    static String piece(byte squareBits) {
+        /*
+         * Note order for unicode chess pieces descend P -> K
+         *
+         * WHITE P'\u2659', N'\u2658', B'\u2657', R'\u2656', Q'\u2655', K'\u2654',
+         * BLACK P'\u265f', N'\u265e', B'\u265d', R'\u265c', Q'\u265b', K'\u265a',
+         *
+         * Also if we add 6 to the WHITE unicode we get BLACK unicode of same piece
+         *
+         * Our square bit values ascend  P=1,N=2,B=3,R=4,Q=5,K=6,
+         *
+         * So
+         *   chessKingUnicode+6-value converts our 'value' to white unicode
+         *   chessKingUnicode+12-value converts our 'value' to black unicode
+         */
+        int offset =   Main.Compute.isWhite(squareBits)?12:6;
+        return Character.toString(chessKingUnicode + offset - (squareBits & Main.PIECE_MASK));
     }
 
     @Override
