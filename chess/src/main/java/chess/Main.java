@@ -290,8 +290,8 @@ public class Main {
                                         {
                                             int fromX = (move >>> 12) & 0xf;
                                             int fromY = (move >>> 8) & 0xf;
-                                            int toY = (move >>> 4) & 0xf;
-                                            int toX = (move >>> 0) & 0xf;
+                                            int toX = (move >>> 4) & 0xf;
+                                            int toY = (move >>> 0) & 0xf;
                                             System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " -> @" + algebraic(toX, toY));
                                         }
                                     } else{
@@ -302,8 +302,8 @@ public class Main {
                                             {
                                                 int fromX = (move >>> 12) & 0xf;
                                                 int fromY = (move >>> 8) & 0xf;
-                                                int toY = (move >>> 4) & 0xf;
-                                                int toX = (move >>> 0) & 0xf;
+                                                int toX = (move >>> 4) & 0xf;
+                                                int toY = (move >>> 0) & 0xf;
                                                 System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " x " + piece(toBits) + " @" + algebraic(toX, toY));
                                             }
                                         }
@@ -343,8 +343,8 @@ public class Main {
                                         int fromX = (move >>> 12) & 0xf;
 
                                         int fromY = (move >>> 8) & 0xf;
-                                        int toY = (move >>> 4) & 0xf;
-                                        int toX = (move >>> 0) & 0xf;
+                                        int toX = (move >>> 4) & 0xf;
+                                        int toY = (move >>> 0) & 0xf;
                                         System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " -> @" + algebraic(toX, toY));
                                     }
                                 }else {
@@ -361,8 +361,8 @@ public class Main {
                                         {
                                             int fromX = (move >>> 12) & 0xf;
                                             int fromY = (move >>> 8) & 0xf;
-                                            int toY = (move >>> 4) & 0xf;
-                                            int toX = (move >>> 0) & 0xf;
+                                            int toX = (move >>> 4) & 0xf;
+                                            int toY = (move >>> 0) & 0xf;
                                             System.out.println(piece(fromBits) + "@" + algebraic(fromX, fromY) + " x " + piece(toBits) + "  @" + algebraic(toX, toY));
                                         }
                                     } else {
@@ -546,7 +546,11 @@ public class Main {
             int toy = (move>>>0)&0xf;
             byte fromBits = board.getSquareBits(fromx, fromy);
             byte toBits = board.getSquareBits(tox, toy);
-            System.out.println(piece(fromBits)+"@"+algebraic(fromx, fromy)+ " x "+piece(toBits)+" @"+ algebraic(tox, tox));
+            if (Compute.isPiece(toBits)) {
+                System.out.println(piece(fromBits) + "@" + algebraic(fromx, fromy) + " x " + piece(toBits) + " @" + algebraic(tox, toy));
+            }else{
+                System.out.println(piece(fromBits) + "@" + algebraic(fromx, fromy) + " -> @" + algebraic(tox, toy));
+            }
         }
     }
 }
