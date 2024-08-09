@@ -4,9 +4,11 @@ package chess;
 import hat.Accelerator;
 import hat.ComputeContext;
 import hat.KernelContext;
+import hat.backend.Backend;
 import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
+import java.lang.invoke.MethodHandles;
 import java.lang.runtime.CodeReflection;
 
 import static chess.ChessConstants.ALL_POINTS;
@@ -147,7 +149,7 @@ public class Main {
         static public void init(final ComputeContext cc, ChessData chessData) {
             cc.dispatchKernel(chessData.length(), kc -> Compute.initTree(kc, chessData));
         }
-
+        @CodeReflection
         public static int validMoves(ChessData.Board board, byte fromBits, int fromx, int fromy, int moves, short[] movesArr) {
             int pieceValue = fromBits & ChessConstants.PIECE_MASK;
             if (pieceValue == ChessConstants.KING_VALUE) {
@@ -304,7 +306,7 @@ public class Main {
 
         Schema<ChessData> schema = Schema.of(ChessData.class, chessData -> chessData
                 .arrayLen("length").array("board", square -> square
-                        .array("square", 64).fields("parent", "firstChild", "score", "spare")
+                        .array("squareBits", 64).fields("parent", "firstChild", "score", "spare")
                 )
         );
 
@@ -395,20 +397,19 @@ public class Main {
 
     public static void main(String[] args) {
         boolean headless = Boolean.getBoolean("headless") || (args.length > 0 && args[0].equals("--headless"));
-        // Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
-        ChessData chessData = new ChessDataImpl(10001);
-        //ChessData.create(accelerator, 10001);//,101,1001,10001
-        //accelerator.compute(cc -> Compute.init(cc, chessData));
+         Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
+        ChessData chessData = //new ChessDataImpl(10001);
+        ChessData.create(accelerator, 10001);//,101,1001,10001
+        accelerator.compute(cc -> Compute.init(cc, chessData));
         ChessData.Board board = chessData.board(0).init();
+
         short[] movesArr = new short[64];
         int moves = 0;
         byte side = ChessConstants.WHITE_BIT;
         for (int i = 0; i < 64; i++) {
-            int x = i % 8;
-            int y = i / 8;
             byte squareBits = board.squareBits(i);
             if (Compute.isComrade(side, squareBits)) {
-                moves = Compute.validMoves(board, squareBits, x, y, moves, movesArr);
+                moves = Compute.validMoves(board, squareBits,  i % 8, i / 8, moves, movesArr);
             }
         }
         System.out.println(new Terminal().board(board));
