@@ -2,17 +2,14 @@ package chess;
 
 import java.util.function.Consumer;
 
-import static chess.ChessConstants.ALL_POINTS;
-import static chess.ChessConstants.BISHOP_VALUE;
-import static chess.ChessConstants.COLROWS;
-import static chess.ChessConstants.DIAGS;
+import static chess.ChessConstants.BISHOP;
 import static chess.ChessConstants.EMPTY_SQUARE;
-import static chess.ChessConstants.KING_VALUE;
-import static chess.ChessConstants.KNIGHT_VALUE;
-import static chess.ChessConstants.PAWN_VALUE;
+import static chess.ChessConstants.KING;
+import static chess.ChessConstants.KNIGHT;
+import static chess.ChessConstants.PAWN;
 import static chess.ChessConstants.PIECE_MASK;
-import static chess.ChessConstants.QUEEN_VALUE;
-import static chess.ChessConstants.ROOK_VALUE;
+import static chess.ChessConstants.QUEEN;
+import static chess.ChessConstants.ROOK;
 
 public class Terminal {
     StringBuilder stringBuilder = new StringBuilder();
@@ -94,7 +91,7 @@ public class Terminal {
                 byte squareBits = board.squareBits(y*8+x);
                 square(x,y, _ -> {
                     space();
-                    if (Main.Compute.isEmpty(squareBits)) {
+                    if (Compute.isEmpty(squareBits)) {
                         space();
                     } else {
                         str(piece(squareBits));
@@ -126,17 +123,17 @@ public class Terminal {
          *   chessKingUnicode+6-value converts our 'value' to white unicode
          *   chessKingUnicode+12-value converts our 'value' to black unicode
          */
-        int offset =   Main.Compute.isWhite(squareBits)?12:6;
+        int offset =   Compute.isWhite(squareBits)?12:6;
         return Character.toString(chessKingUnicode + offset - (squareBits & PIECE_MASK));
     }
 
     static String describe(byte squareBits){
         StringBuilder sb = new StringBuilder();
-        if (Main.Compute.isEmpty(squareBits)){
+        if (Compute.isEmpty(squareBits)){
             sb.append("EMPTY");
         }else {
             int pieceValue = squareBits & PIECE_MASK;
-            if (Main.Compute.isWhite(squareBits)){
+            if (Compute.isWhite(squareBits)){
                 sb.append("WHITE ");
             }else{
                 sb.append("BLACK ");
@@ -145,22 +142,22 @@ public class Terminal {
                 case EMPTY_SQUARE:
                     sb.append("EMPTY");
                     break;
-                case PAWN_VALUE:
+                case PAWN:
                     sb.append("PAWN");
                     break;
-                case ROOK_VALUE:
+                case ROOK:
                     sb.append("ROOK");
                     break;
-                case KNIGHT_VALUE:
+                case KNIGHT:
                     sb.append("KNIGHT");
                     break;
-                case BISHOP_VALUE:
+                case BISHOP:
                     sb.append("BISHOP");
                     break;
-                case QUEEN_VALUE:
+                case QUEEN:
                     sb.append("QUEEN");
                     break;
-                case KING_VALUE:
+                case KING:
                     sb.append("KING");
                     break;
             }

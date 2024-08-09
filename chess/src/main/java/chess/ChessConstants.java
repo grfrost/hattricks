@@ -59,25 +59,15 @@ class ChessConstants {
     public static final byte COLROWS = (byte) 0b0101_1010;
     public static final byte ALL_POINTS = (byte) 0b1111_1111;
     static public final byte EMPTY_SQUARE = (byte) 0b0000_0000;
-    static public final byte PAWN_VALUE = (byte) 0b0000_0001;
-    static public final byte KNIGHT_VALUE = (byte) 0b0000_0010;
-    static public final byte BISHOP_VALUE = (byte) 0b0000_0011;
-    static public final byte ROOK_VALUE = (byte) 0b0000_0100;
-    static public final byte QUEEN_VALUE = (byte) 0b0000_0101;
-    static public final byte KING_VALUE = (byte) 0b0000_0110;
+    static public final byte PAWN = (byte) 0b0000_0001;
+    static public final byte KNIGHT = (byte) 0b0000_0010;
+    static public final byte BISHOP = (byte) 0b0000_0011;
+    static public final byte ROOK = (byte) 0b0000_0100;
+    static public final byte QUEEN = (byte) 0b0000_0101;
+    static public final byte KING = (byte) 0b0000_0110;
     static public final byte WHITE_BIT = (byte) 0b0000_1000;
-    static public final byte BLACK_PAWN = (byte) PAWN_VALUE;
-    static public final byte BLACK_KNIGHT = (byte) KNIGHT_VALUE;
-    static public final byte BLACK_BISHOP = (byte) BISHOP_VALUE;
-    static public final byte BLACK_ROOK = (byte) ROOK_VALUE;
-    static public final byte BLACK_QUEEN = (byte) QUEEN_VALUE;
-    static public final byte BLACK_KING = (byte) KING_VALUE;
-    static public final byte WHITE_PAWN = (byte) PAWN_VALUE | WHITE_BIT;
-    static public final byte WHITE_KNIGHT = (byte) KNIGHT_VALUE | WHITE_BIT;
-    static public final byte WHITE_BISHOP = (byte) BISHOP_VALUE | WHITE_BIT;
-    static public final byte WHITE_ROOK = (byte) ROOK_VALUE | WHITE_BIT;
-    static public final byte WHITE_QUEEN = (byte) QUEEN_VALUE | WHITE_BIT;
-    static public final byte WHITE_KING = (byte) KING_VALUE | WHITE_BIT;
+    static public final byte BLACK_BIT = (byte) 0b0000_0000;
+
     static public final byte PIECE_MASK = (byte) 0b0000_0111;
 
     static public final byte OFF_BOARD_SQUARE = (byte) 0b1111_1111;
