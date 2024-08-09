@@ -2,17 +2,17 @@ package chess;
 
 import java.util.function.Consumer;
 
-import static chess.Main.ALL_POINTS;
-import static chess.Main.BISHOP_VALUE;
-import static chess.Main.COLROWS;
-import static chess.Main.DIAGS;
-import static chess.Main.EMPTY_SQUARE;
-import static chess.Main.KING_VALUE;
-import static chess.Main.KNIGHT_VALUE;
-import static chess.Main.PAWN_VALUE;
-import static chess.Main.PIECE_MASK;
-import static chess.Main.QUEEN_VALUE;
-import static chess.Main.ROOK_VALUE;
+import static chess.ChessConstants.ALL_POINTS;
+import static chess.ChessConstants.BISHOP_VALUE;
+import static chess.ChessConstants.COLROWS;
+import static chess.ChessConstants.DIAGS;
+import static chess.ChessConstants.EMPTY_SQUARE;
+import static chess.ChessConstants.KING_VALUE;
+import static chess.ChessConstants.KNIGHT_VALUE;
+import static chess.ChessConstants.PAWN_VALUE;
+import static chess.ChessConstants.PIECE_MASK;
+import static chess.ChessConstants.QUEEN_VALUE;
+import static chess.ChessConstants.ROOK_VALUE;
 
 public class Terminal {
     StringBuilder stringBuilder = new StringBuilder();
