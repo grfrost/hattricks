@@ -164,12 +164,6 @@ public class Terminal {
                     sb.append("KING");
                     break;
             }
-            switch (Main.Compute.compassBits(squareBits)){
-                case 0:break;
-                case ALL_POINTS:sb.append(" DIAGS and COLROWS ").append(Main.Compute.compassCount(squareBits));break;
-                case DIAGS:sb.append(" DIAGS ").append(Main.Compute.compassCount(squareBits));break;
-                case COLROWS:sb.append(" COLROWS ").append(Main.Compute.compassCount(squareBits));break;
-            }
 
         }
         return sb.toString();

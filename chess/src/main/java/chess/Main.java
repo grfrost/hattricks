@@ -9,19 +9,25 @@ import hat.ifacemapper.Schema;
 
 import java.lang.runtime.CodeReflection;
 
+import static chess.ChessConstants.ALL_POINTS;
+import static chess.ChessConstants.BISHOP_VALUE;
 import static chess.ChessConstants.BLACK_BISHOP;
 import static chess.ChessConstants.BLACK_KING;
 import static chess.ChessConstants.BLACK_KNIGHT;
 import static chess.ChessConstants.BLACK_PAWN;
 import static chess.ChessConstants.BLACK_QUEEN;
 import static chess.ChessConstants.BLACK_ROOK;
+import static chess.ChessConstants.COLROWS;
+import static chess.ChessConstants.DIAGS;
 import static chess.ChessConstants.EMPTY_SQUARE;
+import static chess.ChessConstants.ROOK_VALUE;
 import static chess.ChessConstants.WHITE_BISHOP;
 import static chess.ChessConstants.WHITE_KING;
 import static chess.ChessConstants.WHITE_KNIGHT;
 import static chess.ChessConstants.WHITE_PAWN;
 import static chess.ChessConstants.WHITE_QUEEN;
 import static chess.ChessConstants.WHITE_ROOK;
+import static chess.ChessConstants.CompassDxDyMap;
 import static chess.Terminal.algebraic;
 import static chess.Terminal.piece;
 
@@ -50,21 +56,26 @@ public class Main {
         }
 
         @CodeReflection
-        public static boolean isOpponent(byte mySquareBits, byte opponentSquareBits) {
-            if (isPiece(mySquareBits)) {
-                int myColor = (mySquareBits & ChessConstants.WHITE_BIT);
-                int opponentColor = (opponentSquareBits & ChessConstants.WHITE_BIT);
-                return myColor != opponentColor;
+        public static boolean isOpponent(byte fromBits, byte toBits) {
+            if (isPiece(toBits)) {
+                int fromColorBit = (fromBits & ChessConstants.WHITE_BIT);
+                int toColorBit = (toBits & ChessConstants.WHITE_BIT);
+                return fromColorBit != toColorBit;
             }
             return false;
         }
 
         @CodeReflection
-        public static boolean isMyPiece(byte squareBits, byte myColorBit) {
-            if (isPiece(squareBits)) {
-                int myColor = (squareBits & ChessConstants.WHITE_BIT);
-                int opponentColor = (myColorBit & ChessConstants.WHITE_BIT);
-                return myColor == opponentColor;
+        public static boolean isEmptyOrOpponent(byte fromBits, byte toBits) {
+            return isEmpty(toBits) || isOpponent(fromBits, toBits);
+        }
+
+        @CodeReflection
+        public static boolean isComrade(byte fromBits, byte toBits) {
+            if (isPiece(toBits)) {
+                int fromColorBit = (fromBits & ChessConstants.WHITE_BIT);
+                int toColorBit = (toBits & ChessConstants.WHITE_BIT);
+                return fromColorBit == toColorBit;
             }
             return false;
         }
@@ -73,6 +84,11 @@ public class Main {
         @CodeReflection
         static boolean isOnBoard(int x, int y) {
             return (x < 8 && y < 8 && x >= 0 && y >= 0);
+        }
+
+        @CodeReflection
+        static boolean isOffBoard(int x, int y) {
+            return (x < 0 || y < 0 || x > 7 || y > 7);
         }
 
         @CodeReflection
@@ -87,12 +103,12 @@ public class Main {
 
         @CodeReflection
         static boolean isBishop(int squareBits) {
-            return (squareBits & ChessConstants.PIECE_MASK) == ChessConstants.BISHOP_VALUE;
+            return (squareBits & ChessConstants.PIECE_MASK) == BISHOP_VALUE;
         }
 
         @CodeReflection
         static boolean isRook(int squareBits) {
-            return (squareBits & ChessConstants.PIECE_MASK) == ChessConstants.ROOK_VALUE;
+            return (squareBits & ChessConstants.PIECE_MASK) == ROOK_VALUE;
         }
 
         @CodeReflection
@@ -112,19 +128,6 @@ public class Main {
             return squareBits == ChessConstants.OFF_BOARD_SQUARE;
         }
 
-        @CodeReflection
-        static int compassBits(int squareBits) {
-            int pv = (squareBits & ChessConstants.PIECE_MASK);
-            return pv > ChessConstants.KNIGHT_VALUE ? (pv == ChessConstants.BISHOP_VALUE
-                    ? ChessConstants.DIAGS
-                    : ((pv == ChessConstants.ROOK_VALUE) ? ChessConstants.COLROWS : ChessConstants.ALL_POINTS)) : 0;
-        }
-
-        @CodeReflection
-        static int compassCount(int squareBits) {
-            int pv = (squareBits & ChessConstants.PIECE_MASK);
-            return (pv == ChessConstants.KING_VALUE) ? 1 : pv > ChessConstants.KNIGHT_VALUE ? 7 : 0;
-        }
 
         @CodeReflection
         public static void initTree(KernelContext kc, ChessData chessData) {
@@ -147,9 +150,54 @@ public class Main {
 
         public static int validMoves(ChessData.Board board, byte fromBits, int fromx, int fromy, int moves, short[] movesArr) {
             int pieceValue = fromBits & ChessConstants.PIECE_MASK;
-            if (pieceValue >= ChessConstants.KNIGHT_VALUE) {
-                int compassBits = Compute.compassBits(fromBits);
-                // compass bits has 1/0 for each eligible move relative to fromx,fromy
+            if (pieceValue == ChessConstants.KING_VALUE) {
+                for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
+                    int dxdy = 0b1111 & (CompassDxDyMap >>> (moveIdx * 4));
+                    int dy = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
+                    dxdy >>>= 2;
+                    int dx = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
+                    int tox = fromx + dx;
+                    int toy = fromy + dy;
+                    if (Compute.isOnBoard(tox, toy)) {
+                        var toBits = board.squareBits(toy * 8 + tox);
+                        if (Compute.isEmptyOrOpponent(fromBits, toBits)) {
+                            movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
+                        }
+                    }
+                }
+            } else if (pieceValue == ChessConstants.PAWN_VALUE) {
+                int forward = Compute.isWhite(fromBits) ? -1 : 1;
+                int count = (fromy == (Compute.isWhite(fromBits) ? 6 : 1)) ? 4 : 3;  // four moves if home else three
+                for (int moveIdx = 0; moveIdx < count; moveIdx++) {
+                    int dxdy = 0b1111 & (ChessConstants.PawnDxDyMap >>> (moveIdx * 4));
+                    int toy = fromy + (forward * ((dxdy & 0b11) - 1));
+                    dxdy >>>= 2;
+                    int tox = fromx + (dxdy & 0b11) - 1;
+                    if (Compute.isOnBoard(tox, toy)) {
+                        var toBits = board.squareBits(toy * 8 + tox);
+                        if (((moveIdx > 1) && Compute.isEmpty(toBits)) || (moveIdx < 2) && Compute.isOpponent(fromBits, toBits)) {
+                            movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
+                        }
+                    }
+                }
+            } else if (pieceValue == ChessConstants.KNIGHT_VALUE) {
+                for (int moveIdx = 0; moveIdx < 8; moveIdx++) {
+                    int dxdy = 0b1111 & (ChessConstants.KnightDxDyMap >>> (moveIdx * 4));
+                    int toy = fromy + ((dxdy & 0b1)+1)*((dxdy&0b10)-1);
+                    dxdy >>>= 2;
+                    int tox = fromx + ((dxdy & 0b1)+1)*((dxdy&0b10)-1);
+                    if (Compute.isOnBoard(tox, toy)) {
+                        var toBits = board.squareBits(toy * 8 + tox);
+                        if (Compute.isEmptyOrOpponent(fromBits,toBits)){
+                            movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
+                        }
+                    }
+                }
+            } else {
+                // sliders Rook, Queen, Bishop
+                final int compassPoints = (pieceValue == BISHOP_VALUE) ? DIAGS : ((pieceValue == ROOK_VALUE) ? COLROWS : ALL_POINTS);
+
+                // compassPoints have use 1 or 0 for bit for eligible move relative to fromx,fromy
                 // We only encode the neighbours so the 3x3 grid has no center representation
                 //                piece being moved
                 //                     is here
@@ -161,86 +209,37 @@ public class Main {
                 //     diags   == 0b101_0___0_101
                 //     colrows == 0b010_1___1_010
                 //   allpoints == 0b111_1___1_111
-                int slideCount = Compute.compassCount(fromBits); // 1 for K 7 for Q,R,B
-                for (int slide = 1; slide <= slideCount; slide++) { //1 or 1,2,3,4,5,6,7
-                    for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
-                        int moveBit = (1 << moveIdx); // so 0b10000000 -> 0b01000000 -> ... 0b00000001
-                        // check if the bit is set for this compassPoint in compassBits
-                        // if so we can move /take in this dir
-                        if ((compassBits & moveBit) == moveBit) {
-                            // Now let's determine what a move in this dir looks like
-                            int dxdy = 0b1111 & (ChessConstants.compassMovesDxDy >>> (moveIdx * 4));
-                            int dy = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
-                            dxdy >>>= 2;
-                            int dx = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
 
+
+                for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
+                    int moveBit = (1 << moveIdx); // so 0b10000000 -> 0b01000000 -> ... 0b00000001
+                    // check if we can move this way
+                    // i.e is bit is set for this compassPoint
+                    if ((compassPoints & moveBit) == moveBit) {
+                        // Now let's determine what a move in this dir looks like
+                        int dxdy = 0b1111 & (CompassDxDyMap >>> (moveIdx * 4));
+                        int dy = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
+                        dxdy >>>= 2;
+                        int dx = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
+                        boolean blocked = false;
+                        for (int slide = 1; !blocked && slide < 8; slide++) { //1,2,3,4,5,6,7
                             int tox = fromx + slide * dx;
                             int toy = fromy + slide * dy;
-
-                            //  final String[]  compassPoints = new String[]{"nw", "n", "ne", "w", "e", "sw", "s", "se"};
-                            // System.out.println(compassPoints[moveIdx] + " x=" + toX + ", y=" + toY);
-                            if (Compute.isOnBoard(tox, toy)) {
+                            blocked = isOffBoard(tox, toy);
+                            if (!blocked){
                                 var toBits = board.squareBits(toy * 8 + tox);
-                                if (Compute.isEmpty(toBits)) {
+                                if (isEmptyOrOpponent(fromBits, toBits)) {
                                     movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
-                                } else {
-                                    if (Compute.isOpponent(toBits, fromBits)) {
-                                        movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
+                                    if (isOpponent(toBits, fromBits)) {
+                                       blocked=true;
                                     }
-                                    compassBits ^= (1 << moveIdx); //unset this compass index
+                                }else{
+                                    blocked=true;
                                 }
-                            } else {
-                                //  System.out.println(note(fromx, fromy, " offboard can't move to ", toX, toY));
-                                compassBits ^= (1 << moveIdx); // unset this compass index
                             }
                         }
                     }
                 }
-            } else if (pieceValue == ChessConstants.PAWN_VALUE) {
-                int forward = Compute.isWhite(fromBits) ? -1 : 1;
-                int home = Compute.isWhite(fromBits) ? 6 : 1;
-
-
-                int count = (fromy == home) ? 4 : 3;  // four moves if home else three
-                for (int moveIdx = 0; moveIdx < count; moveIdx++) {
-                    int dxdy = 0b1111 & (ChessConstants.pawnMovesDxDy >>> (moveIdx * 4));
-                    int dy = (dxdy & 0b11) - 1; // 00->-1, 01->0, 10->1, 11->2
-                    dxdy >>>= 2;
-                    int dx = (dxdy & 0b11) - 1; // 00->-1, 01->0, 10->1, 11->2
-
-                    int tox = fromx + dx;
-                    int toy = fromy + (forward * dy);
-
-                    if (Compute.isOnBoard(tox, toy)) {
-                        var toBits = board.squareBits(toy * 8 + tox);
-                        if (moveIdx > 1) {
-                            if (Compute.isEmpty(toBits)) {
-                                movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
-                            } else {
-                                //System.out.println(note(fromx, fromy, " can't move (blocked)to ", x, y));
-                            }
-                        } else {
-                            if (Compute.isEmpty(toBits)) {
-                                //System.out.println(note(fromx, fromy, " can't take (nothing)  on ", x, y));
-                            } else {
-                                if (Compute.isOpponent(toBits, fromBits)) {
-                                    movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
-                                    ;
-                                } else {
-                                    //  System.out.println(note(fromx, fromy, " can't take (own player)  on ", x, y));
-                                }
-
-                            }
-                        }
-                    } else {
-                        // System.out.println(note(fromx, fromy, " offboard can't move to ", x, y));
-                    }
-                }
-
-            } else if (pieceValue == ChessConstants.KNIGHT_VALUE) {
-
-                // 00=-1 01=0 10=1 11=2
-
             }
             return moves;
 
@@ -272,28 +271,29 @@ public class Main {
 
             void spare(short spare);
 
-            default void row(int row, byte ... pieces){
-                int x = row *8;
-                if (pieces.length==1){
-                   for (int i=0; i<8; i++){
-                       squareBits(x++, pieces[0]);
-                   }
-                }else {
+            default void row(int row, byte... pieces) {
+                int x = row * 8;
+                if (pieces.length == 1) {
+                    for (int i = 0; i < 8; i++) {
+                        squareBits(x++, pieces[0]);
+                    }
+                } else {
                     for (byte piece : pieces) {
                         squareBits(x++, piece);
                     }
                 }
             }
+
             default Board init() {
-                int x=0;
-                row(0, BLACK_ROOK,BLACK_KNIGHT,BLACK_BISHOP,BLACK_QUEEN,BLACK_KING,BLACK_BISHOP,BLACK_KNIGHT,BLACK_ROOK);
+                int x = 0;
+                row(0, BLACK_ROOK, BLACK_KNIGHT, BLACK_BISHOP, BLACK_QUEEN, BLACK_KING, BLACK_BISHOP, BLACK_KNIGHT, BLACK_ROOK);
                 row(1, BLACK_PAWN);
                 row(2, EMPTY_SQUARE);
                 row(3, EMPTY_SQUARE);
                 row(4, EMPTY_SQUARE);
                 row(5, EMPTY_SQUARE);
                 row(6, WHITE_PAWN);
-                row(7, WHITE_ROOK,WHITE_KNIGHT,WHITE_BISHOP,WHITE_QUEEN,WHITE_KING,WHITE_BISHOP,WHITE_KNIGHT,WHITE_ROOK);
+                row(7, WHITE_ROOK, WHITE_KNIGHT, WHITE_BISHOP, WHITE_QUEEN, WHITE_KING, WHITE_BISHOP, WHITE_KNIGHT, WHITE_ROOK);
                 return this;
             }
         }
@@ -407,7 +407,7 @@ public class Main {
             int x = i % 8;
             int y = i / 8;
             byte squareBits = board.squareBits(i);
-            if (Compute.isMyPiece(squareBits, side)) {
+            if (Compute.isComrade(side, squareBits)) {
                 moves = Compute.validMoves(board, squareBits, x, y, moves, movesArr);
             }
         }
