@@ -91,7 +91,7 @@ public class Main {
         Control control =  Control.create(accelerator);
         ChessData chessData =  ChessData.create(accelerator, ply3);
         System.out.println(Buffer.getMemorySegment(chessData).byteSize()+" bytes ");
-      //  accelerator.compute(cc -> Compute.init(cc, chessData));
+        accelerator.compute(cc -> Compute.init(cc, chessData));
 
         ChessData.Board board = chessData.board(0);
         int x=0;
@@ -110,7 +110,7 @@ public class Main {
         control.side(WHITE_BIT);
         accelerator.compute(cc-> Compute.countMovesCompute(cc, chessData,control));
 
-
+/*
         int moves =0;
         byte side = ChessConstants.WHITE_BIT;
         for (int i = 0; i < 64; i++) {
@@ -120,17 +120,17 @@ public class Main {
             }
         }
         board.moves((short)moves);
-
-        short[] movesArr = new short[moves];
+*/
+        short[] movesArr = new short[board.moves()];
         int movec = 0;
         for (int i = 0; i < 64; i++) {
             byte squareBits = board.squareBits(i);
-            if (Compute.isComrade(side, squareBits)) {
+            if (Compute.isComrade((byte)control.side(), squareBits)) {
                 movec = Compute.validMoves(chessData, board, squareBits,  i % 8, i / 8, movec, movesArr);
             }
         }
         System.out.println(new Terminal().board(board));
-        for (int moveIdx = 0; moveIdx < moves; moveIdx++) {
+        for (int moveIdx = 0; moveIdx < board.moves(); moveIdx++) {
             int move = movesArr[moveIdx];
             int fromx = (move >>> 12) & 0xf;
             int fromy = (move >>> 8) & 0xf;

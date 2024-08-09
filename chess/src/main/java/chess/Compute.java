@@ -102,10 +102,10 @@ public class Compute {
     }
 
 
-    @CodeReflection
-    static boolean isOffBoard(int squareBits) {
-        return squareBits == ChessConstants.OFF_BOARD_SQUARE;
-    }
+    //@CodeReflection
+   // static boolean isOffBoard(int squareBits) {
+      //  return squareBits == ChessConstants.OFF_BOARD_SQUARE;
+   // }
 
 
     @CodeReflection
@@ -145,7 +145,7 @@ public class Compute {
 
     @CodeReflection
     static public void countMovesCompute(final ComputeContext cc, Main.ChessData chessData, Main.Control control) {
-        cc.dispatchKernel(64, kc -> countMovesKernel(kc, chessData,control));
+        cc.dispatchKernel(1, kc -> countMovesKernel(kc, chessData,control));
     }
 
     @CodeReflection
