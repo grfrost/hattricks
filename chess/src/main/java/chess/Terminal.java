@@ -82,7 +82,7 @@ public class Terminal {
     public Terminal strln(String s) {
         return str(s).nl();
     }
-    public Terminal board(Main.ChessData.Board board) {
+    public Terminal board(ChessData.Board board) {
         space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
             final int finaly = 7-y;

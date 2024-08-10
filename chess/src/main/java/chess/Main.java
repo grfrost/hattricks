@@ -4,12 +4,10 @@ package chess;
 import hat.Accelerator;
 import hat.backend.Backend;
 import hat.buffer.Buffer;
-import hat.ifacemapper.Schema;
 
 import java.lang.invoke.MethodHandles;
 
 import static chess.ChessConstants.BISHOP;
-import static chess.ChessConstants.BLACK_BIT;
 import static chess.ChessConstants.EMPTY_SQUARE;
 import static chess.ChessConstants.KING;
 import static chess.ChessConstants.KNIGHT;
@@ -23,65 +21,8 @@ import static chess.Terminal.piece;
 
 public class Main {
 
-    public interface ChessData extends Buffer {
-        interface Board extends Buffer.Struct {
 
-            byte squareBits(long idx);
 
-            void squareBits(long idx, byte squareBits);
-
-            short parent();
-
-            void parent(short parent);
-
-            short firstChild();
-
-            void firstChild(short firstChild);
-
-            short score();
-
-            void score(short score);
-
-            short moves();
-
-            void moves(short moves);
-          /*  long moveBits();
-
-            void moveBits(long moveBits);
-            long moreBits();
-
-            void moreBits(long moveBits);*/
-
-        }
-
-        int length();
-
-        ChessData.Board board(long idx);
-
-        Schema<ChessData> schema = Schema.of(ChessData.class, chessData -> chessData
-                .arrayLen("length").array("board", square -> square
-                        .array("squareBits", 64).fields( "parent", "firstChild", "score", "moves")
-                )
-        );
-
-        static ChessData create(Accelerator acc, int length) {
-            return schema.allocate(acc, length);
-        }
-    }
-    public interface Control extends Buffer {
-        int  side();
-        void side (int side);
-        int ply();
-        void ply(int ply);
-
-        Schema<Control> schema = Schema.of(Control.class, control -> control
-                .fields( "ply","side")
-        );
-
-        static Control create(Accelerator acc) {
-            return schema.allocate(acc);
-        }
-    }
 
     public static void main(String[] args) {
         boolean headless = Boolean.getBoolean("headless") || (args.length > 0 && args[0].equals("--headless"));
@@ -109,7 +50,7 @@ public class Main {
         control.ply(0);
         control.side(WHITE_BIT);
         accelerator.compute(cc-> Compute.countMovesCompute(cc, chessData,control));
-
+        System.out.println(" found "+board.moves());
 /*
         int moves =0;
         byte side = ChessConstants.WHITE_BIT;
@@ -130,6 +71,7 @@ public class Main {
             }
         }
         System.out.println(new Terminal().board(board));
+        System.out.println("Score = "+board.score());
         for (int moveIdx = 0; moveIdx < board.moves(); moveIdx++) {
             int move = movesArr[moveIdx];
             int fromx = (move >>> 12) & 0xf;
