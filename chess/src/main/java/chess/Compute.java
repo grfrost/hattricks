@@ -109,8 +109,9 @@ public class Compute {
 
 
     @CodeReflection
-    public static int validMoves(ChessData chessData, ChessData.Board board, byte fromBits, int fromx, int fromy, int moves, short[] movesArr) {
+    public static void doMoves(ChessData chessData, ChessData.Board board, byte fromBits, int fromx, int fromy) {
         int pieceValue = fromBits & ChessConstants.PIECE_MASK;
+        int moves = 0;
         if (pieceValue == ChessConstants.KING) {
             for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
                 int dxdy = 0b1111 & (CompassDxDyMap >>> (moveIdx * 4));
@@ -122,7 +123,7 @@ public class Compute {
                 if (isOnBoard(tox, toy)) {
                     var toBits = board.squareBits(toy * 8 + tox);
                     if (isEmptyOrOpponent(fromBits, toBits)) {
-                        movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
+                        moves++;
                     }
                 }
             }
@@ -137,7 +138,7 @@ public class Compute {
                 if (isOnBoard(tox, toy)) {
                     var toBits = board.squareBits(toy * 8 + tox);
                     if (((moveIdx > 1) && isEmpty(toBits)) || (moveIdx < 2) && isOpponent(fromBits, toBits)) {
-                        movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
+                        moves++;
                     }
                 }
             }
@@ -150,7 +151,7 @@ public class Compute {
                 if (isOnBoard(tox, toy)) {
                     var toBits = board.squareBits(toy * 8 + tox);
                     if (isEmptyOrOpponent(fromBits, toBits)) {
-                        movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
+                        moves++;
                     }
                 }
             }
@@ -190,7 +191,7 @@ public class Compute {
                         if (!blocked) {
                             var toBits = board.squareBits(toy * 8 + tox);
                             if (isEmptyOrOpponent(fromBits, toBits)) {
-                                movesArr[moves++] = (short) (fromx << 12 | fromy << 8 | tox << 4 | toy);
+                                moves++;
                                 if (isOpponent(toBits, fromBits)) {
                                     blocked = true;
                                 }
@@ -202,7 +203,6 @@ public class Compute {
                 }
             }
         }
-        return moves;
 
     }
 
@@ -332,11 +332,26 @@ public class Compute {
                 }
 
             }
-            board.moves((short) moves);
+            board.moves((byte) moves);
             board.score((short) score);
 
     }
 
+    @CodeReflection
+    public static void doMovesKernelCore(int id, ChessData chessData, Control control) {
+        ChessData.Board board = chessData.board(id);
+        byte side = (byte)control.side();
+        for (int i = 0; i < 64; i++) {
+            byte squareBits = board.squareBits(i);
+            int piece = squareBits & PIECE_MASK;
+            if (piece != EMPTY_SQUARE) {
+                if (isComrade(side, squareBits)) {
+                    doMoves(chessData,board, squareBits, i % 8, i / 8);
+                }
+            }
+        }
+
+    }
 
     @CodeReflection
     public static void countMovesKernel(KernelContext kc, ChessData chessData, Control control) {
@@ -344,9 +359,20 @@ public class Compute {
             countMovesKernelCore(kc.x, chessData, control);
         }
     }
+
+    @CodeReflection
+    public static void doMovesKernel(KernelContext kc, ChessData chessData, Control control) {
+        if (kc.x < kc.maxX) {
+            doMovesKernelCore(kc.x, chessData, control);
+        }
+    }
     @CodeReflection
     static public void countMovesCompute(final ComputeContext cc, ChessData chessData, Control control) {
         cc.dispatchKernel(1, kc -> countMovesKernel(kc, chessData,control));
+    }
+    @CodeReflection
+    static public void doMovesCompute(final ComputeContext cc, ChessData chessData, Control control) {
+        cc.dispatchKernel(control.count()-control.start(), kc -> doMovesKernel(kc, chessData,control));
     }
 
     @CodeReflection

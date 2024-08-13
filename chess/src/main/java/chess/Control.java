@@ -161,12 +161,17 @@ public interface Control extends Buffer {
 
     void ply(int ply);
 
+    int start();
+    void start(int start);
+    int count();
+    void count(int count);
+
     int weight(long idx);
 
     void weight(long idx, int weight);
 
     Schema<Control> schema = Schema.of(Control.class, control -> control
-            .fields("ply", "side").array("weight", 64)
+            .fields("ply", "side", "start","count").array("weight", 64)
     );
 
     static Control create(Accelerator acc) {

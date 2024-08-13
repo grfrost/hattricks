@@ -15,23 +15,6 @@ import static chess.ChessConstants.WHITE_BIT;
 
 public interface ChessData extends Buffer {
     interface Board extends Struct {
-
-        byte squareBits(long idx);
-
-        void squareBits(long idx, byte squareBits);
-
-        int parent();
-
-        void parent(int parent);
-
-        short score();
-
-        void score(short score);
-
-        short moves();
-
-        void moves(short moves);
-
         default void init(){
             int x=0;
             for (byte bits :new byte[]{ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK}){
@@ -45,10 +28,30 @@ public interface ChessData extends Buffer {
                 x++;
             }
         }
+        byte squareBits(long idx);
 
-        // long moveBits();
+        void squareBits(long idx, byte squareBits);
 
-       // void moveBits(long moveBits);
+        int parent();
+
+        void parent(int parent);
+
+
+        int firstMove();
+        void firstMove(int firstMove);
+
+        short score();
+        void score(short score);
+        byte moves();
+
+        void moves(byte moves);
+
+        byte from();
+        byte to();
+        void from(byte from);
+        void to(byte to);
+
+
     }
 
     int length();
@@ -60,7 +63,9 @@ public interface ChessData extends Buffer {
             .array("board", square -> square
                     //.field("moveBits")
                     .array("squareBits", 64)
-                    .fields("parent", "score", "moves")
+                    //                 4          4         2        1       1     1
+                    .fields("parent", "firstMove","score", "moves","from","to")
+                    .pad(3)
             )
 
     );

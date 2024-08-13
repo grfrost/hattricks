@@ -39,9 +39,17 @@ public class Main {
         control.ply(0);
         control.side(WHITE_BIT);
         accelerator.compute(cc-> Compute.countMovesCompute(cc, chessData, control));
-
+        control.start(1);
+        control.count(board.moves());
+        int accum = 0;
+        for (int i = control.start(); i < control.count()+control.start(); i++) {
+            var b = chessData.board(i);
+            b.firstMove(i+accum);
+            accum+= b.moves();
+        }
+        accelerator.compute(cc-> Compute.doMovesCompute(cc, chessData, control));
         System.out.println(" found "+board.moves());
-
+/*
         short[] movesArr = new short[board.moves()];
         int movec = 0;
         for (int i = 0; i < 64; i++) {
@@ -50,6 +58,7 @@ public class Main {
                 movec = Compute.validMoves(chessData, board, squareBits,  i % 8, i / 8, movec, movesArr);
             }
         }
+
         System.out.println(new Terminal().board(board));
         System.out.println("Score = "+board.score());
         for (int moveIdx = 0; moveIdx < board.moves(); moveIdx++) {
@@ -67,6 +76,6 @@ public class Main {
             } else {
                 System.out.println(piece(fromBits) + "@" + algebraic(fromx, fromy) + " -> @" + algebraic(tox, toy));
             }
-        }
+        } */
     }
 }
