@@ -35,33 +35,13 @@ public class Main {
         accelerator.compute(cc -> Compute.init(cc, chessData));
 
         ChessData.Board board = chessData.board(0);
-        int x=0;
-        for (byte bits :new byte[]{ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK}){
-            board.squareBits(x,(byte) (bits));
-            board.squareBits(x+8,(byte) (PAWN));
-            board.squareBits(x+16,(byte) (EMPTY_SQUARE));
-            board.squareBits(x+24,(byte) (EMPTY_SQUARE));
-            board.squareBits(x+32,(byte) (EMPTY_SQUARE));
-            board.squareBits(x+48,(byte) (EMPTY_SQUARE));
-            board.squareBits(x+48,(byte) (WHITE_BIT|PAWN));
-            board.squareBits(x+56,(byte) (WHITE_BIT|bits));
-            x++;
-        }
+        board.init();
         control.ply(0);
         control.side(WHITE_BIT);
-        accelerator.compute(cc-> Compute.countMovesCompute(cc, chessData,control));
+        accelerator.compute(cc-> Compute.countMovesCompute(cc, chessData, control));
+
         System.out.println(" found "+board.moves());
-/*
-        int moves =0;
-        byte side = ChessConstants.WHITE_BIT;
-        for (int i = 0; i < 64; i++) {
-            byte squareBits = board.squareBits(i);
-            if (Compute.isComrade(side, squareBits)) {
-                moves+=Compute.countMoves(board, squareBits,  i % 8, i / 8);
-            }
-        }
-        board.moves((short)moves);
-*/
+
         short[] movesArr = new short[board.moves()];
         int movec = 0;
         for (int i = 0; i < 64; i++) {

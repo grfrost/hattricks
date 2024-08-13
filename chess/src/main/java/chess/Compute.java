@@ -219,7 +219,7 @@ public class Compute {
                 int tox = fromx + dx;
                 int toy = fromy + dy;
                 if (isOnBoard(tox, toy)) {
-                    var toBits = board.squareBits(toy * 8 + tox);
+                    byte toBits = board.squareBits(toy * 8 + tox);
                     if (isEmptyOrOpponent(fromBits, toBits)) {
                         moves++;
                     }
@@ -234,7 +234,7 @@ public class Compute {
                 dxdy >>>= 2;
                 int tox = fromx + (dxdy & 0b11) - 1;
                 if (isOnBoard(tox, toy)) {
-                    var toBits = board.squareBits(toy * 8 + tox);
+                    byte toBits = board.squareBits(toy * 8 + tox);
                     if (((moveIdx > 1) && isEmpty(toBits)) || (moveIdx < 2) && isOpponent(fromBits, toBits)) {
                         moves++;
                     }
@@ -247,7 +247,7 @@ public class Compute {
                 dxdy >>>= 2;
                 int tox = fromx + ((dxdy & 0b1) + 1) * ((dxdy & 0b10) - 1);
                 if (isOnBoard(tox, toy)) {
-                    var toBits = board.squareBits(toy * 8 + tox);
+                    byte toBits = board.squareBits(toy * 8 + tox);
                     if (isEmptyOrOpponent(fromBits, toBits)) {
                         moves++;
                     }
@@ -287,7 +287,7 @@ public class Compute {
                         int toy = fromy + slide * dy;
                         blocked = isOffBoard(tox, toy);
                         if (!blocked) {
-                            var toBits = board.squareBits(toy * 8 + tox);
+                            byte toBits = board.squareBits(toy * 8 + tox);
                             if (isEmptyOrOpponent(fromBits, toBits)) {
                                 moves++;
                                 if (isOpponent(toBits, fromBits)) {
@@ -317,25 +317,15 @@ public class Compute {
 
                 int piece = squareBits & PIECE_MASK;
                 if (piece != EMPTY_SQUARE) {
+                    // note that the weight arrays are valid for WHITE.  We need to invert the index for black
+                    int weightIndex = ((squareBits&WHITE_BIT)==WHITE_BIT)?i:63-i;
                     int scoreMul = -1;
                     if (isComrade(side, squareBits)) {
-                        int pieceMoves = countMoves(board, squareBits, i % 8, i / 8);
-                        moves += pieceMoves;
-                        if (piece != QUEEN) {
-                            // Queen moves can overflow 4 bits.  I believe this is the only one that can.
-                            // So to determine Queen moves
-                            //     Qmove s = board moves - (sum of piece moves)
-                            squareBits |= (byte) (pieceMoves << 4);
-                        }
+                        moves += countMoves(board, squareBits, i % 8, i / 8);
                         scoreMul = 1;
-                        board.squareBits(i, squareBits);
-                    }
-                    // white and black pawns have separate weight slots wp=1 bp =0
-                    if (piece==PAWN && isBlack(squareBits)){
-                        piece--;
                     }
                     // now the piece value can be used an index into the weights
-                    int weights = control.weight(i);
+                    int weights = control.weight(weightIndex);
                     int shifted = (weights>>>piece*4)&0xf;
                     shifted *= scoreMul;
                     score+=shifted;

@@ -4,6 +4,15 @@ import hat.Accelerator;
 import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
+import static chess.ChessConstants.BISHOP;
+import static chess.ChessConstants.EMPTY_SQUARE;
+import static chess.ChessConstants.KING;
+import static chess.ChessConstants.KNIGHT;
+import static chess.ChessConstants.PAWN;
+import static chess.ChessConstants.QUEEN;
+import static chess.ChessConstants.ROOK;
+import static chess.ChessConstants.WHITE_BIT;
+
 public interface ChessData extends Buffer {
     interface Board extends Struct {
 
@@ -23,7 +32,21 @@ public interface ChessData extends Buffer {
 
         void moves(short moves);
 
-       // long moveBits();
+        default void init(){
+            int x=0;
+            for (byte bits :new byte[]{ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK}){
+                squareBits(x,(byte) (bits));
+                squareBits(x+8,(byte) (PAWN));
+                for (int i=16;i<48;i+=8) {
+                    squareBits(x + i, (byte) (EMPTY_SQUARE));
+                }
+                squareBits(x+48,(byte) (WHITE_BIT|PAWN));
+                squareBits(x+56,(byte) (WHITE_BIT|bits));
+                x++;
+            }
+        }
+
+        // long moveBits();
 
        // void moveBits(long moveBits);
     }
