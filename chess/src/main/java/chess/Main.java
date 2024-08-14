@@ -137,9 +137,8 @@ public class Main {
         // doMovesCompute assumes that all control.count() moves starting at index control.start() in the last control.ply()
         // has it's moveCount and prefix set appropriately
       //  accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
-        IntStream.range(0,1).forEach(id->{
-            Compute.doMovesKernelCore(id, chessData,control);}
-        );
+      // IntStream.range(0,1).forEach(id->Compute.doMovesKernelCore(id, chessData,control));
+        accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
         for (int ply = 1; ply<2; ply++) {
             // This is a prefix scan on boards control.start().. control.count() + control.start()
             // ideally we could use the GPU for this....
@@ -153,13 +152,13 @@ public class Main {
             control.start(control.count()+control.start());
             control.count(accum);
             control.ply(ply);
+            // IntStream.range(0,accum).forEach(id->Compute.doMovesKernelCore(id, chessData,control));
+            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
             IntStream.range(0,accum).forEach(id->{
-                Compute.doMovesKernelCore(id, chessData,control);
-                var boardid = control.start()+id;
+                        var boardid = control.start()+id;
                         System.out.println(new Terminal().board(chessData.board(boardid),boardid));
-            }
+                    }
             );
-           // accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
         }
 /*
         short[] movesArr = new short[board.moves()];
