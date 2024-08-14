@@ -6,6 +6,7 @@ import hat.backend.Backend;
 import hat.buffer.Buffer;
 
 import java.lang.invoke.MethodHandles;
+import java.util.stream.IntStream;
 
 import static chess.ChessConstants.WHITE_BIT;
 
@@ -124,19 +125,21 @@ public class Main {
         int ply5 = 1 + 40 + (40*40) + (40*40*40) + (40*40*40*40) + (40*40*40*40*40);
         ChessData chessData = ChessData.create(accelerator, ply5);
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
-        accelerator.compute(cc -> Compute.init(cc, chessData));
-
         ChessData.Board initBoard = chessData.board(0);
         initBoard.init();
+        System.out.println(new Terminal().board(initBoard));
         control.ply(0);
         control.side(WHITE_BIT);
         var done = false;
         control.start(0);
         control.count(1);
+
         // doMovesCompute assumes that all control.count() moves starting at index control.start() in the last control.ply()
         // has it's moveCount and prefix set appropriately
-        accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
-
+      //  accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
+        IntStream.range(0,1).forEach(id->{
+            Compute.doMovesKernelCore(id, chessData,control);}
+        );
         for (int ply = 1; ply<2; ply++) {
             // This is a prefix scan on boards control.start().. control.count() + control.start()
             // ideally we could use the GPU for this....
@@ -150,7 +153,12 @@ public class Main {
             control.start(control.count()+control.start());
             control.count(accum);
             control.ply(ply);
-            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
+            IntStream.range(0,accum).forEach(id->{
+                Compute.doMovesKernelCore(id, chessData,control);
+                        System.out.println(new Terminal().board(chessData.board(control.start()+id)));
+            }
+            );
+           // accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
         }
 /*
         short[] movesArr = new short[board.moves()];

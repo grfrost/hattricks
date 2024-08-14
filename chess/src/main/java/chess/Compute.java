@@ -107,105 +107,6 @@ public class Compute {
     }
 
 
-
-    @CodeReflection
-    public static void doMoves(ChessData chessData, ChessData.Board board, byte fromBits, int fromx, int fromy) {
-        int pieceValue = fromBits & ChessConstants.PIECE_MASK;
-        int moves = 0;
-        if (pieceValue == ChessConstants.KING) {
-            for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
-                int dxdy = 0b1111 & (CompassDxDyMap >>> (moveIdx * 4));
-                int dy = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
-                dxdy >>>= 2;
-                int dx = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
-                int tox = fromx + dx;
-                int toy = fromy + dy;
-                if (isOnBoard(tox, toy)) {
-                    var toBits = board.squareBits(toy * 8 + tox);
-                    if (isEmptyOrOpponent(fromBits, toBits)) {
-                        moves++;
-                    }
-                }
-            }
-        } else if (pieceValue == ChessConstants.PAWN) {
-            int forward = isWhite(fromBits) ? -1 : 1;
-            int count = (fromy == (isWhite(fromBits) ? 6 : 1)) ? 4 : 3;  // four moves if home else three
-            for (int moveIdx = 0; moveIdx < count; moveIdx++) {
-                int dxdy = 0b1111 & (ChessConstants.PawnDxDyMap >>> (moveIdx * 4));
-                int toy = fromy + (forward * ((dxdy & 0b11) - 1));
-                dxdy >>>= 2;
-                int tox = fromx + (dxdy & 0b11) - 1;
-                if (isOnBoard(tox, toy)) {
-                    var toBits = board.squareBits(toy * 8 + tox);
-                    if (((moveIdx > 1) && isEmpty(toBits)) || (moveIdx < 2) && isOpponent(fromBits, toBits)) {
-                        moves++;
-                    }
-                }
-            }
-        } else if (pieceValue == ChessConstants.KNIGHT) {
-            for (int moveIdx = 0; moveIdx < 8; moveIdx++) {
-                int dxdy = 0b1111 & (ChessConstants.KnightDxDyMap >>> (moveIdx * 4));
-                int toy = fromy + ((dxdy & 0b1) + 1) * ((dxdy & 0b10) - 1);
-                dxdy >>>= 2;
-                int tox = fromx + ((dxdy & 0b1) + 1) * ((dxdy & 0b10) - 1);
-                if (isOnBoard(tox, toy)) {
-                    var toBits = board.squareBits(toy * 8 + tox);
-                    if (isEmptyOrOpponent(fromBits, toBits)) {
-                        moves++;
-                    }
-                }
-            }
-        } else {
-            // sliders Rook, Queen, Bishop
-            final int compassPoints = (pieceValue == BISHOP) ? DIAGS : ((pieceValue == ROOK) ? COLROWS : ALL_POINTS);
-
-            // compassPoints have use 1 or 0 for bit for eligible move relative to fromx,fromy
-            // We only encode the neighbours so the 3x3 grid has no center representation
-            //                piece being moved
-            //                     is here
-            //                        v
-            //              nw n ne e | w sw s se
-            //                \ | | | | | | | /
-            //                 \\ | | | | | //
-            //                  ||| | v | |||
-            //     diags   == 0b101_0___0_101
-            //     colrows == 0b010_1___1_010
-            //   allpoints == 0b111_1___1_111
-
-
-            for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
-                int moveBit = (1 << moveIdx); // so 0b10000000 -> 0b01000000 -> ... 0b00000001
-                // check if we can move this way
-                // i.e is bit is set for this compassPoint
-                if ((compassPoints & moveBit) == moveBit) {
-                    // Now let's determine what a move in this dir looks like
-                    int dxdy = 0b1111 & (CompassDxDyMap >>> (moveIdx * 4));
-                    int dy = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
-                    dxdy >>>= 2;
-                    int dx = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
-                    boolean blocked = false;
-                    for (int slide = 1; !blocked && slide < 8; slide++) { //1,2,3,4,5,6,7
-                        int tox = fromx + slide * dx;
-                        int toy = fromy + slide * dy;
-                        blocked = isOffBoard(tox, toy);
-                        if (!blocked) {
-                            var toBits = board.squareBits(toy * 8 + tox);
-                            if (isEmptyOrOpponent(fromBits, toBits)) {
-                                moves++;
-                                if (isOpponent(toBits, fromBits)) {
-                                    blocked = true;
-                                }
-                            } else {
-                                blocked = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-    }
-
     @CodeReflection
     public static int countMoves(ChessData.Board board, byte fromBits, int fromx, int fromy) {
         int moves = 0;
@@ -302,40 +203,159 @@ public class Compute {
             }
         }
         return moves;
-
     }
+
 
     @CodeReflection
     public static void countMovesKernelCore(int id, ChessData chessData, Control control) {
 
-            ChessData.Board board = chessData.board(id);
-            byte side = (byte)control.side();
-            int moves=0;
-            int score = 0;
-            for (int i = 0; i < 64; i++) {
-                byte squareBits = board.squareBits(i);
+        ChessData.Board board = chessData.board(id);
+        byte side = (byte)control.side();
+        int moves=0;
+        int score = 0;
+        for (int i = 0; i < 64; i++) {
+            byte squareBits = board.squareBits(i);
 
-                int piece = squareBits & PIECE_MASK;
-                if (piece != EMPTY_SQUARE) {
-                    // note that the weight arrays are valid for WHITE.  We need to invert the index for black
-                    int weightIndex = ((squareBits&WHITE_BIT)==WHITE_BIT)?i:63-i;
-                    int scoreMul = -1;
-                    if (isComrade(side, squareBits)) {
-                        moves += countMoves(board, squareBits, i % 8, i / 8);
-                        scoreMul = 1;
-                    }
-                    // now the piece value can be used an index into the weights
-                    int weights = control.weight(weightIndex);
-                    int shifted = (weights>>>piece*4)&0xf;
-                    shifted *= scoreMul;
-                    score+=shifted;
+            int piece = squareBits & PIECE_MASK;
+            if (piece != EMPTY_SQUARE) {
+                // note that the weight arrays are valid for WHITE.  We need to invert the index for black
+                int weightIndex = ((squareBits&WHITE_BIT)==WHITE_BIT)?i:63-i;
+                int scoreMul = -1;
+                if (isComrade(side, squareBits)) {
+                    moves += countMoves(board, squareBits, i % 8, i / 8);
+                    scoreMul = 1;
                 }
-
+                // now the piece value can be used an index into the weights
+                int weights = control.weight(weightIndex);
+                int shifted = (weights>>>piece*4)&0xf;
+                shifted *= scoreMul;
+                score+=shifted;
             }
-            board.moves((byte) moves);
-            board.score((short) score);
+
+        }
+        board.moves((byte) moves);
+        board.score((short) score);
 
     }
+    @CodeReflection
+    public static void createBoard(ChessData chessData, ChessData.Board board, int boardId, int newBoardId,
+                                    int fromx, int fromy, int tox, int toy) {
+
+        var targetBoard = chessData.board(newBoardId);
+        targetBoard.parent(boardId);
+        targetBoard.from((byte)(fromx<<4|fromy));
+        targetBoard.to((byte)(tox<<4|toy));
+        for (int i=0; i<64; i++) {
+            targetBoard.squareBits(i, board.squareBits(i));
+        }
+        targetBoard.squareBits(fromy*8+fromx, EMPTY_SQUARE);
+        targetBoard.squareBits(toy*8+tox, board.squareBits(fromy*8+fromx));
+    }
+
+    @CodeReflection
+    public static void doMoves(ChessData chessData, Control control,int boardId, ChessData.Board board, byte fromBits, int fromx, int fromy) {
+        int pieceValue = fromBits & ChessConstants.PIECE_MASK;
+        int moves = 0;
+        if (pieceValue == ChessConstants.KING) {
+            for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
+                int dxdy = 0b1111 & (CompassDxDyMap >>> (moveIdx * 4));
+                int dy = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
+                dxdy >>>= 2;
+                int dx = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
+                int tox = fromx + dx;
+                int toy = fromy + dy;
+                if (isOnBoard(tox, toy)) {
+                    var toBits = board.squareBits(toy * 8 + tox);
+                    if (isEmptyOrOpponent(fromBits, toBits)) {
+                        moves++;
+                    }
+                }
+            }
+        } else if (pieceValue == ChessConstants.PAWN) {
+            int forward = isWhite(fromBits) ? -1 : 1;
+            int count = (fromy == (isWhite(fromBits) ? 6 : 1)) ? 4 : 3;  // four moves if home else three
+            for (int moveIdx = 0; moveIdx < count; moveIdx++) {
+                int dxdy = 0b1111 & (ChessConstants.PawnDxDyMap >>> (moveIdx * 4));
+                int toy = fromy + (forward * ((dxdy & 0b11) - 1));
+                dxdy >>>= 2;
+                int tox = fromx + (dxdy & 0b11) - 1;
+                if (isOnBoard(tox, toy)) {
+                    var toBits = board.squareBits(toy * 8 + tox);
+                    if (((moveIdx > 1) && isEmpty(toBits)) || (moveIdx < 2) && isOpponent(fromBits, toBits)) {
+                        createBoard(chessData, board, boardId, control.start()+control.count()+board.prefix()+moves,fromx,fromy,tox,toy );
+
+                        // now we need to count the moves for targetBoard
+
+                        moves++;
+                    }
+                }
+            }
+        } else if (pieceValue == ChessConstants.KNIGHT) {
+            for (int moveIdx = 0; moveIdx < 8; moveIdx++) {
+                int dxdy = 0b1111 & (ChessConstants.KnightDxDyMap >>> (moveIdx * 4));
+                int toy = fromy + ((dxdy & 0b1) + 1) * ((dxdy & 0b10) - 1);
+                dxdy >>>= 2;
+                int tox = fromx + ((dxdy & 0b1) + 1) * ((dxdy & 0b10) - 1);
+                if (isOnBoard(tox, toy)) {
+                    var toBits = board.squareBits(toy * 8 + tox);
+                    if (isEmptyOrOpponent(fromBits, toBits)) {
+                        moves++;
+                    }
+                }
+            }
+        } else {
+            // sliders Rook, Queen, Bishop
+            final int compassPoints = (pieceValue == BISHOP) ? DIAGS : ((pieceValue == ROOK) ? COLROWS : ALL_POINTS);
+
+            // compassPoints have use 1 or 0 for bit for eligible move relative to fromx,fromy
+            // We only encode the neighbours so the 3x3 grid has no center representation
+            //                piece being moved
+            //                     is here
+            //                        v
+            //              nw n ne e | w sw s se
+            //                \ | | | | | | | /
+            //                 \\ | | | | | //
+            //                  ||| | v | |||
+            //     diags   == 0b101_0___0_101
+            //     colrows == 0b010_1___1_010
+            //   allpoints == 0b111_1___1_111
+
+
+            for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
+                int moveBit = (1 << moveIdx); // so 0b10000000 -> 0b01000000 -> ... 0b00000001
+                // check if we can move this way
+                // i.e is bit is set for this compassPoint
+                if ((compassPoints & moveBit) == moveBit) {
+                    // Now let's determine what a move in this dir looks like
+                    int dxdy = 0b1111 & (CompassDxDyMap >>> (moveIdx * 4));
+                    int dy = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
+                    dxdy >>>= 2;
+                    int dx = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
+                    boolean blocked = false;
+                    for (int slide = 1; !blocked && slide < 8; slide++) { //1,2,3,4,5,6,7
+                        int tox = fromx + slide * dx;
+                        int toy = fromy + slide * dy;
+                        blocked = isOffBoard(tox, toy);
+                        if (!blocked) {
+                            var toBits = board.squareBits(toy * 8 + tox);
+                            if (isEmptyOrOpponent(fromBits, toBits)) {
+                                moves++;
+                                if (isOpponent(toBits, fromBits)) {
+                                    blocked = true;
+                                }
+                            } else {
+                                blocked = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+
+
 
     @CodeReflection
     public static void doMovesKernelCore(int id, ChessData chessData, Control control) {
@@ -346,18 +366,11 @@ public class Compute {
             int piece = squareBits & PIECE_MASK;
             if (piece != EMPTY_SQUARE) {
                 if (isComrade(side, squareBits)) {
-                    doMoves(chessData,board, squareBits, i % 8, i / 8);
+                    doMoves(chessData,control,id,board, squareBits, i % 8, i / 8);
                 }
             }
         }
 
-    }
-
-    @CodeReflection
-    public static void countMovesKernel(KernelContext kc, ChessData chessData, Control control) {
-        if (kc.x < kc.maxX) {
-            countMovesKernelCore(kc.x, chessData, control);
-        }
     }
 
     @CodeReflection
@@ -367,23 +380,9 @@ public class Compute {
         }
     }
     @CodeReflection
-    static public void countMovesCompute(final ComputeContext cc, ChessData chessData, Control control) {
-        cc.dispatchKernel(1, kc -> countMovesKernel(kc, chessData,control));
-    }
-    @CodeReflection
     static public void doMovesCompute(final ComputeContext cc, ChessData chessData, Control control) {
         cc.dispatchKernel(control.count()-control.start(), kc -> doMovesKernel(kc, chessData,control));
     }
 
-    @CodeReflection
-    public static void initTree(KernelContext kc, ChessData chessData) {
-        if (kc.x < kc.maxX) {
-            ChessData.Board board = chessData.board(kc.x);
-        }
-    }
 
-    @CodeReflection
-    static public void init(final ComputeContext cc, ChessData chessData) {
-        cc.dispatchKernel(chessData.length(), kc -> initTree(kc, chessData));
-    }
 }
