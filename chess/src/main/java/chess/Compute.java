@@ -238,7 +238,7 @@ public class Compute {
 
     }
     @CodeReflection
-    public static void createBoard(ChessData chessData, ChessData.Board board, int boardId, int newBoardId,
+    public static void createBoard(ChessData chessData, Control control, ChessData.Board board, int boardId, int newBoardId,
                                     int fromx, int fromy, int tox, int toy) {
 
         var targetBoard = chessData.board(newBoardId);
@@ -250,6 +250,7 @@ public class Compute {
         }
         targetBoard.squareBits(fromy*8+fromx, EMPTY_SQUARE);
         targetBoard.squareBits(toy*8+tox, board.squareBits(fromy*8+fromx));
+        countMovesKernelCore(newBoardId,chessData,control);
     }
 
     @CodeReflection
@@ -268,7 +269,7 @@ public class Compute {
                 if (isOnBoard(tox, toy)) {
                     var toBits = board.squareBits(toy * 8 + tox);
                     if (isEmptyOrOpponent(fromBits, toBits)) {
-                        createBoard(chessData, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
+                        createBoard(chessData,control, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
                         moves++;
                     }
                 }
@@ -284,7 +285,7 @@ public class Compute {
                 if (isOnBoard(tox, toy)) {
                     var toBits = board.squareBits(toy * 8 + tox);
                     if (((moveIdx > 1) && isEmpty(toBits)) || (moveIdx < 2) && isOpponent(fromBits, toBits)) {
-                        createBoard(chessData, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
+                        createBoard(chessData,control, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
                         moves++;
                     }
                 }
@@ -298,7 +299,7 @@ public class Compute {
                 if (isOnBoard(tox, toy)) {
                     var toBits = board.squareBits(toy * 8 + tox);
                     if (isEmptyOrOpponent(fromBits, toBits)) {
-                        createBoard(chessData, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
+                        createBoard(chessData,control, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
                         moves++;
                     }
                 }
@@ -339,7 +340,7 @@ public class Compute {
                         if (!blocked) {
                             var toBits = board.squareBits(toy * 8 + tox);
                             if (isEmptyOrOpponent(fromBits, toBits)) {
-                                createBoard(chessData, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
+                                createBoard(chessData,control,board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
                                 moves++;
                                 if (isOpponent(toBits, fromBits)) {
                                     blocked = true;

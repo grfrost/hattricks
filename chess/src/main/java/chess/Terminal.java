@@ -93,6 +93,7 @@ public class Terminal {
         return str(s).nl();
     }
     public Terminal board(ChessData.Board board, int id) {
+        intValue("Score", board.score()).space();
         intValue("Board", id).space().intValue("Parent", board.parent()).space();
         intValue("Moves", board.moves()).space().intValue("Prefix", board.prefix()).space();
         algebraic("from", board.from()).space(). algebraic("to", board.to()).space().nl();
