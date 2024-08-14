@@ -127,7 +127,7 @@ public class Main {
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
         ChessData.Board initBoard = chessData.board(0);
         initBoard.init();
-        System.out.println(new Terminal().board(initBoard));
+        System.out.println(new Terminal().board(initBoard, 0));
         control.ply(0);
         control.side(WHITE_BIT);
         var done = false;
@@ -155,7 +155,8 @@ public class Main {
             control.ply(ply);
             IntStream.range(0,accum).forEach(id->{
                 Compute.doMovesKernelCore(id, chessData,control);
-                        System.out.println(new Terminal().board(chessData.board(control.start()+id)));
+                var boardid = control.start()+id;
+                        System.out.println(new Terminal().board(chessData.board(boardid),boardid));
             }
             );
            // accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));

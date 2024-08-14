@@ -73,6 +73,9 @@ public class Terminal {
         }
         return this;
     }
+    public Terminal value(String label, int value) {
+        return str(label).ch(':').str(Integer.toString(value));
+    }
 
     public Terminal bar() {
         ch('|');
@@ -82,7 +85,8 @@ public class Terminal {
     public Terminal strln(String s) {
         return str(s).nl();
     }
-    public Terminal board(ChessData.Board board) {
+    public Terminal board(ChessData.Board board, int id) {
+        value("Board", id).value("Parent", board.parent()).nl();
         space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
             final int finaly = 7-y;
