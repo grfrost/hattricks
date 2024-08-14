@@ -133,7 +133,7 @@ public class Main {
         control.side(WHITE_BIT);
         control.start(0);
         control.count(1);
-        boolean intStream = true;
+        boolean intStream = false;
         // doMovesCompute assumes that all control.count() moves starting at index control.start() in the last control.ply()
         // has it's moveCount and prefix set appropriately
         //  accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
