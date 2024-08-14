@@ -78,7 +78,7 @@ public class Main {
  *    But the space saved by this approach is huge.
  *
  *    Whilst the theoretical upper bound for moves for each board is 218 in practice the number is much smaller (by observation 20-40)
- *       Later  found this which states that the average number of bits is 5.5 bits so 40 ?  32+ 8 -> 40 seems reasonable
+ *       Later self... this states that the average number of bits is 5.5 bits so 40 ?  32+ 8 -> 40 seems reasonable
  *       https://groups.google.com/g/rec.games.chess/c/RspnvkCEY7s/m/W4kUZ0uH7jMJ
  *
  *    So 5 ply
@@ -109,7 +109,7 @@ public class Main {
  *    Each kernel adds its prefix + move value (1..moves) to the ply index start then populates the board at that index.
  *
  *    It then scores each new board and counts the # of moves.
- * 
+ *
  *
  *
  *
@@ -119,35 +119,39 @@ public class Main {
     public static void main(String[] args) {
         boolean headless = Boolean.getBoolean("headless") || (args.length > 0 && args[0].equals("--headless"));
         Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
-        //3 ply requires 64+64*64+64*64*64
-        int ply3 = 1 + 64 + 64 * 64 + 64 * 64 * 64;
+
         Control control = Control.create(accelerator);
-        ChessData chessData = ChessData.create(accelerator, ply3);
+        int ply5 = 1 + 40 + (40*40) + (40*40*40) + (40*40*40*40) + (40*40*40*40*40);
+        ChessData chessData = ChessData.create(accelerator, ply5);
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
         accelerator.compute(cc -> Compute.init(cc, chessData));
 
-        ChessData.Board board = chessData.board(0);
-        board.init();
+        ChessData.Board initBoard = chessData.board(0);
+        initBoard.init();
         control.ply(0);
         control.side(WHITE_BIT);
-        // To save space we compute the number of moves in one kernel. Then later actually perform the moves.
-        // sadly these share very similar code.
-        accelerator.compute(cc -> Compute.countMovesCompute(cc, chessData, control));
-        control.start(1);
-        control.count(board.moves());
-
-        int accum = 0;
-        for (int i = control.start(); i < control.count() + control.start(); i++) {
-            var b = chessData.board(i);
-            b.firstMove(i + accum);
-            for (int j = i + accum; j < i + b.moves(); j++) {
-                var m = chessData.board(i + accum);
-                m.parent(i);
-            }
-            accum += b.moves();
-        }
+        var done = false;
+        control.start(0);
+        control.count(1);
+        // doMovesCompute assumes that all control.count() moves starting at index control.start() in the last control.ply()
+        // has it's moveCount and prefix set appropriately
         accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
-        System.out.println(" found " + board.moves());
+
+        for (int ply = 1; ply<2; ply++) {
+            // This is a prefix scan on boards control.start().. control.count() + control.start()
+            // ideally we could use the GPU for this....
+            int accum = 0;
+            for (int i = control.start(); i < control.count() + control.start(); i++) {
+                var board = chessData.board(i);
+                board.prefix(i + accum);
+                accum += board.moves();
+            }
+            // accum is now the 'size' of the ply for the next layer
+            control.start(control.count()+control.start());
+            control.count(accum);
+            control.ply(ply);
+            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
+        }
 /*
         short[] movesArr = new short[board.moves()];
         int movec = 0;

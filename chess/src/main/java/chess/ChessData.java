@@ -27,6 +27,13 @@ public interface ChessData extends Buffer {
                 squareBits(x+56,(byte) (WHITE_BIT|bits));
                 x++;
             }
+            // The score after init is zero, no move got us here, the prefix is 0
+            // The number of moves available to white is 20 (same for black presumeably)
+            score((short)0);
+            moves((byte)20);
+            prefix(0);
+            from((byte) 0);
+            to((byte) 0);
         }
         byte squareBits(long idx);
 
@@ -37,8 +44,8 @@ public interface ChessData extends Buffer {
         void parent(int parent);
 
 
-        int firstMove();
-        void firstMove(int firstMove);
+        int prefix();
+        void prefix(int prefix);
 
         short score();
         void score(short score);
@@ -46,12 +53,11 @@ public interface ChessData extends Buffer {
 
         void moves(byte moves);
 
+        // The move that got us here from the parent
         byte from();
         byte to();
         void from(byte from);
         void to(byte to);
-
-
     }
 
     int length();
@@ -61,12 +67,11 @@ public interface ChessData extends Buffer {
     Schema<ChessData> schema = Schema.of(ChessData.class, chessData -> chessData
             .arrayLen("length")//.pad(4)  // must be 4 if array has a long ?
             .array("board", square -> square
-                    //.field("moveBits")
                     .array("squareBits", 64)
-                    //                 4          4         2        1       1     1
-                    .fields("parent", "firstMove","score", "moves","from","to")
+                    //                 4          4       2        1       1     1
+                    .fields("parent", "prefix", "score", "moves","from","to")
                     .pad(3)
-            )
+            ) // each board is 80 bytes.
 
     );
 
