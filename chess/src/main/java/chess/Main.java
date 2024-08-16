@@ -139,11 +139,12 @@ public class Main {
         // has it's moveCount and prefix set appropriately
         //  accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
         if (intStream) {
-            IntStream.range(0, 1).forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
+            IntStream.range(0, control.playEndBoardIdx() - control.playEndBoardIdx())
+                    .forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
         } else {
             accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
         }
-        for (int ply = 1; ply < 2; ply++) {
+        for (int ply = 1; ply < 3; ply++) {
             // This is a prefix scan on boards between
             // control.start() and control.count() + control.start()
             // ideally we could use the GPU for this....
@@ -162,19 +163,19 @@ public class Main {
             // also each board now can use control.start()+board.prefix()+move # to
             // populate the correct target board.
             control.playStartBoardIdx(control.playEndBoardIdx());
-            control.playEndBoardIdx(control.playEndBoardIdx()+accum);
+            control.playEndBoardIdx(control.playEndBoardIdx() + accum);
             control.ply(ply);
             if (intStream) {
-                IntStream.range(0, accum).forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
+                IntStream.range(0, control.playEndBoardIdx() - control.playStartBoardIdx())
+                        .forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
             } else {
                 accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
             }
-            IntStream.range(0, accum).forEach(id -> {
-                        var boardid = control.playStartBoardIdx() + id;
-                        var board = chessData.board(id);
+            IntStream.range(0, control.playEndBoardIdx() - control.playStartBoardIdx()).forEach(id -> {
+                        int boardid = control.playStartBoardIdx() + id;
+                        ChessData.Board board = chessData.board(id);
                         System.out.println(new Terminal().board(board, boardid));
-                viewer.view(board);
-
+                        viewer.view(board);
                     }
             );
             control.side((control.side() & WHITE_BIT) == WHITE_BIT ? EMPTY_SQUARE : WHITE_BIT);
