@@ -121,7 +121,7 @@ public class Main {
     public static void main(String[] args) {
         boolean headless = Boolean.getBoolean("headless") || (args.length > 0 && args[0].equals("--headless"));
         Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
-
+        Viewer viewer = new Viewer();
         Control control = Control.create(accelerator);
         int ply5 = 1 + 40 + (40 * 40) + (40 * 40 * 40) + (40 * 40 * 40 * 40) + (40 * 40 * 40 * 40 * 40);
         ChessData chessData = ChessData.create(accelerator, ply5);
@@ -129,6 +129,7 @@ public class Main {
         ChessData.Board initBoard = chessData.board(0);
         initBoard.init();
         System.out.println(new Terminal().board(initBoard, 0));
+        viewer.view(initBoard);
         control.ply(0);
         control.side(WHITE_BIT);
         control.start(0);
@@ -142,9 +143,15 @@ public class Main {
         } else {
             accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
         }
-        for (int ply = 1; ply < 3; ply++) {
-            // This is a prefix scan on boards control.start().. control.count() + control.start()
+        for (int ply = 1; ply < 2; ply++) {
+            // This is a prefix scan on boards between
+            // control.start() and control.count() + control.start()
             // ideally we could use the GPU for this....
+            // prefix scan from within a kernel needs groupwide lane cooperation
+            // and access to local memory.
+            // We should initially provide an intrinsic which allows us to call
+            // via the acceleratior, and which may fall back to something like this
+
             int accum = 0;
             for (int i = control.start(); i < control.count() + control.start(); i++) {
                 var board = chessData.board(i);
@@ -152,6 +159,8 @@ public class Main {
                 accum += board.moves();
             }
             // accum now has the 'size' of the ply for the next layer
+            // also each board now can use control.start()+board.prefix()+move # to
+            // populate the correct target board.
             control.start(control.count() + control.start());
             control.count(accum);
             control.ply(ply);
@@ -162,7 +171,10 @@ public class Main {
             }
             IntStream.range(0, accum).forEach(id -> {
                         var boardid = control.start() + id;
-                        System.out.println(new Terminal().board(chessData.board(boardid), boardid));
+                        var board = chessData.board(id);
+                        System.out.println(new Terminal().board(board, boardid));
+                viewer.view(board);
+
                     }
             );
             control.side((control.side() & WHITE_BIT) == WHITE_BIT ? EMPTY_SQUARE : WHITE_BIT);
