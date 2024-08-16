@@ -28,12 +28,15 @@ package chess;
 import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.Timer;
 import javax.swing.WindowConstants;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -101,6 +104,34 @@ public class Viewer extends JFrame {
         public Dimension getPreferredSize() {
             return new Dimension(640, 640);
         }
+        Long startTime=null;
+        Double PLAY_TIME =5.0;
+        Timer timer = new Timer(40, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+
+                if (startTime == null) {
+                    startTime = System.currentTimeMillis();
+                }
+                long playTime = System.currentTimeMillis() - startTime;
+                double progress = playTime / PLAY_TIME;
+                if (progress >= 1.0) {
+                    progress = 1d;
+                    ((Timer) e.getSource()).stop();
+                }
+
+              //  int index = Math.min(Math.max(0, (int) (points.size() * progress)), points.size() - 1);
+
+              //  pos = points.get(index);
+              //  if (index < points.size() - 1) {
+              //      angle = angleTo(pos, points.get(index + 1));
+              //  }
+              //  repaint();
+            }
+        });
+
+
 
 
         @Override
@@ -133,6 +164,7 @@ public class Viewer extends JFrame {
                 synchronized (doorBell) {
                     try {
                         doorBell.wait();
+                       // timer.start();
                     } catch (final InterruptedException ie) {
                         ie.getStackTrace();
                     }
