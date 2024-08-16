@@ -256,7 +256,7 @@ public class Compute {
     @CodeReflection
     public static int doMoves(ChessData chessData, Control control,int moves, int boardId, ChessData.Board board, byte fromBits, int fromx, int fromy) {
         int pieceValue = fromBits & ChessConstants.PIECE_MASK;
-        int boardIdBase = control.start()+control.count()+board.prefix();
+        int boardIdBase = control.playEndBoardIdx()+board.prefix();
 
         if (pieceValue == ChessConstants.KING) {
             for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
@@ -384,8 +384,6 @@ return moves;
     }
     @CodeReflection
     static public void doMovesCompute(final ComputeContext cc, ChessData chessData, Control control) {
-        cc.dispatchKernel(control.count()-control.start(), kc -> doMovesKernel(kc, chessData,control));
+        cc.dispatchKernel(control.playEndBoardIdx()-control.playStartBoardIdx(), kc -> doMovesKernel(kc, chessData,control));
     }
-
-
 }

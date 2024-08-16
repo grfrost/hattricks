@@ -132,8 +132,8 @@ public class Main {
         viewer.view(initBoard);
         control.ply(0);
         control.side(WHITE_BIT);
-        control.start(0);
-        control.count(1);
+        control.playStartBoardIdx(0);
+        control.playEndBoardIdx(1);
         boolean intStream = false;
         // doMovesCompute assumes that all control.count() moves starting at index control.start() in the last control.ply()
         // has it's moveCount and prefix set appropriately
@@ -153,7 +153,7 @@ public class Main {
             // via the acceleratior, and which may fall back to something like this
 
             int accum = 0;
-            for (int i = control.start(); i < control.count() + control.start(); i++) {
+            for (int i = control.playStartBoardIdx(); i < control.playEndBoardIdx(); i++) {
                 var board = chessData.board(i);
                 board.prefix(i + accum);
                 accum += board.moves();
@@ -161,8 +161,8 @@ public class Main {
             // accum now has the 'size' of the ply for the next layer
             // also each board now can use control.start()+board.prefix()+move # to
             // populate the correct target board.
-            control.start(control.count() + control.start());
-            control.count(accum);
+            control.playStartBoardIdx(control.playEndBoardIdx());
+            control.playEndBoardIdx(control.playEndBoardIdx()+accum);
             control.ply(ply);
             if (intStream) {
                 IntStream.range(0, accum).forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
@@ -170,7 +170,7 @@ public class Main {
                 accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
             }
             IntStream.range(0, accum).forEach(id -> {
-                        var boardid = control.start() + id;
+                        var boardid = control.playStartBoardIdx() + id;
                         var board = chessData.board(id);
                         System.out.println(new Terminal().board(board, boardid));
                 viewer.view(board);
