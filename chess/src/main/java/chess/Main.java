@@ -123,62 +123,95 @@ public class Main {
         Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
         Viewer viewer = new Viewer();
         Control control = Control.create(accelerator);
-        int ply5 = 1 + 40 + (40 * 40) + (40 * 40 * 40) + (40 * 40 * 40 * 40) + (40 * 40 * 40 * 40 * 40);
-        ChessData chessData = ChessData.create(accelerator, ply5);
+        // From chess wikipedia we learned that on average each board needs 5.5 bits to encode # of moves so 32-40
+        ChessData chessData = ChessData.create(accelerator,
+                        1                           // ply 0
+                        + 40                        //     1
+                        + (40 * 40)                 //     2
+                        + (40 * 40 * 40)            //     3
+                        + (40 * 40 * 40 * 40)       //     4
+                        + (40 * 40 * 40 * 40 * 40)  //     5
+        );
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
         ChessData.Board initBoard = chessData.board(0);
+        // This sets up the board 'as if' we had run doMovesCompute.
+        // so board.moves(20);
+        //    board.prefix(0);
         initBoard.init();
-        System.out.println(new Terminal().board(initBoard, 0));
-        viewer.view(initBoard);
-        control.ply(0);
-        control.side(WHITE_BIT);
-        control.playStartBoardIdx(0);
-        control.playEndBoardIdx(1);
-        boolean intStream = false;
-        // doMovesCompute assumes that all control.count() moves starting at index control.start() in the last control.ply()
-        // has it's moveCount and prefix set appropriately
-        //  accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
-        if (intStream) {
-            IntStream.range(0, control.playEndBoardIdx() - control.playEndBoardIdx())
-                    .forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
-        } else {
-            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
-        }
-        for (int ply = 1; ply < 3; ply++) {
-            // This is a prefix scan on boards between
-            // control.start() and control.count() + control.start()
-            // ideally we could use the GPU for this....
-            // prefix scan from within a kernel needs groupwide lane cooperation
-            // and access to local memory.
-            // We should initially provide an intrinsic which allows us to call
-            // via the acceleratior, and which may fall back to something like this
 
-            int accum = 0;
-            for (int i = control.playStartBoardIdx(); i < control.playEndBoardIdx(); i++) {
-                var board = chessData.board(i);
-                board.prefix(i + accum);
-                accum += board.moves();
-            }
-            // accum now has the 'size' of the ply for the next layer
-            // also each board now can use control.start()+board.prefix()+move # to
-            // populate the correct target board.
-            control.playStartBoardIdx(control.playEndBoardIdx());
-            control.playEndBoardIdx(control.playEndBoardIdx() + accum);
-            control.ply(ply);
+        System.out.println(new Terminal().board(initBoard, 0));
+
+        viewer.view(initBoard);
+
+        control.side(WHITE_BIT);
+        control.setBounds(0,1); // init board
+
+        boolean intStream = false;
+
+        for (int ply = 1; ply < 3; ply++) {
+            /*
+             * doMovesCompute() requires that board.moves for each boards move field
+             * (boardId between control.plyStartIdx() and control.plyEndIdx()) be set
+             * appropriately
+             * board.initBoard() does this for the 0th ply of the start of game
+             * (where we know that there are 20 possible moves for white at game opening)
+             * after that we depend on the previous loop's execution of doMovesCompute()
+             */
             if (intStream) {
-                IntStream.range(0, control.playEndBoardIdx() - control.playStartBoardIdx())
+                IntStream.range(0, control.plyEndIdx() - control.plyEndIdx())
                         .forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
             } else {
                 accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
             }
-            IntStream.range(0, control.playEndBoardIdx() - control.playStartBoardIdx()).forEach(id -> {
-                        int boardid = control.playStartBoardIdx() + id;
+
+            /*
+             * Dump the board to the terminal/ui
+             */
+            IntStream.range(0, control.plyEndIdx() - control.plyStartIdx()).forEach(id -> {
+                        int boardid = control.plyStartIdx() + id;
                         ChessData.Board board = chessData.board(id);
                         System.out.println(new Terminal().board(board, boardid));
                         viewer.view(board);
                     }
             );
-            control.side((control.side() & WHITE_BIT) == WHITE_BIT ? EMPTY_SQUARE : WHITE_BIT);
+
+            /*
+             * Now we need to perform a prefix scan on board.moves field
+             * between control.plyStartIdx() and control.plyEndIdx()
+             * Ideally we could use the GPU for this as prefix scans from within a
+             * kernel can use groupwide lane cooperation and local memory.
+             *
+             */
+            int prefix = 0;
+            for (int boardIdx = control.plyStartIdx(); boardIdx < control.plyEndIdx(); boardIdx++) {
+                ChessData.Board board = chessData.board(boardIdx);
+                board.prefix(boardIdx + prefix); // set the prefix value
+                prefix += board.moves(); // include current board
+            }
+            /*
+             * Imagine that after the last round we had only four boards in a ply
+             *
+             * board.prefix is initialized to 0 and moves has been calculated by the last round for each board
+             *       bd0             bd1             bd2             bd3
+             *  prefix moves    prefix moves    prefix moves    prefix moves
+             *     0    20         0    25         0    22         0     15
+             *
+             *
+             * After a prefix scan
+             *
+             *       bd0             bd1             bd2             bd3
+             *  prefix moves    prefix moves    prefix moves    prefix moves      prefix =
+             *     0    20        20    25        45    22        67     15          82
+             *
+             * The resulting prefix now has the 'size' of the next ply
+             * The board.prefix() field + new ply's control.start() + boardId
+             * yields the boardId (in global chessData space) for the new board for each move
+             *
+             * So we set up the control.plyStartIdx() and control.plyEndIdx() for the next round
+             * and flip the sides.
+             */
+            control.setBounds(control.plyEndIdx(), control.plyEndIdx()+prefix);
+            control.swapSide();
         }
     }
 }

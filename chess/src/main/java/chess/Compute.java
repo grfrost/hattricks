@@ -11,9 +11,7 @@ import static chess.ChessConstants.COLROWS;
 import static chess.ChessConstants.CompassDxDyMap;
 import static chess.ChessConstants.DIAGS;
 import static chess.ChessConstants.EMPTY_SQUARE;
-import static chess.ChessConstants.PAWN;
 import static chess.ChessConstants.PIECE_MASK;
-import static chess.ChessConstants.QUEEN;
 import static chess.ChessConstants.ROOK;
 import static chess.ChessConstants.WHITE_BIT;
 
@@ -256,7 +254,7 @@ public class Compute {
     @CodeReflection
     public static int doMoves(ChessData chessData, Control control,int moves, int boardId, ChessData.Board board, byte fromBits, int fromx, int fromy) {
         int pieceValue = fromBits & ChessConstants.PIECE_MASK;
-        int boardIdBase = control.playEndBoardIdx()+board.prefix();
+        int boardIdBase = control.plyEndIdx()+board.prefix();
 
         if (pieceValue == ChessConstants.KING) {
             for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
@@ -384,6 +382,6 @@ return moves;
     }
     @CodeReflection
     static public void doMovesCompute(final ComputeContext cc, ChessData chessData, Control control) {
-        cc.dispatchKernel(control.playEndBoardIdx()-control.playStartBoardIdx(), kc -> doMovesKernel(kc, chessData,control));
+        cc.dispatchKernel(control.plyEndIdx()-control.plyStartIdx(), kc -> doMovesKernel(kc, chessData,control));
     }
 }

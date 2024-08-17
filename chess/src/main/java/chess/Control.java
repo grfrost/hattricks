@@ -5,11 +5,13 @@ import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
 import static chess.ChessConstants.BISHOP;
+import static chess.ChessConstants.EMPTY_SQUARE;
 import static chess.ChessConstants.KING;
 import static chess.ChessConstants.KNIGHT;
 import static chess.ChessConstants.PAWN;
 import static chess.ChessConstants.QUEEN;
 import static chess.ChessConstants.ROOK;
+import static chess.ChessConstants.WHITE_BIT;
 
 public interface Control extends Buffer {
     // See how we  combine these into a single weighted map
@@ -154,24 +156,19 @@ public interface Control extends Buffer {
     };
 
     int side();
-
     void side(int side);
 
-    int ply();
-
-    void ply(int ply);
-
-    int playStartBoardIdx();
-    void playStartBoardIdx(int playStartBoardIdx);
-    int playEndBoardIdx();
-    void playEndBoardIdx(int playEndBoardIdx);
+    int plyStartIdx();
+    void plyStartIdx(int plyStartIdx);
+    int plyEndIdx();
+    void plyEndIdx(int plyEndIdx);
 
     int weight(long idx);
 
     void weight(long idx, int weight);
 
     Schema<Control> schema = Schema.of(Control.class, control -> control
-            .fields("ply", "side", "playStartBoardIdx","playEndBoardIdx").array("weight", 64)
+            .fields( "side", "plyStartIdx","plyEndIdx").array("weight", 64)
     );
 
     static Control create(Accelerator acc) {
@@ -180,5 +177,15 @@ public interface Control extends Buffer {
             control.weight(i, weightMap[i]);
         }
         return control;
+    }
+
+    // Helpers not available on GPU!
+    default void setBounds(int start, int end){
+        plyStartIdx(start);
+        plyEndIdx(end);
+    }
+
+    default void swapSide(){
+        side((side() & WHITE_BIT) == WHITE_BIT ? EMPTY_SQUARE : WHITE_BIT);
     }
 }
