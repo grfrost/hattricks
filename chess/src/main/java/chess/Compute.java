@@ -1,9 +1,11 @@
 package chess;
 
+import hat.Accelerator;
 import hat.ComputeContext;
 import hat.KernelContext;
 
 import java.lang.runtime.CodeReflection;
+import java.util.stream.IntStream;
 
 import static chess.ChessConstants.ALL_POINTS;
 import static chess.ChessConstants.BISHOP;
@@ -383,5 +385,14 @@ return moves;
     @CodeReflection
     static public void doMovesCompute(final ComputeContext cc, ChessData chessData, Control control) {
         cc.dispatchKernel(control.plyEndIdx()-control.plyStartIdx(), kc -> doMovesKernel(kc, chessData,control));
+    }
+
+    public static void doMoves(Accelerator accelerator, boolean useIntStream, ChessData chessData, Control control) {
+        if (useIntStream) {
+            IntStream.range(0, control.plyEndIdx() - control.plyStartIdx())
+                    .forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
+        } else {
+            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
+        }
     }
 }

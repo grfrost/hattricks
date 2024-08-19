@@ -146,31 +146,26 @@ public class Main {
         control.side(WHITE_BIT);
         control.setBounds(0,1); // init board
 
-        boolean intStream = false;
 
-        for (int ply = 1; ply < 3; ply++) {
+        for (int ply = 0; ply < 3; ply++) {
             /*
              * doMovesCompute() requires that board.moves for each boards move field
              * (boardId between control.plyStartIdx() and control.plyEndIdx()) be set
              * appropriately
              * board.initBoard() does this for the 0th ply of the start of game
-             * (where we know that there are 20 possible moves for white at game opening)
+             * (we know all possible 20 possible moves for white at game opening)
              * after that we depend on the previous loop's execution of doMovesCompute()
+             * to provide this information
              */
-            if (intStream) {
-                IntStream.range(0, control.plyEndIdx() - control.plyEndIdx())
-                        .forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
-            } else {
-                accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
-            }
+
+            Compute.doMoves(accelerator, true, chessData,control);
 
             /*
              * Dump the board to the terminal/ui
              */
-            IntStream.range(0, control.plyEndIdx() - control.plyStartIdx()).forEach(id -> {
-                        int boardid = control.plyStartIdx() + id;
-                        ChessData.Board board = chessData.board(id);
-                        System.out.println(new Terminal().board(board, boardid));
+            IntStream.range(control.plyStartIdx(), control.plyEndIdx()).forEach(boardId -> {
+                        ChessData.Board board = chessData.board(boardId);
+                        System.out.println(new Terminal().board(board, boardId));
                         viewer.view(board);
                     }
             );
