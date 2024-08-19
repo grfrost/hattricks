@@ -387,7 +387,7 @@ return moves;
         cc.dispatchKernel(control.plyEndIdx()-control.plyStartIdx(), kc -> doMovesKernel(kc, chessData,control));
     }
 
-    public static void doMoves(Accelerator accelerator, boolean useIntStream, ChessData chessData, Control control) {
+    public static void plyMoves(Accelerator accelerator, boolean useIntStream, ChessData chessData, Control control) {
         if (useIntStream) {
             IntStream.range(0, control.plyEndIdx() - control.plyStartIdx())
                     .forEach(id -> Compute.doMovesKernelCore(id, chessData, control));

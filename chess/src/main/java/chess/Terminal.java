@@ -73,12 +73,10 @@ public class Terminal {
         }
         return this;
     }
-    public Terminal intValue(String label, int value) {
-        return str(label).ch(':').str(Integer.toString(value));
+    public Terminal intf(String format, int value) {
+        return str(String.format(format,value));
     }
-    public Terminal hexValue(String label, int value) {
-        return str(label).ch(':').str("0x").str(Integer.toHexString(value));
-    }
+
     public Terminal algebraic(String label, int xy){
         var x = ((xy>>>4)&0xf);
         var y = (xy&0xf);
@@ -92,10 +90,32 @@ public class Terminal {
     public Terminal strln(String s) {
         return str(s).nl();
     }
+
+    public Terminal line(ChessData.Board board, int id) {
+        intf("Score %4d", board.score()).space();
+        intf("Board %3d", id).space().intf("Parent %3d", board.parent()).space();
+        intf("Moves %2d", board.moves()).space().intf("Prefix %3d", board.prefix()).space();
+        algebraic("from", board.from()).space(). algebraic("to", board.to()).space();
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                byte squareBits = board.squareBits(y*8+x);
+                square(x,y, _ -> {
+                    if (Compute.isEmpty(squareBits)) {
+                        space();
+                    } else {
+                        str(piece(squareBits));
+                    }
+                });
+            }
+            border(_ -> bar());
+        };
+        return this;
+    }
+
     public Terminal board(ChessData.Board board, int id) {
-        intValue("Score", board.score()).space();
-        intValue("Board", id).space().intValue("Parent", board.parent()).space();
-        intValue("Moves", board.moves()).space().intValue("Prefix", board.prefix()).space();
+        intf("Score %4d", board.score()).space();
+        intf("Board %3d", id).space().intf("Parent %3d", board.parent()).space();
+        intf("Moves %2d", board.moves()).space().intf("Prefix %3d", board.prefix()).space();
         algebraic("from", board.from()).space(). algebraic("to", board.to()).space().nl();
         space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {

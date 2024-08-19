@@ -121,7 +121,7 @@ public class Main {
     public static void main(String[] args) {
         boolean headless = Boolean.getBoolean("headless") || (args.length > 0 && args[0].equals("--headless"));
         Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
-        Viewer viewer = new Viewer();
+       // Viewer viewer = new Viewer();
         Control control = Control.create(accelerator);
         // From chess wikipedia we learned that on average each board needs 5.5 bits to encode # of moves so 32-40
         ChessData chessData = ChessData.create(accelerator,
@@ -141,7 +141,7 @@ public class Main {
 
         System.out.println(new Terminal().board(initBoard, 0));
 
-        viewer.view(initBoard);
+      //  viewer.view(initBoard);
 
         control.side(WHITE_BIT);
         control.setBounds(0,1); // init board
@@ -158,15 +158,15 @@ public class Main {
              * to provide this information
              */
 
-            Compute.doMoves(accelerator, true, chessData,control);
+            Compute.plyMoves(accelerator, false, chessData,control);
 
             /*
              * Dump the board to the terminal/ui
              */
             IntStream.range(control.plyStartIdx(), control.plyEndIdx()).forEach(boardId -> {
                         ChessData.Board board = chessData.board(boardId);
-                        System.out.println(new Terminal().board(board, boardId));
-                        viewer.view(board);
+                        System.out.println(new Terminal().line(board, boardId));
+                       // viewer.view(board);
                     }
             );
 
