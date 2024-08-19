@@ -207,7 +207,7 @@ public class Compute {
 
 
     @CodeReflection
-    public static void countMovesKernelCore(int id, ChessData chessData, Control control) {
+    public static void countMovesKernelCore(int id, ChessData chessData, Control control, WeightTable weightTable) {
 
         ChessData.Board board = chessData.board(id);
         byte side = (byte)control.side();
@@ -226,7 +226,7 @@ public class Compute {
                     scoreMul = 1;
                 }
                 // now the piece value can be used an index into the weights
-                int weights = control.weight(weightIndex);
+                int weights = weightTable.weight(weightIndex);
                 int shifted = (weights>>>piece*4)&0xf;
                 shifted *= scoreMul;
                 score+=shifted;
@@ -238,7 +238,7 @@ public class Compute {
 
     }
     @CodeReflection
-    public static void createBoard(ChessData chessData, Control control, ChessData.Board board, int boardId, int newBoardId,
+    public static void createBoard(ChessData chessData, Control control, WeightTable weightTable, ChessData.Board board, int boardId, int newBoardId,
                                     int fromx, int fromy, int tox, int toy) {
 
         var targetBoard = chessData.board(newBoardId);
@@ -250,11 +250,11 @@ public class Compute {
         }
         targetBoard.squareBits(fromy*8+fromx, EMPTY_SQUARE);
         targetBoard.squareBits(toy*8+tox, board.squareBits(fromy*8+fromx));
-        countMovesKernelCore(newBoardId,chessData,control);
+        countMovesKernelCore(newBoardId,chessData,control,weightTable);
     }
 
     @CodeReflection
-    public static int doMoves(ChessData chessData, Control control,int moves, int boardId, ChessData.Board board, byte fromBits, int fromx, int fromy) {
+    public static int doMoves(ChessData chessData, Control control, WeightTable weightTable,int moves, int boardId, ChessData.Board board, byte fromBits, int fromx, int fromy) {
         int pieceValue = fromBits & ChessConstants.PIECE_MASK;
         int boardIdBase = control.plyEndIdx()+board.prefix();
 
@@ -269,7 +269,7 @@ public class Compute {
                 if (isOnBoard(tox, toy)) {
                     var toBits = board.squareBits(toy * 8 + tox);
                     if (isEmptyOrOpponent(fromBits, toBits)) {
-                        createBoard(chessData,control, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
+                        createBoard(chessData,control,weightTable, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
                         moves++;
                     }
                 }
@@ -285,7 +285,7 @@ public class Compute {
                 if (isOnBoard(tox, toy)) {
                     var toBits = board.squareBits(toy * 8 + tox);
                     if (((moveIdx > 1) && isEmpty(toBits)) || (moveIdx < 2) && isOpponent(fromBits, toBits)) {
-                        createBoard(chessData,control, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
+                        createBoard(chessData,control,weightTable, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
                         moves++;
                     }
                 }
@@ -299,7 +299,7 @@ public class Compute {
                 if (isOnBoard(tox, toy)) {
                     var toBits = board.squareBits(toy * 8 + tox);
                     if (isEmptyOrOpponent(fromBits, toBits)) {
-                        createBoard(chessData,control, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
+                        createBoard(chessData,control,weightTable, board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
                         moves++;
                     }
                 }
@@ -340,7 +340,7 @@ public class Compute {
                         if (!blocked) {
                             var toBits = board.squareBits(toy * 8 + tox);
                             if (isEmptyOrOpponent(fromBits, toBits)) {
-                                createBoard(chessData,control,board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
+                                createBoard(chessData,control,weightTable,board, boardId, boardIdBase+moves,fromx,fromy,tox,toy );
                                 moves++;
                                 if (isOpponent(toBits, fromBits)) {
                                     blocked = true;
@@ -360,7 +360,7 @@ return moves;
 
 
     @CodeReflection
-    public static void doMovesKernelCore(int id, ChessData chessData, Control control) {
+    public static void doMovesKernelCore(int id, ChessData chessData, Control control, WeightTable weightTable) {
         ChessData.Board board = chessData.board(id);
         byte side = (byte)control.side();
         int moves = 0;
@@ -369,7 +369,7 @@ return moves;
             int piece = squareBits & PIECE_MASK;
             if (piece != EMPTY_SQUARE) {
                 if (isComrade(side, squareBits)) {
-                    moves = doMoves(chessData,control,moves, id,board, squareBits, i % 8, i / 8);
+                    moves = doMoves(chessData,control,weightTable,moves, id,board, squareBits, i % 8, i / 8);
                 }
             }
         }
@@ -377,22 +377,22 @@ return moves;
     }
 
     @CodeReflection
-    public static void doMovesKernel(KernelContext kc, ChessData chessData, Control control) {
+    public static void doMovesKernel(KernelContext kc, ChessData chessData, Control control, WeightTable weightTable) {
         if (kc.x < kc.maxX) {
-            doMovesKernelCore(kc.x, chessData, control);
+            doMovesKernelCore(kc.x, chessData, control,weightTable);
         }
     }
     @CodeReflection
-    static public void doMovesCompute(final ComputeContext cc, ChessData chessData, Control control) {
-        cc.dispatchKernel(control.plyEndIdx()-control.plyStartIdx(), kc -> doMovesKernel(kc, chessData,control));
+    static public void doMovesCompute(final ComputeContext cc, ChessData chessData, Control control, WeightTable weightTable) {
+        cc.dispatchKernel(control.plyEndIdx()-control.plyStartIdx(), kc -> doMovesKernel(kc, chessData,control,weightTable));
     }
 
-    public static void plyMoves(Accelerator accelerator, boolean useIntStream, ChessData chessData, Control control) {
+    public static void plyMoves(Accelerator accelerator, boolean useIntStream, ChessData chessData, Control control, WeightTable weightTable) {
         if (useIntStream) {
             IntStream.range(0, control.plyEndIdx() - control.plyStartIdx())
-                    .forEach(id -> Compute.doMovesKernelCore(id, chessData, control));
+                    .forEach(id -> Compute.doMovesKernelCore(id, chessData, control,weightTable));
         } else {
-            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control));
+            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, control,weightTable));
         }
     }
 }

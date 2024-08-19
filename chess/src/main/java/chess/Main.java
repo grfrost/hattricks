@@ -6,6 +6,9 @@ import hat.backend.Backend;
 import hat.buffer.Buffer;
 
 import java.lang.invoke.MethodHandles;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 
 import static chess.ChessConstants.EMPTY_SQUARE;
@@ -123,6 +126,7 @@ public class Main {
         Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
        // Viewer viewer = new Viewer();
         Control control = Control.create(accelerator);
+        WeightTable weightTable = WeightTable.create(accelerator);
         // From chess wikipedia we learned that on average each board needs 5.5 bits to encode # of moves so 32-40
         ChessData chessData = ChessData.create(accelerator,
                         1                           // ply 0
@@ -158,7 +162,7 @@ public class Main {
              * to provide this information
              */
 
-            Compute.plyMoves(accelerator, true, chessData,control);
+            Compute.plyMoves(accelerator, true, chessData,control,weightTable);
             /*
              * Now we need to perform a prefix scan on board.moves field
              * between control.plyStartIdx() and control.plyEndIdx()
