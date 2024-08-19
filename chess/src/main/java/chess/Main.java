@@ -139,8 +139,8 @@ public class Main {
         //    board.prefix(0);
         initBoard.init();
 
-        System.out.println(new Terminal().board(initBoard, 0));
-
+        System.out.println(new Terminal().line(initBoard, 0));
+        System.out.println("-----------------------------------------------------");
       //  viewer.view(initBoard);
 
         control.side(WHITE_BIT);
@@ -158,18 +158,7 @@ public class Main {
              * to provide this information
              */
 
-            Compute.plyMoves(accelerator, false, chessData,control);
-
-            /*
-             * Dump the board to the terminal/ui
-             */
-            IntStream.range(control.plyStartIdx(), control.plyEndIdx()).forEach(boardId -> {
-                        ChessData.Board board = chessData.board(boardId);
-                        System.out.println(new Terminal().line(board, boardId));
-                       // viewer.view(board);
-                    }
-            );
-
+            Compute.plyMoves(accelerator, true, chessData,control);
             /*
              * Now we need to perform a prefix scan on board.moves field
              * between control.plyStartIdx() and control.plyEndIdx()
@@ -177,12 +166,24 @@ public class Main {
              * kernel can use groupwide lane cooperation and local memory.
              *
              */
-            int prefix = 0;
+            int prefix = control.plyEndIdx();
             for (int boardIdx = control.plyStartIdx(); boardIdx < control.plyEndIdx(); boardIdx++) {
                 ChessData.Board board = chessData.board(boardIdx);
                 board.prefix(boardIdx + prefix); // set the prefix value
                 prefix += board.moves(); // include current board
             }
+            /*
+             * Dump the board to the terminal/ui
+             */
+            IntStream.range(control.plyStartIdx(), control.plyEndIdx()).forEach(boardId -> {
+                        ChessData.Board board = chessData.board(boardId);
+                        System.out.println(new Terminal().line(board, boardId));
+
+                       // viewer.view(board);
+                    }
+            );
+            System.out.println("-----------------------------------------------------");
+
             /*
              * Imagine that after the last round we had only four boards in a ply
              *
