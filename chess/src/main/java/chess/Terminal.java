@@ -77,9 +77,10 @@ public class Terminal {
         return str(String.format(format,value));
     }
 
-    public Terminal algebraic(String label, int xy){
-        var x = ((xy>>>4)&0xf);
-        var y = (xy&0xf);
+    public Terminal algebraic(String label, int squareIdx){
+
+        var x = squareIdx%8;
+        var y = squareIdx/8;
         return str(label).ch(':').str(algebraic(x,y));
     }
     public Terminal bar() {
@@ -92,10 +93,11 @@ public class Terminal {
     }
 
     public Terminal line(ChessData.Board board, int id) {
-        intf("Score %4d", board.score()).space();
-        intf("Board %3d", id).space().intf("Parent %3d", board.parent()).space();
-        intf("Moves %2d", board.moves()).space().intf("Prefix %3d", board.prefix()).space();
-        algebraic("from", board.from()).space(). algebraic("to", board.to()).space();
+        intf("Score %4d,", board.score()).space();
+        intf("Board %3d,", id).space().intf("id %3d", board.id()).space().intf("Parent %3d,", board.parent()).space();
+        intf("Moves %2d,", board.moves()).space().intf("FirstChildIdx %3d,", board.firstChildIdx()).space();
+        algebraic("from", board.fromSquareIdx()).space().algebraic("to", board.toSquareIdx()).space();
+        intf("ParentRelativeMove %2d,", board.move()).space();
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
                 byte squareBits = board.squareBits(y*8+x);
@@ -114,9 +116,9 @@ public class Terminal {
 
     public Terminal board(ChessData.Board board, int id) {
         intf("Score %4d", board.score()).space();
-        intf("Board %3d", id).space().intf("Parent %3d", board.parent()).space();
-        intf("Moves %2d", board.moves()).space().intf("Prefix %3d", board.prefix()).space();
-        algebraic("from", board.from()).space(). algebraic("to", board.to()).space().nl();
+        intf("Board %3d", id).space().intf("id %3d", board.id()).space().intf("Parent %3d", board.parent()).space();
+        intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
+        algebraic("from", board.fromSquareIdx()).space(). algebraic("to", board.toSquareIdx()).space().nl();
         space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
             final int finaly = 7-y;

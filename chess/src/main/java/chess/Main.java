@@ -6,12 +6,14 @@ import hat.backend.Backend;
 import hat.buffer.Buffer;
 
 import java.lang.invoke.MethodHandles;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.IntConsumer;
-import java.util.stream.IntStream;
 
+import static chess.ChessConstants.BISHOP;
 import static chess.ChessConstants.EMPTY_SQUARE;
+import static chess.ChessConstants.KING;
+import static chess.ChessConstants.KNIGHT;
+import static chess.ChessConstants.PAWN;
+import static chess.ChessConstants.QUEEN;
+import static chess.ChessConstants.ROOK;
 import static chess.ChessConstants.WHITE_BIT;
 
 
@@ -125,7 +127,7 @@ public class Main {
         boolean headless = Boolean.getBoolean("headless") || (args.length > 0 && args[0].equals("--headless"));
         Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
        // Viewer viewer = new Viewer();
-        Control control = Control.create(accelerator);
+
         WeightTable weightTable = WeightTable.create(accelerator);
         // From chess wikipedia we learned that on average each board needs 5.5 bits to encode # of moves so 32-40
         ChessData chessData = ChessData.create(accelerator,
@@ -136,82 +138,97 @@ public class Main {
                         + (40 * 40 * 40 * 40)       //     4
                         + (40 * 40 * 40 * 40 * 40)  //     5
         );
+        PlyTable plyTable = PlyTable.create(accelerator, 5);
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
         ChessData.Board initBoard = chessData.board(0);
-        // This sets up the board 'as if' we had run doMovesCompute.
-        // so board.moves(20);
-        //    board.prefix(0);
-        initBoard.init();
+        // This sets up the board 'as if' we had run plyMoves.
+        {
+            int x = 0;
+            for (byte bits : new byte[]{ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK}) {
+                initBoard.squareBits(x, (byte) (bits));
+                initBoard.squareBits(x + 8, (byte) (PAWN));
+                for (int i = 16; i < 48; i += 8) {
+                    initBoard.squareBits(x + i, (byte) (EMPTY_SQUARE));
+                }
+                initBoard.squareBits(x + 48, (byte) (WHITE_BIT | PAWN));
+                initBoard.squareBits(x + 56, (byte) (WHITE_BIT | bits));
+                x++;
+            }
+        }
+        initBoard.id(0);
+        initBoard.score((short)0);  // The score after init is zero,
+        initBoard.moves((byte)20);  // The number of moves available to white is 20 =  8 pawn, 4 knight
+        initBoard.firstChildIdx(1); // the first child will be 1
+        initBoard.fromSquareIdx((byte) 0);   // no move got us here,
+        initBoard.toSquareIdx((byte) 0);     // no move got us here
+        initBoard.move((byte)0);    // no move got us here
 
-        System.out.println(new Terminal().line(initBoard, 0));
-        System.out.println("-----------------------------------------------------");
-      //  viewer.view(initBoard);
+        plyTable.idx(0);
+        PlyTable.Ply ply = plyTable.ply(0);
+        ply.side(WHITE_BIT);
+        ply.startIdx(0);
+        ply.size(1);
 
-        control.side(WHITE_BIT);
-        control.setBounds(0,1); // init board
-
-
-        for (int ply = 0; ply < 3; ply++) {
+        while (plyTable.idx()<3) {
             /*
-             * doMovesCompute() requires that board.moves for each boards move field
-             * (boardId between control.plyStartIdx() and control.plyEndIdx()) be set
-             * appropriately
-             * board.initBoard() does this for the 0th ply of the start of game
-             * (we know all possible 20 possible moves for white at game opening)
+             * plyMoves() requires that board.moves for each boards move field
+             * (boardId between ply.startIdx() and ply.endIdx()) be set appropriately
+             * board initialization does this for the start of game
              * after that we depend on the previous loop's execution of doMovesCompute()
              * to provide this information
              */
 
-            Compute.plyMoves(accelerator, true, chessData,control,weightTable);
+            Compute.plyMoves(accelerator, false, chessData, plyTable,weightTable);
             /*
              * Now we need to perform a prefix scan on board.moves field
-             * between control.plyStartIdx() and control.plyEndIdx()
+             * between ply.startIdx() and ply.endIdx()
              * Ideally we could use the GPU for this as prefix scans from within a
              * kernel can use groupwide lane cooperation and local memory.
              *
              */
-            int prefix = control.plyEndIdx();
-            for (int boardIdx = control.plyStartIdx(); boardIdx < control.plyEndIdx(); boardIdx++) {
-                ChessData.Board board = chessData.board(boardIdx);
-                board.prefix(boardIdx + prefix); // set the prefix value
-                prefix += board.moves(); // include current board
-            }
-            /*
-             * Dump the board to the terminal/ui
-             */
-            IntStream.range(control.plyStartIdx(), control.plyEndIdx()).forEach(boardId -> {
-                        ChessData.Board board = chessData.board(boardId);
-                        System.out.println(new Terminal().line(board, boardId));
 
-                       // viewer.view(board);
-                    }
-            );
-            System.out.println("-----------------------------------------------------");
+            int nextPlySize = 0;
+            for (int boardIdx = ply.startIdx(); boardIdx < ply.startIdx()+ply.size(); boardIdx++) {
+                ChessData.Board board = chessData.board(boardIdx);
+                board.firstChildIdx(nextPlySize); // set the prefix value
+                nextPlySize += board.moves(); // include current board
+            }
+
 
             /*
              * Imagine that after the last round we had only four boards in a ply
              *
-             * board.prefix is initialized to 0 and moves has been calculated by the last round for each board
-             *       bd0             bd1             bd2             bd3
-             *  prefix moves    prefix moves    prefix moves    prefix moves
-             *     0    20         0    25         0    22         0     15
+             * board.firstChild is initialized to 0 and moves has been calculated by the last round for each board
+             *           bd0                  bd1                bd2                 bd3
+             *  firstChild moves    firstChild moves    firstChild moves    firstChild moves
+             *         0    20              0    25            0    22             0     15
              *
              *
              * After a prefix scan
              *
-             *       bd0             bd1             bd2             bd3
-             *  prefix moves    prefix moves    prefix moves    prefix moves      prefix =
-             *     0    20        20    25        45    22        67     15          82
+             *           bd0                 bd1                 bd2                 bd3
+             *  firstChild moves    firstChild moves    firstChild moves    firstChild moves      nextPlySize =
+             *          0    20            20    25            45    22           67     15         82
              *
-             * The resulting prefix now has the 'size' of the next ply
-             * The board.prefix() field + new ply's control.start() + boardId
-             * yields the boardId (in global chessData space) for the new board for each move
+             * The resulting nextPlySize has the 'size' of the next ply
              *
-             * So we set up the control.plyStartIdx() and control.plyEndIdx() for the next round
+             * So we set up the ply.startIdx() and ply.endIdx() for the next round
              * and flip the sides.
              */
-            control.setBounds(control.plyEndIdx(), control.plyEndIdx()+prefix);
-            control.swapSide();
+
+            for (int boardIdx = ply.startIdx(); boardIdx < ply.startIdx()+ply.size(); boardIdx++) {
+                ChessData.Board board = chessData.board(boardIdx);
+                System.out.println(new Terminal().line(board, boardIdx));
+            }
+            System.out.println("-----------------------------------------------------");
+            int plyIdx = plyTable.idx();
+            plyTable.idx(plyIdx+1);
+            int nextPlyIdx = plyTable.idx();
+            PlyTable.Ply nextPly = plyTable.ply(nextPlyIdx);
+            nextPly.startIdx(ply.startIdx()+ply.size());
+            nextPly.size(nextPlySize);
+            nextPly.side( (byte)(ply.side() ^WHITE_BIT));
+            ply =nextPly;
         }
     }
 }
