@@ -255,9 +255,18 @@ public class Compute {
         board.squareBits(toSquareIdx, parentBoard.squareBits(fromSquareIdx));
         countMovesForBoard(newBoardId,chessData, ply,weightTable);
     }
+    public static void traceCreateBoards(ChessData chessData,  PlyTable.Ply ply,  WeightTable weightTable, int moves,  ChessData.Board board, byte fromSquareBits, int fromSquareIdx) {
+        System.out.print("void createBoards(chessData, ply");
+        System.out.print("{startIdx()=" + ply.startIdx() + ", size()=" + ply.size()+"}");
+        System.out.print(", weightTable, moves="+moves+", board");
+        System.out.print("{id()=" + board.id() + ", firstChildIdx()=" + board.firstChildIdx() + ", moves()=" + board.moves()+"}");
+        System.out.println(", fromsSquareBits, fromSquareIdx=" + fromSquareIdx+")");
+    }
 
-    @CodeReflection
+        @CodeReflection
     public static int createBoards(ChessData chessData,  PlyTable.Ply ply,  WeightTable weightTable, int moves,  ChessData.Board board, byte fromSquareBits, int fromSquareIdx) {
+        traceCreateBoards(chessData,ply,weightTable,moves,board,fromSquareBits,fromSquareIdx);
+
         int fromx = fromSquareIdx%8;
         int fromy = fromSquareIdx/8;
         byte fromPieceValue = pieceValue(fromSquareBits);
@@ -367,15 +376,23 @@ public class Compute {
     }
 
 
-
+    public static void traceDoMovesKernelCore(ChessData chessData, PlyTable.Ply ply,  WeightTable weightTable,ChessData.Board board, int boardId) {
+        System.out.print("void doMovesKernelCore(chessData, ply");
+        System.out.print("{startIdx()=" + ply.startIdx() + ", size()=" + ply.size()+"}");
+        System.out.print(", weightTable,  board");
+        System.out.println("{id()=" + board.id() + ", firstChildIdx()=" + board.firstChildIdx() + ", moves()=" + board.moves()+"})");
+    }
 
     @CodeReflection
-    public static void doMovesKernelCore(ChessData.Board board, ChessData chessData, PlyTable.Ply ply, WeightTable weightTable) {
+    public static void doMovesKernelCore(ChessData chessData, PlyTable.Ply ply,  WeightTable weightTable, int boardId) {
+        ChessData.Board board = chessData.board(boardId);
+        board.id(boardId);
+        traceDoMovesKernelCore(chessData,ply,weightTable,board, boardId);
         int moves = 0;
         for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
             byte squareBits = board.squareBits(squareIdx);
             if (isComrade((byte) ply.side(), squareBits)) {
-                moves = createBoards(chessData,ply, weightTable, moves, board, squareBits, squareIdx);
+                moves = createBoards(chessData, ply, weightTable, moves, board, squareBits, squareIdx);
             }
         }
     }
@@ -384,28 +401,22 @@ public class Compute {
     public static void doMovesKernel(KernelContext kc, ChessData chessData, PlyTable plyTable, WeightTable weightTable) {
         if (kc.x < kc.maxX) {
             PlyTable.Ply ply  =plyTable.ply(plyTable.idx());
-            ChessData.Board board = chessData.board(kc.x+ply.startIdx());
-            board.id(kc.x+ply.startIdx());
-            doMovesKernelCore(board, chessData,  ply,weightTable);
+            doMovesKernelCore( chessData,  ply,weightTable, kc.x+ply.startIdx());
         }
     }
     @CodeReflection
     static public void doMovesCompute(final ComputeContext cc, ChessData chessData, PlyTable plyTable, WeightTable weightTable) {
-        PlyTable.Ply ply =plyTable.ply(plyTable.idx());
-        System.out.print("work size ");System.out.println(ply.size());
         // We can't pass ply because HAT kernels expect Buffer roots.
-        cc.dispatchKernel(ply.size(), kc -> doMovesKernel(kc, chessData, plyTable,weightTable));
+        cc.dispatchKernel(plyTable.ply(plyTable.idx()).size(), kc -> doMovesKernel(kc, chessData, plyTable, weightTable));
     }
 
     public static void plyMoves(Accelerator accelerator, boolean useIntStream, ChessData chessData, PlyTable plyTable, WeightTable weightTable) {
         if (useIntStream) {
             PlyTable.Ply ply =plyTable.ply(plyTable.idx());
             IntStream.range(0, ply.size())
-                    .forEach(id -> {
-                        ChessData.Board board = chessData.board(id+ply.startIdx());
-                        board.id(id+ply.startIdx());
-                        Compute.doMovesKernelCore(board, chessData, ply, weightTable);
-                    });
+                    .forEach(id ->
+                        Compute.doMovesKernelCore(chessData, ply, weightTable, id+ply.startIdx())
+                    );
         } else {
             accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, plyTable,weightTable));
         }

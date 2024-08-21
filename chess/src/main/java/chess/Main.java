@@ -204,7 +204,7 @@ public class Main {
             for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
                 ChessData.Board board = chessData.board(boardIdx);
               //  System.out.println("looking at " + boardIdx+ " ?= "+board.id());
-                board.firstChildIdx(nextPlySize); // set the prefix value
+                board.firstChildIdx(nextPlySize+ply.startIdx()+ply.size()); // set the prefix value
                 nextPlySize += board.moves(); // include current board
             }
             if (nextPlySize == 0) {
@@ -233,7 +233,7 @@ public class Main {
              * and flip the sides.
              */
 
-            for (int boardIdx = ply.startIdx(); boardIdx < ply.startIdx()+ply.size(); boardIdx++) {
+            for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
                 ChessData.Board board = chessData.board(boardIdx);
                 System.out.println(new Terminal().line(board, boardIdx));
             }
