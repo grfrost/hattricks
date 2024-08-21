@@ -100,7 +100,7 @@ public class Compute {
 
 
     @CodeReflection
-    public static int countMovesFromSquare(PlyTable.Ply ply, ChessData.Board board, byte fromBits, int fromSquareIdx) {
+    public static int countMovesForSquare(PlyTable.Ply ply, ChessData.Board board, byte fromBits, int fromSquareIdx) {
         int fromx = fromSquareIdx%8;
         int fromy = fromSquareIdx/8;
         int moves = 0;
@@ -206,7 +206,7 @@ public class Compute {
 
 
     @CodeReflection
-    public static void countMovesKernelCore(int id, ChessData chessData, PlyTable.Ply ply, WeightTable weightTable) {
+    public static void countMovesForBoard(int id, ChessData chessData, PlyTable.Ply ply, WeightTable weightTable) {
         ChessData.Board board = chessData.board(id);
 
         byte side =(byte)ply.side();
@@ -216,12 +216,12 @@ public class Compute {
         for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
             byte squareBits = board.squareBits(squareIdx);
             byte piece = pieceValue(squareBits);
-            if (isEmpty(piece)) {
+            if (!isEmpty(piece)) {
                 // The weight array masks are valid for WHITE.  We need to invert the index for black
                 int weightIndex = isWhite(squareBits)?squareIdx:63-squareIdx;
                 int scoreMul = -1;
                 if (isComrade(side, squareBits)) {
-                    moves += countMovesFromSquare(ply,board, squareBits, squareIdx);
+                    moves += countMovesForSquare(ply,board, squareBits, squareIdx);
                     scoreMul = 1;
                 }
                 // now the piece value can be used an index into the weights
@@ -230,6 +230,9 @@ public class Compute {
                 shifted *= scoreMul;
                 score+=shifted;
             }
+        }
+        if (moves == 0){
+            throw new IllegalStateException("no moves");
         }
         board.moves((byte) moves);
         board.score((short) score);
@@ -250,7 +253,7 @@ public class Compute {
         }
         board.squareBits(fromSquareIdx, EMPTY_SQUARE);
         board.squareBits(toSquareIdx, parentBoard.squareBits(fromSquareIdx));
-        countMovesKernelCore(newBoardId,chessData, ply,weightTable);
+        countMovesForBoard(newBoardId,chessData, ply,weightTable);
     }
 
     @CodeReflection
@@ -368,7 +371,6 @@ public class Compute {
 
     @CodeReflection
     public static void doMovesKernelCore(ChessData.Board board, ChessData chessData, PlyTable.Ply ply, WeightTable weightTable) {
-
         int moves = 0;
         for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
             byte squareBits = board.squareBits(squareIdx);

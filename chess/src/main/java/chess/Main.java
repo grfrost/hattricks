@@ -180,7 +180,7 @@ public class Main {
              * to provide this information
              */
 
-            Compute.plyMoves(accelerator, false, chessData, plyTable,weightTable);
+            Compute.plyMoves(accelerator, true, chessData, plyTable,weightTable);
             /*
              * Now we need to perform a prefix scan on board.moves field
              * between ply.startIdx() and ply.endIdx()
@@ -203,7 +203,7 @@ public class Main {
             int nextPlySize = 0;
             for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
                 ChessData.Board board = chessData.board(boardIdx);
-                System.out.println("looking at " + boardIdx+ " ?= "+board.id());
+              //  System.out.println("looking at " + boardIdx+ " ?= "+board.id());
                 board.firstChildIdx(nextPlySize); // set the prefix value
                 nextPlySize += board.moves(); // include current board
             }
