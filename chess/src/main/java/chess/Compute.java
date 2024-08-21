@@ -251,19 +251,24 @@ public class Compute {
 
     }
 
-    public static void traceCreateBoard(ChessData chessData, PlyTable.Ply ply,  WeightTable weightTable,ChessData.Board parentBoard, int move, int newBoardId, int fromSquareIdx, int toSquareIdx) {
+    public static void traceCreateBoard(ChessData chessData, PlyTable.Ply ply,  WeightTable weightTable,ChessData.Board parentBoard,int parentBoardId, int move, int newBoardId, int fromSquareIdx, int toSquareIdx) {
         System.out.print("   void createBoard(chessData, ply");
         System.out.print("{startIdx()=" + ply.startIdx() + ", size()=" + ply.size()+"}");
         System.out.print(", weightTable, parentBoard");
         System.out.print("{id()=" + parentBoard.id() + ", firstChildIdx()=" + parentBoard.firstChildIdx() + ", moves()=" + parentBoard.moves()+"}");
-        System.out.println(", move="+move+", newBoardId="+newBoardId+", fromSquareIdx="+fromSquareIdx+", toSquareIdx="+toSquareIdx+")");
+        System.out.println(", parentBoardId="+parentBoardId+" move="+move+", newBoardId="+newBoardId+", fromSquareIdx="+fromSquareIdx+", toSquareIdx="+toSquareIdx+")");
     }
     @CodeReflection
-    public static void createBoard(ChessData chessData, PlyTable.Ply ply, WeightTable weightTable, ChessData.Board parentBoard, int move,  int newBoardId,
+    public static void createBoard(ChessData chessData, PlyTable.Ply ply, WeightTable weightTable, ChessData.Board parentBoard, int parentBoardId,  int move,  int newBoardId,
                                    int fromSquareIdx, int toSquareIdx){
-        traceCreateBoard(chessData,ply,weightTable,parentBoard,move,newBoardId,fromSquareIdx,toSquareIdx);
+        traceCreateBoard(chessData,ply,weightTable,parentBoard,parentBoardId, move,newBoardId,fromSquareIdx,toSquareIdx);
 
         var newBoard = chessData.board(newBoardId);
+        if (newBoard.id() != 0 ){
+            if (newBoard.id()!= newBoardId) {
+                throw new IllegalStateException("WTF");
+            }
+        }
         newBoard.id(newBoardId);
         newBoard.parent(parentBoard.id());
         newBoard.fromSquareIdx((byte)fromSquareIdx);
@@ -277,22 +282,22 @@ public class Compute {
         newBoard.squareBits(toSquareIdx, parentBoard.squareBits(fromSquareIdx));
         countMovesForBoard(chessData, ply,weightTable, newBoard);
     }
-    public static void traceCreateBoards(ChessData chessData,  PlyTable.Ply ply,  WeightTable weightTable, int moves,  ChessData.Board board, byte fromSquareBits, int fromSquareIdx) {
+    public static void traceCreateBoards(ChessData chessData,  PlyTable.Ply ply,  WeightTable weightTable, int moves,  ChessData.Board parentBoard, int parentBoardId,byte fromSquareBits, int fromSquareIdx) {
         System.out.print("  void createBoards(chessData, ply");
         System.out.print("{startIdx()=" + ply.startIdx() + ", size()=" + ply.size()+"}");
-        System.out.print(", weightTable, moves="+moves+", board");
-        System.out.print("{id()=" + board.id() + ", firstChildIdx()=" + board.firstChildIdx() + ", moves()=" + board.moves()+"}");
-        System.out.println(", fromsSquareBits, fromSquareIdx=" + fromSquareIdx+")");
+        System.out.print(", weightTable, moves="+moves+", parentBoard");
+        System.out.print("{id()=" + parentBoard.id() + ", firstChildIdx()=" + parentBoard.firstChildIdx() + ", moves()=" + parentBoard.moves()+"}");
+        System.out.println(", parentBoardId="+parentBoardId+", fromsSquareBits, fromSquareIdx=" + fromSquareIdx+")");
     }
 
         @CodeReflection
-    public static int createBoards(ChessData chessData,  PlyTable.Ply ply,  WeightTable weightTable, int moves,  ChessData.Board board, byte fromSquareBits, int fromSquareIdx) {
-        traceCreateBoards(chessData,ply,weightTable,moves,board,fromSquareBits,fromSquareIdx);
+    public static int createBoards(ChessData chessData,  PlyTable.Ply ply,  WeightTable weightTable, int moves,  ChessData.Board parentBoard, int parentBoardId, byte fromSquareBits, int fromSquareIdx) {
+        traceCreateBoards(chessData,ply,weightTable,moves,parentBoard,parentBoardId,fromSquareBits,fromSquareIdx);
 
         int fromx = fromSquareIdx%8;
         int fromy = fromSquareIdx/8;
         byte fromPieceValue = pieceValue(fromSquareBits);
-        int boardFirstChildIdx = board.firstChildIdx();
+        int boardFirstChildIdx = parentBoard.firstChildIdx();
         int boardIdBase = ply.startIdx()+boardFirstChildIdx;
 
         if (isKing(fromPieceValue)) {
@@ -305,9 +310,9 @@ public class Compute {
                 int toy = fromy + dy;
                 if (isOnBoard(tox, toy)) {
                     var toSquareIdx = toy*8+tox;
-                    var toSquareBits = board.squareBits(toSquareIdx);
+                    var toSquareBits = parentBoard.squareBits(toSquareIdx);
                     if (isEmptyOrOpponent(fromSquareBits, toSquareBits)) {
-                        createBoard(chessData, ply,weightTable, board,moves,  boardIdBase+moves,fromSquareIdx,toSquareIdx);
+                        createBoard(chessData, ply,weightTable, parentBoard,parentBoardId,moves,  boardIdBase+moves,fromSquareIdx,toSquareIdx);
                         moves++;
                     }
                 }
@@ -322,9 +327,9 @@ public class Compute {
                 int tox = fromx + (dxdy & 0b11) - 1;
                 if (isOnBoard(tox, toy)) {
                     var toSquareIdx = toy*8+tox;
-                    var toSquareBits = board.squareBits(toSquareIdx);
+                    var toSquareBits = parentBoard.squareBits(toSquareIdx);
                     if (((moveIdx > 1) && isEmpty(toSquareBits)) || (moveIdx < 2) && isOpponent(fromSquareBits, toSquareBits)) {
-                        createBoard(chessData, ply,weightTable, board, moves, boardIdBase+moves,fromSquareIdx, toSquareIdx);
+                        createBoard(chessData, ply,weightTable, parentBoard, parentBoardId,moves, boardIdBase+moves,fromSquareIdx, toSquareIdx);
                         moves++;
                     }
                 }
@@ -337,9 +342,9 @@ public class Compute {
                 int tox = fromx + ((dxdy & 0b1) + 1) * ((dxdy & 0b10) - 1);
                 if (isOnBoard(tox, toy)) {
                     var toSquareIdx = toy*8+tox;
-                    var toSquareBits = board.squareBits(toSquareIdx);
+                    var toSquareBits = parentBoard.squareBits(toSquareIdx);
                     if (isEmptyOrOpponent(fromSquareBits, toSquareBits)) {
-                        createBoard(chessData, ply,weightTable, board, moves, boardIdBase+moves,fromSquareIdx, toSquareIdx );
+                        createBoard(chessData, ply,weightTable, parentBoard, parentBoardId, moves, boardIdBase+moves,fromSquareIdx, toSquareIdx );
                         moves++;
                     }
                 }
@@ -379,9 +384,9 @@ public class Compute {
                         blocked = isOffBoard(tox, toy);
                         if (!blocked) {
                             var toSquareIdx = toy*8+tox;
-                            var toSquareBits = board.squareBits(toSquareIdx);
+                            var toSquareBits = parentBoard.squareBits(toSquareIdx);
                             if (isEmptyOrOpponent(fromSquareBits, toSquareBits)) {
-                                createBoard(chessData, ply,weightTable,board, moves, boardIdBase+moves, fromSquareIdx, toSquareIdx );
+                                createBoard(chessData, ply,weightTable,parentBoard,parentBoardId, moves, boardIdBase+moves, fromSquareIdx, toSquareIdx );
                                 moves++;
                                 if (isOpponent(toSquareBits, fromSquareBits)) {
                                     blocked = true;
@@ -414,7 +419,7 @@ public class Compute {
         for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
             byte squareBits = board.squareBits(squareIdx);
             if (isComrade((byte) ply.side(), squareBits)) {
-                moves = createBoards(chessData, ply, weightTable, moves, board, squareBits, squareIdx);
+                moves = createBoards(chessData, ply, weightTable, moves, board, boardId, squareBits, squareIdx);
             }
         }
     }
