@@ -13,58 +13,48 @@ import static chess.ChessConstants.COLROWS;
 import static chess.ChessConstants.CompassDxDyMap;
 import static chess.ChessConstants.DIAGS;
 import static chess.ChessConstants.EMPTY_SQUARE;
-import static chess.ChessConstants.PIECE_MASK;
 import static chess.ChessConstants.ROOK;
+import static chess.ChessConstants.WHITE_BIT;
 
 public class Compute {
     @CodeReflection
-    static byte pieceValue(int squareBits) {
+    static byte pieceValue(byte squareBits) {
         return (byte)(squareBits & ChessConstants.PIECE_MASK);
-    }
-    @CodeReflection
-    public static boolean isEmpty(byte squareBits) {
-        return pieceValue(squareBits) == 0;
     }
 
     @CodeReflection
-    static boolean isPiece(int squareBits) {
+    static byte side(byte squareBits) {
+        return (byte)(squareBits & WHITE_BIT);
+    }
+    @CodeReflection
+    public static boolean isEmpty(byte squareBits) {
+        return pieceValue(squareBits) == EMPTY_SQUARE;
+    }
+
+    @CodeReflection
+    static boolean isPiece(byte squareBits) {
         return pieceValue(squareBits) != 0;
     }
 
     @CodeReflection
     public static boolean isWhite(byte squareBits) {
-        return isPiece(squareBits) && ((squareBits & ChessConstants.WHITE_BIT) == ChessConstants.WHITE_BIT);
-    }
-
-    @CodeReflection
-    public static boolean isBlack(byte squareBits) {
-        return isPiece(squareBits) && ((squareBits & ChessConstants.WHITE_BIT) != ChessConstants.WHITE_BIT);
+        return isPiece(squareBits) && (side(squareBits) == ChessConstants.WHITE_BIT);
     }
 
     @CodeReflection
     public static boolean isOpponent(byte fromBits, byte toBits) {
-        if (isPiece(toBits)) {
-            int fromColorBit = (fromBits & ChessConstants.WHITE_BIT);
-            int toColorBit = (toBits & ChessConstants.WHITE_BIT);
-            return fromColorBit != toColorBit;
-        }
-        return false;
+        return isPiece(toBits) &&  side(fromBits)!=side(toBits);
     }
-
+    @CodeReflection
+    public static boolean isComrade(byte fromBits, byte toBits) {
+        return isPiece(toBits) &&  side(fromBits)==side(toBits);
+    }
     @CodeReflection
     public static boolean isEmptyOrOpponent(byte fromBits, byte toBits) {
         return isEmpty(toBits) || isOpponent(fromBits, toBits);
     }
 
-    @CodeReflection
-    public static boolean isComrade(byte fromBits, byte toBits) {
-        if (isPiece(toBits)) {
-            int fromColorBit = (fromBits & ChessConstants.WHITE_BIT);
-            int toColorBit = (toBits & ChessConstants.WHITE_BIT);
-            return fromColorBit == toColorBit;
-        }
-        return false;
-    }
+
 
 
     @CodeReflection
@@ -78,44 +68,47 @@ public class Compute {
     }
 
     @CodeReflection
-    static boolean isPawn(int squareBits) {
+    static boolean isPawn(byte squareBits) {
         return pieceValue(squareBits) == ChessConstants.PAWN;
     }
 
     @CodeReflection
-    static boolean isKnight(int squareBits) {
+    static boolean isKnight(byte squareBits) {
         return pieceValue(squareBits) == ChessConstants.KNIGHT;
     }
 
     @CodeReflection
-    static boolean isBishop(int squareBits) {
+    static boolean isBishop(byte squareBits) {
         return pieceValue(squareBits) == BISHOP;
     }
 
     @CodeReflection
-    static boolean isRook(int squareBits) {
+    static boolean isRook(byte squareBits) {
         return pieceValue(squareBits) == ROOK;
     }
 
     @CodeReflection
-    static boolean isKing(int squareBits) {
+    static boolean isKing(byte squareBits) {
         return pieceValue(squareBits) == ChessConstants.KING;
     }
 
 
     @CodeReflection
-    static boolean isQueen(int squareBits) {
+    static boolean isQueen(byte squareBits) {
         return pieceValue(squareBits) == ChessConstants.QUEEN;
     }
 
 
     @CodeReflection
-    public static int countMoves(ChessData.Board board, byte fromBits, int fromSquareIdx) {
+    public static int countMovesFromSquare(PlyTable.Ply ply, ChessData.Board board, byte fromBits, int fromSquareIdx) {
         int fromx = fromSquareIdx%8;
         int fromy = fromSquareIdx/8;
         int moves = 0;
-        int pieceValue = fromBits & ChessConstants.PIECE_MASK;
-        if (isKing(pieceValue)) {
+        byte plySide = (byte)(ply.side()&WHITE_BIT);
+        byte fromSide = side(fromBits);
+
+        byte fromPieceValue = pieceValue(fromBits);
+        if (isKing(fromPieceValue)) {
             for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
                 int dxdy = 0b1111 & (CompassDxDyMap >>> (moveIdx * 4));
                 int dy = (dxdy & 0b11) - 1;// 00->-1, 01->0, 10->1, 11->2
@@ -125,12 +118,14 @@ public class Compute {
                 int toy = fromy + dy;
                 if (isOnBoard(tox, toy)) {
                     byte toBits = board.squareBits(toy * 8 + tox);
+                    byte toSide = side(toBits);
+
                     if (isEmptyOrOpponent(fromBits, toBits)) {
                         moves++;
                     }
                 }
             }
-        } else if (isPawn(pieceValue)) {
+        } else if (isPawn(fromPieceValue)) {
             int forward = isWhite(fromBits) ? -1 : 1;
             int count = (fromy == (isWhite(fromBits) ? 6 : 1)) ? 4 : 3;  // four moves if home else three
             for (int moveIdx = 0; moveIdx < count; moveIdx++) {
@@ -145,7 +140,7 @@ public class Compute {
                     }
                 }
             }
-        } else if (isKnight(pieceValue)) {
+        } else if (isKnight(fromPieceValue)) {
             for (int moveIdx = 0; moveIdx < 8; moveIdx++) {
                 int dxdy = 0b1111 & (ChessConstants.KnightDxDyMap >>> (moveIdx * 4));
                 int toy = fromy + ((dxdy & 0b1) + 1) * ((dxdy & 0b10) - 1);
@@ -160,7 +155,7 @@ public class Compute {
             }
         } else {
             // sliders Rook, Queen, Bishop
-            final int compassPoints = isBishop(pieceValue) ? DIAGS : isRook(pieceValue) ? COLROWS : /* MUST BE QUEEN */ALL_POINTS;
+            final int compassPoints = isBishop(fromPieceValue) ? DIAGS : isRook(fromPieceValue) ? COLROWS : /* MUST BE QUEEN */ALL_POINTS;
 
             // compassPoints have use 1 or 0 for bit for eligible move relative to fromx,fromy
             // We only encode the neighbours so the 3x3 grid has no center representation
@@ -220,13 +215,13 @@ public class Compute {
         int score = 0;
         for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
             byte squareBits = board.squareBits(squareIdx);
-            byte piece = (byte)(squareBits & PIECE_MASK);
+            byte piece = pieceValue(squareBits);
             if (isEmpty(piece)) {
-                // note that the weight arrays are valid for WHITE.  We need to invert the index for black
+                // The weight array masks are valid for WHITE.  We need to invert the index for black
                 int weightIndex = isWhite(squareBits)?squareIdx:63-squareIdx;
                 int scoreMul = -1;
                 if (isComrade(side, squareBits)) {
-                    moves += countMoves(board, squareBits, squareIdx);
+                    moves += countMovesFromSquare(ply,board, squareBits, squareIdx);
                     scoreMul = 1;
                 }
                 // now the piece value can be used an index into the weights
@@ -235,7 +230,6 @@ public class Compute {
                 shifted *= scoreMul;
                 score+=shifted;
             }
-
         }
         board.moves((byte) moves);
         board.score((short) score);
@@ -263,7 +257,7 @@ public class Compute {
     public static int createBoards(ChessData chessData,  PlyTable.Ply ply,  WeightTable weightTable, int moves,  ChessData.Board board, byte fromSquareBits, int fromSquareIdx) {
         int fromx = fromSquareIdx%8;
         int fromy = fromSquareIdx/8;
-        int fromPieceValue = pieceValue(fromSquareBits);
+        byte fromPieceValue = pieceValue(fromSquareBits);
         int boardFirstChildIdx = board.firstChildIdx();
         int boardIdBase = ply.startIdx()+ ply.size()+boardFirstChildIdx;
 
@@ -396,6 +390,8 @@ public class Compute {
     @CodeReflection
     static public void doMovesCompute(final ComputeContext cc, ChessData chessData, PlyTable plyTable, WeightTable weightTable) {
         PlyTable.Ply ply =plyTable.ply(plyTable.idx());
+        System.out.print("work size ");System.out.println(ply.size());
+        // We can't pass ply because HAT kernels expect Buffer roots.
         cc.dispatchKernel(ply.size(), kc -> doMovesKernel(kc, chessData, plyTable,weightTable));
     }
 

@@ -6,6 +6,8 @@ import hat.backend.Backend;
 import hat.buffer.Buffer;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Arrays;
+import java.util.stream.IntStream;
 
 import static chess.ChessConstants.BISHOP;
 import static chess.ChessConstants.EMPTY_SQUARE;
@@ -187,11 +189,26 @@ public class Main {
              *
              */
 
+            boolean useArraysParallelPrefix=false;
+            if (useArraysParallelPrefix) {
+                int[] moves = new int[ply.size()];
+                PlyTable.Ply finalPly = ply;
+                IntStream.range(ply.startIdx(), ply.startIdx() + ply.size()).parallel()
+                        .mapToObj(i -> (ChessData.Board) chessData.board((long) i))
+                        .forEach(
+                                board -> moves[board.id() - finalPly.startIdx()] = board.moves()
+                        );
+                Arrays.parallelPrefix(moves, Integer::sum);
+            }
             int nextPlySize = 0;
-            for (int boardIdx = ply.startIdx(); boardIdx < ply.startIdx()+ply.size(); boardIdx++) {
+            for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
                 ChessData.Board board = chessData.board(boardIdx);
+                System.out.println("looking at " + boardIdx+ " ?= "+board.id());
                 board.firstChildIdx(nextPlySize); // set the prefix value
                 nextPlySize += board.moves(); // include current board
+            }
+            if (nextPlySize == 0) {
+                throw new IllegalStateException("no moves?");
             }
 
 
