@@ -99,8 +99,16 @@ public class Compute {
     }
 
 
+    public static void traceCountMovesForSquare( PlyTable.Ply ply,  ChessData.Board board, byte fromBits, int fromSquareIdx) {
+        System.out.print("     void countMovesForSquare(ply");
+        System.out.print("{startIdx()=" + ply.startIdx() + ", size()=" + ply.size()+"}");
+        System.out.print(", board");
+        System.out.print("{id()=" + board.id() + ", firstChildIdx()=" + board.firstChildIdx() + ", moves()=" + board.moves()+"}");
+        System.out.println(", fromBits=" + fromBits + ", fromSquareIdx=" + fromSquareIdx+")");
+    }
     @CodeReflection
     public static int countMovesForSquare(PlyTable.Ply ply, ChessData.Board board, byte fromBits, int fromSquareIdx) {
+        traceCountMovesForSquare(ply, board, fromBits, fromSquareIdx);
         int fromx = fromSquareIdx%8;
         int fromy = fromSquareIdx/8;
         int moves = 0;
@@ -204,24 +212,28 @@ public class Compute {
         return moves;
     }
 
-
+    public static void traceCountMovesForBoard(ChessData chessData, PlyTable.Ply ply,  WeightTable weightTable,ChessData.Board newBoard) {
+        System.out.print("    void countMovesForBoard(chessData, ply");
+        System.out.print("{startIdx()=" + ply.startIdx() + ", size()=" + ply.size()+"}");
+        System.out.print(", weightTable, newBoard");
+        System.out.println("{id()=" + newBoard.id() + ", firstChildIdx()=" + newBoard.firstChildIdx() + ", moves()=" + newBoard.moves()+"})");
+    }
     @CodeReflection
-    public static void countMovesForBoard(int id, ChessData chessData, PlyTable.Ply ply, WeightTable weightTable) {
-        ChessData.Board board = chessData.board(id);
-
+    public static void countMovesForBoard(ChessData chessData, PlyTable.Ply ply, WeightTable weightTable, ChessData.Board newBoard) {
+        traceCountMovesForBoard(chessData, ply, weightTable, newBoard);
         byte side =(byte)ply.side();
 
         int moves=0;
-        int score = 0;
+        int score=0;
         for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
-            byte squareBits = board.squareBits(squareIdx);
+            byte squareBits = newBoard.squareBits(squareIdx);
             byte piece = pieceValue(squareBits);
             if (!isEmpty(piece)) {
                 // The weight array masks are valid for WHITE.  We need to invert the index for black
                 int weightIndex = isWhite(squareBits)?squareIdx:63-squareIdx;
                 int scoreMul = -1;
                 if (isComrade(side, squareBits)) {
-                    moves += countMovesForSquare(ply,board, squareBits, squareIdx);
+                    moves += countMovesForSquare(ply,newBoard, squareBits, squareIdx);
                     scoreMul = 1;
                 }
                 // now the piece value can be used an index into the weights
@@ -234,29 +246,39 @@ public class Compute {
         if (moves == 0){
             throw new IllegalStateException("no moves");
         }
-        board.moves((byte) moves);
-        board.score((short) score);
+        newBoard.moves((byte) moves);
+        newBoard.score((short) score);
 
+    }
+
+    public static void traceCreateBoard(ChessData chessData, PlyTable.Ply ply,  WeightTable weightTable,ChessData.Board parentBoard, int move, int newBoardId, int fromSquareIdx, int toSquareIdx) {
+        System.out.print("   void createBoard(chessData, ply");
+        System.out.print("{startIdx()=" + ply.startIdx() + ", size()=" + ply.size()+"}");
+        System.out.print(", weightTable, parentBoard");
+        System.out.print("{id()=" + parentBoard.id() + ", firstChildIdx()=" + parentBoard.firstChildIdx() + ", moves()=" + parentBoard.moves()+"}");
+        System.out.println(", move="+move+", newBoardId="+newBoardId+", fromSquareIdx="+fromSquareIdx+", toSquareIdx="+toSquareIdx+")");
     }
     @CodeReflection
     public static void createBoard(ChessData chessData, PlyTable.Ply ply, WeightTable weightTable, ChessData.Board parentBoard, int move,  int newBoardId,
                                    int fromSquareIdx, int toSquareIdx){
+        traceCreateBoard(chessData,ply,weightTable,parentBoard,move,newBoardId,fromSquareIdx,toSquareIdx);
 
-        var board = chessData.board(newBoardId);
-        board.parent(parentBoard.id());
-        board.fromSquareIdx((byte)fromSquareIdx);
-        board.toSquareIdx((byte)toSquareIdx);
-        board.move((byte)move);
+        var newBoard = chessData.board(newBoardId);
+        newBoard.id(newBoardId);
+        newBoard.parent(parentBoard.id());
+        newBoard.fromSquareIdx((byte)fromSquareIdx);
+        newBoard.toSquareIdx((byte)toSquareIdx);
+        newBoard.move((byte)move);
 
         for (int squareIdx=0; squareIdx<64; squareIdx++) {
-            board.squareBits(squareIdx, parentBoard.squareBits(squareIdx));
+            newBoard.squareBits(squareIdx, parentBoard.squareBits(squareIdx));
         }
-        board.squareBits(fromSquareIdx, EMPTY_SQUARE);
-        board.squareBits(toSquareIdx, parentBoard.squareBits(fromSquareIdx));
-        countMovesForBoard(newBoardId,chessData, ply,weightTable);
+        newBoard.squareBits(fromSquareIdx, EMPTY_SQUARE);
+        newBoard.squareBits(toSquareIdx, parentBoard.squareBits(fromSquareIdx));
+        countMovesForBoard(chessData, ply,weightTable, newBoard);
     }
     public static void traceCreateBoards(ChessData chessData,  PlyTable.Ply ply,  WeightTable weightTable, int moves,  ChessData.Board board, byte fromSquareBits, int fromSquareIdx) {
-        System.out.print("void createBoards(chessData, ply");
+        System.out.print("  void createBoards(chessData, ply");
         System.out.print("{startIdx()=" + ply.startIdx() + ", size()=" + ply.size()+"}");
         System.out.print(", weightTable, moves="+moves+", board");
         System.out.print("{id()=" + board.id() + ", firstChildIdx()=" + board.firstChildIdx() + ", moves()=" + board.moves()+"}");
@@ -271,7 +293,7 @@ public class Compute {
         int fromy = fromSquareIdx/8;
         byte fromPieceValue = pieceValue(fromSquareBits);
         int boardFirstChildIdx = board.firstChildIdx();
-        int boardIdBase = ply.startIdx()+ ply.size()+boardFirstChildIdx;
+        int boardIdBase = ply.startIdx()+boardFirstChildIdx;
 
         if (isKing(fromPieceValue)) {
             for (int moveIdx = 7; moveIdx > 0; moveIdx--) {
@@ -377,10 +399,10 @@ public class Compute {
 
 
     public static void traceDoMovesKernelCore(ChessData chessData, PlyTable.Ply ply,  WeightTable weightTable,ChessData.Board board, int boardId) {
-        System.out.print("void doMovesKernelCore(chessData, ply");
+        System.out.print(" void doMovesKernelCore(chessData, ply");
         System.out.print("{startIdx()=" + ply.startIdx() + ", size()=" + ply.size()+"}");
-        System.out.print(", weightTable,  board");
-        System.out.println("{id()=" + board.id() + ", firstChildIdx()=" + board.firstChildIdx() + ", moves()=" + board.moves()+"})");
+        System.out.print(", weightTable,  boardId=" + boardId+", <board");
+        System.out.println("{id()=" + board.id() + ", firstChildIdx()=" + board.firstChildIdx() + ", moves()=" + board.moves()+"}>)");
     }
 
     @CodeReflection
