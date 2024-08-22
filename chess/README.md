@@ -78,3 +78,5 @@ Possibly also integral image intrinsics.
 [A Java  UIC Chess UI](https://github.com/nomemory/neat-chess) 
 [Forsyth Edwards Notation (FEN)](https://support.chess.com/en/articles/8598397-what-are-pgn-fen)
 [From WikiPedia](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
+
+[Scalability but at what cost](https://www.usenix.org/system/files/conference/hotos15/hotos15-paper-mcsherry.pdf)
