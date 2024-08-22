@@ -169,11 +169,13 @@ public class Main {
         ply.side(WHITE_BIT);
         ply.startIdx(0);
         ply.size(1);
-        for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
-            ChessData.Board board = chessData.board(boardIdx);
-            System.out.println("+"+new Terminal().line(board, boardIdx));
-        }
+
         while (plyTable.idx()<2) {
+            for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
+                ChessData.Board board = chessData.board(boardIdx);
+                System.out.println("1"+new Terminal().line(board, boardIdx));
+            }
+
             /*
              * plyMoves() requires that board.moves for each boards move field
              * (boardId between ply.startIdx() and ply.endIdx()) be set appropriately
@@ -190,7 +192,10 @@ public class Main {
              * kernel can use groupwide lane cooperation and local memory.
              *
              */
-
+            for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
+                ChessData.Board board = chessData.board(boardIdx);
+                System.out.println("2"+new Terminal().line(board, boardIdx));
+            }
             int nextPlySize = 0;
             System.out.print("prefix -> ");
             for (int boardId = ply.startIdx(); boardId < (ply.startIdx()+ply.size()); boardId++) {
@@ -201,7 +206,10 @@ public class Main {
                 nextPlySize += board.moves(); // include current board
             }
             System.out.println();
-
+            for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
+                ChessData.Board board = chessData.board(boardIdx);
+                System.out.println("3"+new Terminal().line(board, boardIdx));
+            }
             /*
              * Imagine that after the last round we had only four boards in a ply
              *
@@ -225,9 +233,9 @@ public class Main {
 
             for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
                 ChessData.Board board = chessData.board(boardIdx);
-                System.out.println(new Terminal().line(board, boardIdx));
+                System.out.println("4"+new Terminal().line(board, boardIdx));
             }
-            System.out.println("-----------------------------------------------------");
+
             int plyIdx = plyTable.idx();
             plyTable.idx(plyIdx+1);
             int nextPlyIdx = plyTable.idx();
@@ -238,6 +246,7 @@ public class Main {
             nextPly.side( (byte)(ply.side() ^WHITE_BIT));
             ply =nextPly;
             System.out.println("next ply idx="+plyTable.idx()+" start="+ply.startIdx()+"->"+(ply.startIdx()+ply.size()));
+            System.out.println("-----------------------------------------------------");
         }
     }
 }

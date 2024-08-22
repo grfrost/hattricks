@@ -35,7 +35,7 @@ Possibly also integral image intrinsics.
 * [NVidia prefix sum link](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda)
 * [SSE/AVX](https://www.intel.com/content/www/us/en/developer/articles/technical/optimize-scan-operations-explicit-vectorization.html)
 * [Kogge Stone](https://gwern.net/doc/cs/algorithm/1973-kogge.pdf)
-
+* [ButterFly](https://jtristan.github.io/papers/topc19.pdf)
 
 ## Links
 [GPU Notes From www.chessprogramming.org](https://www.chessprogramming.org/GPU#:~:text=There%20are%20in%20main%20four,and%20position%20evaluation%20on%20GPU)
