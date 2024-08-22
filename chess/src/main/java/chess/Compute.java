@@ -54,9 +54,6 @@ public class Compute {
         return isEmpty(toBits) || isOpponent(fromBits, toBits);
     }
 
-
-
-
     @CodeReflection
     static boolean isOnBoard(int x, int y) {
         return (x < 8 && y < 8 && x >= 0 && y >= 0);
@@ -120,8 +117,6 @@ public class Compute {
         int fromx = fromSquareIdx%8;
         int fromy = fromSquareIdx/8;
         int moves = 0;
-        byte plySide = (byte)(ply.side()&WHITE_BIT);
-        byte fromSide = side(fromBits);
 
         byte fromPieceValue = pieceValue(fromBits);
         if (isKing(fromPieceValue)) {
@@ -237,7 +232,8 @@ public class Compute {
     @CodeReflection
     public static void countMovesForBoard(ChessData chessData, PlyTable.Ply ply, WeightTable weightTable, ChessData.Board newBoard) {
         traceCountMovesForBoard(chessData, ply, weightTable, newBoard);
-        byte side =(byte)ply.side();
+       // byte side =(byte)ply.side();
+        byte side = (byte)(ply.side()^WHITE_BIT);
 
         int moves=0;
         int score=0;

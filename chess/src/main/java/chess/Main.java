@@ -192,16 +192,15 @@ public class Main {
              */
 
             int nextPlySize = 0;
+            System.out.print("prefix -> ");
             for (int boardId = ply.startIdx(); boardId < (ply.startIdx()+ply.size()); boardId++) {
                 ChessData.Board board = chessData.board(boardId);
-              //  System.out.println("looking at " + boardIdx+ " ?= "+board.id());
-                board.firstChildIdx(nextPlySize+ply.startIdx()+ply.size()); // set the prefix value
+                board.firstChildIdx(nextPlySize+ply.startIdx()+ply.size());
+                System.out.print(boardId+"{fc="+ board.firstChildIdx()+",m="+board.moves()+ "} ");
+                // set the prefix value
                 nextPlySize += board.moves(); // include current board
             }
-            if (nextPlySize == 0) {
-                throw new IllegalStateException("no moves?");
-            }
-
+            System.out.println();
 
             /*
              * Imagine that after the last round we had only four boards in a ply
@@ -235,8 +234,10 @@ public class Main {
             PlyTable.Ply nextPly = plyTable.ply(nextPlyIdx);
             nextPly.startIdx(ply.startIdx()+ply.size());
             nextPly.size(nextPlySize);
+
             nextPly.side( (byte)(ply.side() ^WHITE_BIT));
             ply =nextPly;
+            System.out.println("next ply idx="+plyTable.idx()+" start="+ply.startIdx()+"->"+(ply.startIdx()+ply.size()));
         }
     }
 }
