@@ -18,19 +18,23 @@ Would really confuse the OpenCL compiler :)   We might consider a '_fn_' prefix 
 
 ### Prefix sum is 'integral' to many parallel solutions ;)
 [Prefix Sum](https://en.wikipedia.org/wiki/Prefix_sum)
+<img src="https://www.intel.com/content/dam/developer/articles/technical/optimize-scan-operations-explicit-vectorization/optimize-scan-operations-explicit-vectorization-fig2.jpg"/>
 
+From Guy Steel's paper 
 <img style="background:white" src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Prefix_sum_16.svg/600px-Prefix_sum_16.svg.png"/>
 
 <!--
 ![From wikipedia](https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Prefix_sum_16.svg/600px-Prefix_sum_16.svg.png)
->
+-->
 
 At present HAT does not provide a prefix sum, it should provide both exclusive and inclusive.
 
 Possibly also integral image intrinsics.
 
-[Data parallel algorithms, Authors: W. Daniel Hillis, Guy L. Steele, Jr.](https://dl.acm.org/doi/pdf/10.1145/7902.7903)
-
+* [Data parallel algorithms, Authors: W. Daniel Hillis, Guy L. Steele, Jr.](https://dl.acm.org/doi/pdf/10.1145/7902.7903)
+* [NVidia prefix sum link](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda)
+* [SSE/AVX](https://www.intel.com/content/www/us/en/developer/articles/technical/optimize-scan-operations-explicit-vectorization.html)
+* [Kogge Stone](https://gwern.net/doc/cs/algorithm/1973-kogge.pdf)
 
 
 ## Links

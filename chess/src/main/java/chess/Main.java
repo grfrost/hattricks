@@ -157,7 +157,6 @@ public class Main {
                 x++;
             }
         }
-        initBoard.id(0);
         initBoard.score((short)0);  // The score after init is zero,
         initBoard.moves((byte)20);  // The number of moves available to white is 20 =  8 pawn, 4 knight
         initBoard.firstChildIdx(1); // the first child will be 1
@@ -170,8 +169,11 @@ public class Main {
         ply.side(WHITE_BIT);
         ply.startIdx(0);
         ply.size(1);
-
-        while (plyTable.idx()<3) {
+        for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
+            ChessData.Board board = chessData.board(boardIdx);
+            System.out.println("+"+new Terminal().line(board, boardIdx));
+        }
+        while (plyTable.idx()<2) {
             /*
              * plyMoves() requires that board.moves for each boards move field
              * (boardId between ply.startIdx() and ply.endIdx()) be set appropriately
@@ -189,20 +191,9 @@ public class Main {
              *
              */
 
-            boolean useArraysParallelPrefix=false;
-            if (useArraysParallelPrefix) {
-                int[] moves = new int[ply.size()];
-                PlyTable.Ply finalPly = ply;
-                IntStream.range(ply.startIdx(), ply.startIdx() + ply.size()).parallel()
-                        .mapToObj(i -> (ChessData.Board) chessData.board((long) i))
-                        .forEach(
-                                board -> moves[board.id() - finalPly.startIdx()] = board.moves()
-                        );
-                Arrays.parallelPrefix(moves, Integer::sum);
-            }
             int nextPlySize = 0;
-            for (int boardIdx = ply.startIdx(); boardIdx < (ply.startIdx()+ply.size()); boardIdx++) {
-                ChessData.Board board = chessData.board(boardIdx);
+            for (int boardId = ply.startIdx(); boardId < (ply.startIdx()+ply.size()); boardId++) {
+                ChessData.Board board = chessData.board(boardId);
               //  System.out.println("looking at " + boardIdx+ " ?= "+board.id());
                 board.firstChildIdx(nextPlySize+ply.startIdx()+ply.size()); // set the prefix value
                 nextPlySize += board.moves(); // include current board

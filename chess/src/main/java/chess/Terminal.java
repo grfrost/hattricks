@@ -34,10 +34,15 @@ public class Terminal {
     public Terminal border(Consumer<Terminal> consumer) {
         return fg(0, 250, 0, fg -> fg.bg(128, 128, 128, consumer));
     }
-    public Terminal square(int x,int y, Consumer<Terminal> consumer) {
-        int grey = 64 + (((x + y) % 2) * 64);
-        return bg(grey, grey, grey,consumer);
+    public Terminal square(int x,int y, boolean highlight,int hx, int hy, Consumer<Terminal> consumer) {
+        if (x==hx && y==hy && highlight) {
+            return bg(64, 24, 24, consumer);
+        }else {
+            int grey = 64 + (((x + y) % 2) * 64);
+            return bg(grey, grey, grey, consumer);
+        }
     }
+
 
     public Terminal ch(char ch) {
         stringBuilder.append(ch);
@@ -92,16 +97,11 @@ public class Terminal {
         return str(s).nl();
     }
 
-    public Terminal line(ChessData.Board board, int id) {
-        intf("Score %4d,", board.score()).space();
-        intf("Board %3d,", id).space().intf("id %3d", board.id()).space().intf("Parent %3d,", board.parent()).space();
-        intf("Moves %2d,", board.moves()).space().intf("FirstChildIdx %3d,", board.firstChildIdx()).space();
-        algebraic("from", board.fromSquareIdx()).space().algebraic("to", board.toSquareIdx()).space();
-        intf("ParentRelativeMove %2d,", board.move()).space();
+    public Terminal lineHighlight(ChessData.Board board, boolean highlight,int squareIdx) {
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
                 byte squareBits = board.squareBits(y*8+x);
-                square(x,y, _ -> {
+                square(x,y,highlight,squareIdx%8, squareIdx/8,_ -> {
                     if (Compute.isEmpty(squareBits)) {
                         space();
                     } else {
@@ -110,13 +110,22 @@ public class Terminal {
                 });
             }
             border(_ -> bar());
-        };
+        }
+        return this;
+    }
+    public  Terminal line(ChessData.Board board, int boardId) {
+        intf("Score %4d,", board.score()).space();
+        intf("BoardId %3d,",boardId).space().intf("Parent %3d,", board.parent()).space();
+        intf("Moves %2d,", board.moves()).space().intf("FirstChildIdx %3d,", board.firstChildIdx()).space();
+        algebraic("from", board.fromSquareIdx()).space().algebraic("to", board.toSquareIdx()).space();
+        intf("ParentRelativeMove %2d,", board.move()).space();
+        lineHighlight(board, false, 0);
         return this;
     }
 
-    public Terminal board(ChessData.Board board, int id) {
+    public Terminal board(ChessData.Board board, int boardId) {
         intf("Score %4d", board.score()).space();
-        intf("Board %3d", id).space().intf("id %3d", board.id()).space().intf("Parent %3d", board.parent()).space();
+        intf("BoardId %3d", boardId).space().intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
         algebraic("from", board.fromSquareIdx()).space(). algebraic("to", board.toSquareIdx()).space().nl();
         space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
@@ -125,7 +134,7 @@ public class Terminal {
             border(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
                 byte squareBits = board.squareBits(y*8+x);
-                square(x,y, _ -> {
+                square(x,y,false,0,0, _ -> {
                     space();
                     if (Compute.isEmpty(squareBits)) {
                         space();

@@ -19,9 +19,9 @@ public interface ChessData extends Buffer {
         byte squareBits(long idx);
 
         void squareBits(long idx, byte squareBits);
-        int id();
+      //  int id();
 
-        void id(int id);
+      //  void id(int id);
 
         int parent();
 
@@ -56,10 +56,10 @@ public interface ChessData extends Buffer {
             .arrayLen("length")//.pad(4)  // must be 4 if array has a long ?
             .array("board", square -> square
                     .array("squareBits", 64)
-                    //               4     4          4             1        1    1     1        2 == 82
-                    .fields("id","parent", "firstChildIdx","moves","fromSquareIdx","toSquareIdx", "move", "score")
-                    .pad(2) //84
-            ) // each board is 80 bytes.
+                    //              4         4               1        1              1              1       2
+                    .fields("parent", "firstChildIdx","moves","fromSquareIdx","toSquareIdx", "move", "score")
+                    .pad(2) //80
+            )
 
     );
 
