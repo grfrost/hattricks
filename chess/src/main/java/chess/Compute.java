@@ -213,22 +213,22 @@ public class Compute {
         return moves;
     }
 
-    public static void traceCountMovesForBoard( Ply ply,  WeightTable weightTable,ChessData.Board newBoard) {
+    public static void traceCountMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board newBoard) {
         System.out.print("    void countMovesForBoard(chessData, ply");
         System.out.print("{" + ply.fromBoardId() + "-" + ply.toBoardId() +" size=" + ply.size()+"}");
         System.out.print(", weightTable, newBoard");
         System.out.println("{firstChildIdx=" + newBoard.firstChildIdx() + ", moves=" + newBoard.moves()+"})");
 
     }
-    public static void traceOutCountMovesForBoard( Ply ply,  WeightTable weightTable,ChessData.Board newBoard) {
+    public static void traceOutCountMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board newBoard) {
         System.out.print("    <-- void countMovesForBoard(chessData, ply");
         System.out.print("{" + ply.fromBoardId() + "-" + ply.toBoardId() +" size=" + ply.size()+"}");
         System.out.print(", weightTable, newBoard");
         System.out.println("{firstChildIdx=" + newBoard.firstChildIdx() + ", moves=" + newBoard.moves()+"})");
     }
     @CodeReflection
-    public static void countMovesForBoard( Ply ply, WeightTable weightTable, ChessData.Board newBoard) {
-        traceCountMovesForBoard(ply, weightTable, newBoard);
+    public static void countMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board newBoard) {
+        traceCountMovesAndScoreBoard(ply, weightTable, newBoard);
         byte opponentSide = (byte)(ply.side()^WHITE_BIT);
 
         int moves=0;
@@ -244,9 +244,12 @@ public class Compute {
                     moves += countMovesForSquare(ply,newBoard, squareBits, sqId);
                     scoreMul = 1;
                 }
-                // now the piece value can be used an index into the weights
+                // now the piece value can be used an index into the weights table
                 int weights = weightTable.weight(weightIndex);
+
+                // shift weight for this piece
                 int shifted = (weights>>>piece*4)&0xf;
+
                 shifted *= scoreMul;
                 score+=shifted;
             }
@@ -256,7 +259,7 @@ public class Compute {
         }
         newBoard.moves((byte) moves);
         newBoard.score((short) score);
-        traceOutCountMovesForBoard( ply, weightTable, newBoard);
+        traceOutCountMovesAndScoreBoard( ply, weightTable, newBoard);
     }
 
     public static void traceCreateBoard( Ply ply,  ChessData.Board parentBoard,ChessData.Board newBoard,  byte fromSqId, byte toSqId) {
@@ -287,7 +290,7 @@ public class Compute {
         }
         newBoard.squareBits(fromSqId, EMPTY_SQUARE);
         newBoard.squareBits(toSqId, parentBoard.squareBits(fromSqId));
-        countMovesForBoard(ply,weightTable, newBoard);
+        countMovesAndScoreBoard(ply,weightTable, newBoard);
         traceOutCreateBoard(ply,parentBoard,newBoard,fromSqId,toSqId);
     }
     public static void traceCreateBoards(Ply ply,   int moves,  ChessData.Board parentBoard, int parentBoardId,byte fromSquareBits, int fromSqId) {
