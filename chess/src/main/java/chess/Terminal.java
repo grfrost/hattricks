@@ -117,7 +117,7 @@ public class Terminal {
         intf("Score %4d,", board.score()).space();
         intf("BoardId %3d,",boardId).space().intf("Parent %3d,", board.parent()).space();
         intf("Moves %2d,", board.moves()).space().intf("FirstChildIdx %3d,", board.firstChildIdx()).space();
-        algebraic("from", board.fromSquareIdx()).space().algebraic("to", board.toSquareIdx()).space();
+        algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space();
         intf("ParentRelativeMove %2d,", board.move()).space();
         lineHighlight(board, false, 0);
         return this;
@@ -127,7 +127,7 @@ public class Terminal {
         intf("Score %4d", board.score()).space();
         intf("BoardId %3d", boardId).space().intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
-        algebraic("from", board.fromSquareIdx()).space(). algebraic("to", board.toSquareIdx()).space().nl();
+        algebraic("from", board.fromSqId()).space(). algebraic("to", board.toSqId()).space().nl();
         space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
             final int finaly = 7-y;

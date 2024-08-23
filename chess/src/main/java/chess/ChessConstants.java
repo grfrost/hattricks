@@ -55,6 +55,10 @@ class ChessConstants {
     public final static int KnightDxDyMap = 0b11_10__10_11__00_11__01_10__01_00__00_01__10_01__11_00;
 
 
+    public static final int DxDyMASK = 0b1111;
+
+
+
     public static final byte DIAGS = (byte) 0b1010_0101;
     public static final byte COLROWS = (byte) 0b0101_1010;
     public static final byte ALL_POINTS = (byte) 0b1111_1111;
@@ -66,9 +70,5 @@ class ChessConstants {
     static public final byte QUEEN = (byte) 0b0000_0101;
     static public final byte KING = (byte) 0b0000_0110;
     static public final byte WHITE_BIT = (byte) 0b0000_1000;
-    static public final byte BLACK_BIT = (byte) 0b0000_0000;
-
     static public final byte PIECE_MASK = (byte) 0b0000_0111;
-
-    static public final byte OFF_BOARD_SQUARE = (byte) 0b1111_1111;
 }
