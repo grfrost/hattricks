@@ -111,7 +111,7 @@ public class Compute {
     }
     @CodeReflection
     public static int countMovesForSquare(Ply ply, ChessData.Board board, byte fromBits, int fromSqId) {
-        traceCountMovesForSquare(ply, board, fromBits, fromSqId);
+     //   traceCountMovesForSquare(ply, board, fromBits, fromSqId);
         int fromx = fromSqId%8;
         int fromy = fromSqId/8;
         int moves = 0;
@@ -209,7 +209,7 @@ public class Compute {
                 }
             }
         }
-        traceOutCountMovesForSquare(ply, board, fromBits, fromSqId, moves);
+      //  traceOutCountMovesForSquare(ply, board, fromBits, fromSqId, moves);
         return moves;
     }
 
@@ -228,7 +228,7 @@ public class Compute {
     }
     @CodeReflection
     public static void countMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board newBoard) {
-        traceCountMovesAndScoreBoard(ply, weightTable, newBoard);
+       // traceCountMovesAndScoreBoard(ply, weightTable, newBoard);
         byte opponentSide = (byte)(ply.side()^WHITE_BIT);
 
         int moves=0;
@@ -254,12 +254,12 @@ public class Compute {
                 score+=shifted;
             }
         }
-        if (moves == 0){
-            throw new IllegalStateException("no moves");
-        }
+       // if (moves == 0){
+       //     throw new IllegalStateException("no moves");
+       // }
         newBoard.moves((byte) moves);
         newBoard.score((short) score);
-        traceOutCountMovesAndScoreBoard( ply, weightTable, newBoard);
+     //   traceOutCountMovesAndScoreBoard( ply, weightTable, newBoard);
     }
 
     public static void traceCreateBoard( Ply ply,  ChessData.Board parentBoard,ChessData.Board newBoard,  byte fromSqId, byte toSqId) {
@@ -282,7 +282,7 @@ public class Compute {
     }
     @CodeReflection
     public static void createBoard( Ply ply, WeightTable weightTable, ChessData.Board parentBoard, ChessData.Board newBoard, byte fromSqId, byte toSqId){
-        traceCreateBoard(ply,parentBoard,newBoard,fromSqId,toSqId);
+       // traceCreateBoard(ply,parentBoard,newBoard,fromSqId,toSqId);
         newBoard.fromSqId((byte)fromSqId);
         newBoard.toSqId((byte)toSqId);
         for (int sqId=0; sqId<64; sqId++) {
@@ -291,7 +291,7 @@ public class Compute {
         newBoard.squareBits(fromSqId, EMPTY_SQUARE);
         newBoard.squareBits(toSqId, parentBoard.squareBits(fromSqId));
         countMovesAndScoreBoard(ply,weightTable, newBoard);
-        traceOutCreateBoard(ply,parentBoard,newBoard,fromSqId,toSqId);
+       // traceOutCreateBoard(ply,parentBoard,newBoard,fromSqId,toSqId);
     }
     public static void traceCreateBoards(Ply ply,   int moves,  ChessData.Board parentBoard, int parentBoardId,byte fromSquareBits, int fromSqId) {
         System.out.print("  void createBoards(chessData, ply");
@@ -311,7 +311,7 @@ public class Compute {
 
         @CodeReflection
     public static int createBoards(ChessData chessData,  Ply ply,  WeightTable weightTable, int moves,  ChessData.Board parentBoard, int parentBoardId, byte fromSquareBits, byte fromSqId) {
-        traceCreateBoards(ply,moves,parentBoard,parentBoardId,fromSquareBits,fromSqId);
+      //  traceCreateBoards(ply,moves,parentBoard,parentBoardId,fromSquareBits,fromSqId);
 
         int fromx = fromSqId%8;
         int fromy = fromSqId/8;
@@ -330,9 +330,9 @@ public class Compute {
                     var toSquareBits = parentBoard.squareBits(toSqId);
                     if (isEmptyOrOpponent(fromSquareBits, toSquareBits)) {
                         ChessData.Board newBoard = chessData.board(parentBoard.firstChildIdx()+moves);
-                        if (newBoard.parent()!=0){
-                            throw new IllegalStateException("already parented "+newBoard.parent());
-                        }
+                    //    if (newBoard.parent()!=0){
+                    //        throw new IllegalStateException("already parented "+newBoard.parent());
+                    //    }
                         newBoard.parent(parentBoardId);
                         newBoard.move((byte)moves);
                         createBoard( ply,weightTable, parentBoard,newBoard, fromSqId, toSqId);
@@ -353,9 +353,9 @@ public class Compute {
                     byte toSquareBits = parentBoard.squareBits(toSqId);
                     if (((moveIdx > 1) && isEmpty(toSquareBits)) || (moveIdx < 2) && isOpponent(fromSquareBits, toSquareBits)) {
                         ChessData.Board newBoard = chessData.board(parentBoard.firstChildIdx()+moves);
-                        if (newBoard.parent()!=0){
-                            throw new IllegalStateException("already parented "+newBoard.parent());
-                        }
+                     ////   if (newBoard.parent()!=0){
+                       //     throw new IllegalStateException("already parented "+newBoard.parent());
+                      //  }
                         newBoard.parent(parentBoardId);
                         newBoard.move((byte)moves);
                         createBoard( ply,weightTable, parentBoard,newBoard, fromSqId, toSqId);
@@ -374,9 +374,9 @@ public class Compute {
                     byte toSquareBits = parentBoard.squareBits(toSqId);
                     if (isEmptyOrOpponent(fromSquareBits, toSquareBits)) {
                         ChessData.Board newBoard = chessData.board(parentBoard.firstChildIdx()+moves);
-                        if (newBoard.parent()!=0){
-                            throw new IllegalStateException("already parented "+newBoard.parent());
-                        }
+                     //   if (newBoard.parent()!=0){
+                      //      throw new IllegalStateException("already parented "+newBoard.parent());
+                     //   }
                         newBoard.parent(parentBoardId);
                         newBoard.move((byte)moves);
                         createBoard( ply,weightTable, parentBoard,newBoard, fromSqId, toSqId);
@@ -422,9 +422,9 @@ public class Compute {
                             var toSquareBits = parentBoard.squareBits(toSqId);
                             if (isEmptyOrOpponent(fromSquareBits, toSquareBits)) {
                                 ChessData.Board newBoard = chessData.board(parentBoard.firstChildIdx()+moves);
-                                if (newBoard.parent()!=0){
-                                    throw new IllegalStateException("already parented "+newBoard.parent());
-                                }
+                               // if (newBoard.parent()!=0){
+                              //      throw new IllegalStateException("already parented "+newBoard.parent());
+                             //   }
                                 newBoard.parent(parentBoardId);
                                 newBoard.move((byte)moves);
 
@@ -441,7 +441,7 @@ public class Compute {
                 }
             }
         }
-        traceOutCreateBoards(ply,moves,parentBoard,parentBoardId,fromSquareBits,fromSqId);
+       // traceOutCreateBoards(ply,moves,parentBoard,parentBoardId,fromSquareBits,fromSqId);
         return moves;
     }
 
@@ -461,7 +461,7 @@ public class Compute {
     @CodeReflection
     public static void doMovesKernelCore(ChessData chessData, Ply ply,  WeightTable weightTable, int parentBoardId) {
         ChessData.Board parentBoard = chessData.board(parentBoardId);
-        traceInDoMovesKernelCore(ply,parentBoard, parentBoardId);
+      //  traceInDoMovesKernelCore(ply,parentBoard, parentBoardId);
         int moves = 0;
         for (byte sqId = 0; sqId < 64; sqId++) {
             byte squareBits = parentBoard.squareBits(sqId);
@@ -469,7 +469,7 @@ public class Compute {
                 moves = createBoards(chessData, ply, weightTable, moves, parentBoard, parentBoardId, squareBits, sqId);
             }
         }
-        traceOutDoMovesKernelCore(ply,parentBoard, parentBoardId, moves);
+      //  traceOutDoMovesKernelCore(ply,parentBoard, parentBoardId, moves);
 
     }
 

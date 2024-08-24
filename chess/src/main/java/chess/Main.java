@@ -3,6 +3,7 @@ package chess;
 
 import hat.Accelerator;
 import hat.backend.Backend;
+import hat.backend.JavaMultiThreadedBackend;
 import hat.buffer.Buffer;
 
 import java.lang.invoke.MethodHandles;
@@ -12,21 +13,9 @@ import static chess.ChessConstants.WHITE_BIT;
 
 
 public class Main {
-    private static int prefixSum(ChessData chessData, Ply ply) {
-        int nextPlyEndIdx = ply.toBoardId();
-        System.out.print("prefix -> ");
-        for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
-            ChessData.Board board = chessData.board(id);
-            board.firstChildIdx(nextPlyEndIdx);
-            System.out.print(id + "{fc=" + board.firstChildIdx() + ",m=" + board.moves() + "} ");
-            nextPlyEndIdx += board.moves(); // include current board
-        }
-        return nextPlyEndIdx - ply.toBoardId();
-    }
-
     public static void main(String[] args) {
         boolean headless = Boolean.getBoolean("headless") || (args.length > 0 && args[0].equals("--headless"));
-        Accelerator accelerator = new Accelerator(MethodHandles.lookup(), Backend.FIRST);
+        Accelerator accelerator = new Accelerator(MethodHandles.lookup(), /*new JavaMultiThreadedBackend());*/ Backend.FIRST);
         // Viewer viewer = new Viewer();
 
         WeightTable weightTable = WeightTable.create(accelerator);
@@ -37,9 +26,26 @@ public class Main {
         ChessData.Board initBoard = chessData.board(0);
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
         ply.init(0, WHITE_BIT, 0, 1);
-        boolean useIntStream = true;
-        while (ply.id() < 2) {
-            System.out.print(ply.dump(chessData, "1"));
+        boolean useIntStream = false;
+        accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
+        long start = System.currentTimeMillis();
+
+        while (ply.id() < 5) {
+            System.out.println("Ply " + ply.id() + " boards " + ply.fromBoardId() + " - " + ply.toBoardId()+ " count = "+ply.size());
+            long prefixStart = System.currentTimeMillis();
+            int nextPlyEndIdx = ply.toBoardId();
+            //  System.out.print("prefix -> ");
+            for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
+                ChessData.Board board = chessData.board(id);
+                board.firstChildIdx(nextPlyEndIdx);
+                //    System.out.print(id + "{fc=" + board.firstChildIdx() + ",m=" + board.moves() + "} ");
+                nextPlyEndIdx += board.moves(); // include current board
+            }
+            System.out.println("Prefix " + (System.currentTimeMillis() - prefixStart) + " ms");
+            int nextPlySize = nextPlyEndIdx - ply.toBoardId();
+
+            long plyStart = System.currentTimeMillis();
+            //    System.out.print(ply.dump(chessData, "1"));
             /*
              * plyMoves() requires that board.moves for each boards move field
              * (boardId between ply.fromBoardId() and ply.toBoardId()) be set appropriately
@@ -49,30 +55,31 @@ public class Main {
 
             if (useIntStream) {
                 //Here we bypass compute on entrypoint.  This way we get to fully control execution from Java.
-                IntStream.range(0, ply.size())
+                IntStream.range(0, ply.size()).parallel()
                         .forEach(id ->
                                 Compute.doMovesKernelCore(chessData, ply, weightTable, id + ply.fromBoardId())
                         );
             } else {
                 accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
             }
-
+            System.out.println("Ply compute " + (System.currentTimeMillis() - plyStart) + "ms");
             /*
              * Now we need to perform a prefix scan on board.moves field
              * between ply.startIdx() and ply.endIdx()
              * Ideally we could use the GPU for this as prefix scans from within a
              * kernel can use groupwide lane cooperation and local memory.
              */
-          //  System.out.print(ply.dump(chessData, "2"));
-            int nextPlySize = prefixSum(chessData, ply);
+            //    System.out.print(ply.dump(chessData, "2"));
+            //   int nextPlySize = prefixSum(chessData, ply);
 
 
             //System.out.println();
             //System.out.print(ply.dump(chessData, "3"));
             ply.init(ply.id() + 1, ply.side() ^ WHITE_BIT, ply.toBoardId(), nextPlySize);
 
-            System.out.println("next ply idx=" + ply.id() + " start=" + ply.fromBoardId() + "->" + ply.toBoardId());
+
             System.out.println("-----------------------------------------------------");
         }
+        System.out.println("ms" + (System.currentTimeMillis() - start));
     }
 }
