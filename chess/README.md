@@ -268,3 +268,74 @@ Possibly also integral image intrinsics.
 [From WikiPedia](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
 
 [Scalability but at what cost](https://www.usenix.org/system/files/conference/hotos15/hotos15-paper-mcsherry.pdf)
+
+
+## Some Numbers 
+
+So I got the chess engine to run 5 ply  on the GPU (I think :wink: )
+
+```
+Ply 0 boards 0 - 1 count = 1
+Prefix 0 ms
+Ply compute 42ms
+-----------------------------------------------------
+Ply 1 boards 1 - 21 count = 20
+Prefix 0 ms
+Ply compute 43ms
+-----------------------------------------------------
+Ply 2 boards 21 - 421 count = 400
+Prefix 2 ms
+Ply compute 47ms
+-----------------------------------------------------
+Ply 3 boards 421 - 8747 count = 8326
+Prefix 6 ms
+Ply compute 42ms
+-----------------------------------------------------
+Ply 4 boards 8747 - 185580 count = 176833
+Prefix 10 ms
+Ply compute 107ms
+-----------------------------------------------------
+ms305
+```
+
+Sadly improvement over multithreaded is not huge
+
+Here are the multithreaded java #’s
+
+```
+Ply 0 boards 0 - 1 count = 1
+Prefix 0 ms
+Ply compute 6ms
+-----------------------------------------------------
+Ply 1 boards 1 - 21 count = 20
+Prefix 0 ms
+Ply compute 15ms
+-----------------------------------------------------
+Ply 2 boards 21 - 421 count = 400
+Prefix 0 ms
+Ply compute 44ms
+-----------------------------------------------------
+Ply 3 boards 421 - 8747 count = 8326
+Prefix 2 ms
+Ply compute 64ms
+-----------------------------------------------------
+Ply 4 boards 8747 - 185580 count = 176833
+Prefix 13 ms
+Ply compute 254ms
+-----------------------------------------------------
+ms402
+
+```
+
+I was worried that the prefix sum (needed to compact the board space between kernels) would dominate perf, but this does not seem to be the case.
+Just realized that I need to ‘mod up the ply sizes’ to next GPU group size.
+
+A ply size of  176833 for example will not fully occupy the GPU.
+
+OpenCL (specifically) needs all groups to be the same size.  So given a global size of 
+176833 (with factors 1, 19, 41, 227, 779, 4313, 9307, 176833) opencl will determine which of these sizes 
+is closest to it's natural group size (usually 32,64,256 maybe 1024 ...)  
+
+So we are probably only using 19/32 or 41/64 or 227/256 or 227/512 or 779/1024 lanes.
+
+At least the count is not a prime  :) or we would only use one lane ;)

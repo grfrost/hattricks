@@ -26,7 +26,7 @@ public class Main {
         ChessData.Board initBoard = chessData.board(0);
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
         ply.init(0, WHITE_BIT, 0, 1);
-        boolean useIntStream = false;
+        boolean useIntStream = true;
         accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
         long start = System.currentTimeMillis();
 
@@ -76,8 +76,6 @@ public class Main {
             //System.out.println();
             //System.out.print(ply.dump(chessData, "3"));
             ply.init(ply.id() + 1, ply.side() ^ WHITE_BIT, ply.toBoardId(), nextPlySize);
-
-
             System.out.println("-----------------------------------------------------");
         }
         System.out.println("ms" + (System.currentTimeMillis() - start));
