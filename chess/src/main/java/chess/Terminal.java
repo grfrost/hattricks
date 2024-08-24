@@ -123,6 +123,33 @@ public class Terminal {
         return this;
     }
 
+    public Terminal board(ChessData.Board board) {
+        intf("Score %4d", board.score()).space();
+        intf("Parent %3d", board.parent()).space();
+        intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
+        algebraic("from", board.fromSqId()).space(). algebraic("to", board.toSqId()).space().nl();
+        space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
+        for (int y = 0; y < 8; y++) {
+            final int finaly = 7-y;
+            border(_ -> space().ch(0x31 + finaly).space().bar());
+            for (int x = 0; x < 8; x++) {
+                byte squareBits = board.squareBits(y*8+x);
+                square(x,y,false,0,0, _ -> {
+                    space();
+                    if (Compute.isEmpty(squareBits)) {
+                        space();
+                    } else {
+                        str(piece(squareBits));
+                    }
+                    space();
+                });
+            }
+            border(_ -> bar()).nl();
+        }
+        space(3).border(bg -> bg.str("| a  b  c  d  e  f  g  h |")).nl();
+        return this;
+    }
+
     public Terminal board(ChessData.Board board, int boardId) {
         intf("Score %4d", board.score()).space();
         intf("BoardId %3d", boardId).space().intf("Parent %3d", board.parent()).space();

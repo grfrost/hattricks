@@ -27,7 +27,9 @@ public class Main {
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
         ply.init(0, WHITE_BIT, 0, 1);
         boolean useIntStream = true;
-        accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
+        if (!useIntStream) {
+            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
+        }
         long start = System.currentTimeMillis();
 
         while (ply.id() < 5) {
@@ -79,5 +81,33 @@ public class Main {
             System.out.println("-----------------------------------------------------");
         }
         System.out.println("ms" + (System.currentTimeMillis() - start));
+        int minScore = Integer.MAX_VALUE;
+        int maxScore = Integer.MIN_VALUE;
+        int minBoardId = 0;
+        int maxBoardId = 0;
+
+       for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
+            ChessData.Board board = chessData.board(id);
+            if (board.score() < minScore) {
+                minScore = board.score();
+                minBoardId=id;
+            }
+           if (board.score() >= maxScore) {
+               maxScore = board.score();
+               maxBoardId=id;
+           }
+
+        }
+       System.out.print("minScore = " + minScore + "minBoard = "+ minBoardId + "maxScore = " + maxScore + "maxBoard = "+ maxBoardId);
+       System.out.println(new Terminal().board(chessData.board(minBoardId), minBoardId));
+       System.out.println(new Terminal().board(chessData.board(maxBoardId), maxBoardId));
+
+       var board = chessData.board(maxBoardId);
+
+       while (board.parent()!=0){
+           board = chessData.board(board.parent());
+       }
+        System.out.println(new Terminal().board(board));
+
     }
 }

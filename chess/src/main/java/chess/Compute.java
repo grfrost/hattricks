@@ -227,7 +227,7 @@ public class Compute {
         System.out.println("{firstChildIdx=" + newBoard.firstChildIdx() + ", moves=" + newBoard.moves()+"})");
     }
     @CodeReflection
-    public static void countMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board newBoard) {
+    public static void countMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board parentBoard, ChessData.Board newBoard) {
        // traceCountMovesAndScoreBoard(ply, weightTable, newBoard);
         byte opponentSide = (byte)(ply.side()^WHITE_BIT);
 
@@ -237,29 +237,26 @@ public class Compute {
             byte squareBits = newBoard.squareBits(sqId);
             byte piece = pieceValue(squareBits);
             if (!isEmpty(piece)) {
-                // Because the weight array masks are only valid for WHITE.  We invert the weightIndex table  (63-idx) for black
+                // Because the weight array masks are valid for WHITE.  We invert the weightIndex table  (63-idx) for black
                 int weightIndex = isWhite(squareBits)?sqId:63-sqId;
-                int scoreMul = -1;
-                if (isComrade(opponentSide, squareBits)) {
-                    moves += countMovesForSquare(ply,newBoard, squareBits, sqId);
-                    scoreMul = 1;
-                }
                 // now the piece value can be used an index into the weights table
                 int weights = weightTable.weight(weightIndex);
-
-                // shift weight for this piece
-                int shifted = (weights>>>piece*4)&0xf;
-
-                shifted *= scoreMul;
-                score+=shifted;
+                // shift and mask to get the weight for this piece
+                int pieceWeight = (weights>>>(piece*4))&0xf;
+                if (pieceWeight>7){
+                    pieceWeight = -(16-pieceWeight);
+                   // throw new RuntimeException( "neg weight " + pieceWeight);
+                }
+                if (isComrade(opponentSide, squareBits)) {
+                    moves += countMovesForSquare(ply,newBoard, squareBits, sqId);
+                }else{
+                    pieceWeight *= -1;
+                }
+                score= score+ pieceWeight +parentBoard.score();
             }
         }
-       // if (moves == 0){
-       //     throw new IllegalStateException("no moves");
-       // }
         newBoard.moves((byte) moves);
         newBoard.score((short) score);
-     //   traceOutCountMovesAndScoreBoard( ply, weightTable, newBoard);
     }
 
     public static void traceCreateBoard( Ply ply,  ChessData.Board parentBoard,ChessData.Board newBoard,  byte fromSqId, byte toSqId) {
@@ -290,7 +287,7 @@ public class Compute {
         }
         newBoard.squareBits(fromSqId, EMPTY_SQUARE);
         newBoard.squareBits(toSqId, parentBoard.squareBits(fromSqId));
-        countMovesAndScoreBoard(ply,weightTable, newBoard);
+        countMovesAndScoreBoard(ply,weightTable, parentBoard, newBoard);
        // traceOutCreateBoard(ply,parentBoard,newBoard,fromSqId,toSqId);
     }
     public static void traceCreateBoards(Ply ply,   int moves,  ChessData.Board parentBoard, int parentBoardId,byte fromSquareBits, int fromSqId) {
