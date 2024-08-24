@@ -244,15 +244,16 @@ public class Compute {
                 // shift and mask to get the weight for this piece
                 int pieceWeight = (weights>>>(piece*4))&0xf;
                 if (pieceWeight>7){
-                    pieceWeight = -(16-pieceWeight);
+                    pieceWeight = (7-pieceWeight);
                    // throw new RuntimeException( "neg weight " + pieceWeight);
                 }
+                int mul = 1;
                 if (isComrade(opponentSide, squareBits)) {
                     moves += countMovesForSquare(ply,newBoard, squareBits, sqId);
                 }else{
-                    pieceWeight *= -1;
+                    mul = -1;
                 }
-                score= score+ pieceWeight +parentBoard.score();
+                score= (1*(score+ (mul*pieceWeight) - (mul*parentBoard.score())));
             }
         }
         newBoard.moves((byte) moves);

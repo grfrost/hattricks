@@ -98,16 +98,25 @@ public class Main {
            }
 
         }
-       System.out.print("minScore = " + minScore + "minBoard = "+ minBoardId + "maxScore = " + maxScore + "maxBoard = "+ maxBoardId);
-       System.out.println(new Terminal().board(chessData.board(minBoardId), minBoardId));
-       System.out.println(new Terminal().board(chessData.board(maxBoardId), maxBoardId));
-
+     //  System.out.print("minScore = " + minScore + "minBoard = "+ minBoardId + "maxScore = " + maxScore + "maxBoard = "+ maxBoardId);
+     //  System.out.println(new Terminal().board(chessData.board(minBoardId), minBoardId));
+    //  System.out.println(new Terminal().board(chessData.board(maxBoardId), maxBoardId));
+/*
+       System.out.println("MaxLine");
        var board = chessData.board(maxBoardId);
-
+        System.out.println(new Terminal().board(board));
        while (board.parent()!=0){
            board = chessData.board(board.parent());
+           System.out.println(new Terminal().board(board));
        }
-        System.out.println(new Terminal().board(board));
+*/
+        //System.out.println("MinLine");
+        var board = chessData.board(minBoardId);
+        //System.out.println(new Terminal().board(board));
+        while (board.parent()!=0){
+            board = chessData.board(board.parent());
 
+        }
+        System.out.println(new Terminal().board(board));
     }
 }
