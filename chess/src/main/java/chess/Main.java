@@ -20,22 +20,27 @@ public class Main {
 
         WeightTable weightTable = WeightTable.create(accelerator);
         // From chess wikipedia we learned that on average each board needs 5.5 bits to encode # of moves so 32-64 approx 48
-        ChessData chessData = ChessData.create(accelerator, 50, 5);
+        ChessData chessData = ChessData.create(accelerator, 96, 5);
         Ply ply = Ply.create(accelerator);
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
         ChessData.Board initBoard = chessData.board(0);
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
         ply.init(0, WHITE_BIT, 0, 1);
-        boolean useIntStream = true;
+        boolean useIntStream = false;
         if (!useIntStream) {
             accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
         }
+        boolean timing = false;
+        boolean tracing = false;
+        long totalMs = 0;
 
-        for (int i=0; i< 2; i++) {
+        for (int i=0; i< 32; i++) {
             long start = System.currentTimeMillis();
 
             while (ply.id() < 5) {
-                System.out.println("Ply " + ply.id() + " boards " + ply.fromBoardId() + " - " + ply.toBoardId() + " count = " + ply.size());
+                if (tracing) {
+                    System.out.println("Ply " + ply.id() + " boards " + ply.fromBoardId() + " - " + ply.toBoardId() + " count = " + ply.size());
+                }
                 long prefixStart = System.currentTimeMillis();
                 int nextPlyEndIdx = ply.toBoardId();
                 //  System.out.print("prefix -> ");
@@ -45,7 +50,9 @@ public class Main {
                     //    System.out.print(id + "{fc=" + board.firstChildIdx() + ",m=" + board.moves() + "} ");
                     nextPlyEndIdx += board.moves(); // include current board
                 }
-                System.out.println("Prefix " + (System.currentTimeMillis() - prefixStart) + " ms");
+                if (timing) {
+                    System.out.println("Prefix " + (System.currentTimeMillis() - prefixStart) + " ms");
+                }
                 int nextPlySize = nextPlyEndIdx - ply.toBoardId();
 
                 long plyStart = System.currentTimeMillis();
@@ -66,7 +73,9 @@ public class Main {
                 } else {
                     accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
                 }
-                System.out.println("Ply compute " + (System.currentTimeMillis() - plyStart) + "ms");
+                if (timing) {
+                    System.out.println("Ply compute " + (System.currentTimeMillis() - plyStart) + "ms");
+                }
                 /*
                  * Now we need to perform a prefix scan on board.moves field
                  * between ply.startIdx() and ply.endIdx()
@@ -80,9 +89,14 @@ public class Main {
                 //System.out.println();
                 //System.out.print(ply.dump(chessData, "3"));
                 ply.init(ply.id() + 1, ply.side() ^ WHITE_BIT, ply.toBoardId(), nextPlySize);
-                System.out.println("-----------------------------------------------------");
+                if (tracing) {
+                    System.out.println("-----------------------------------------------------");
+                }
             }
-            System.out.println("ms" + (System.currentTimeMillis() - start));
+            if (timing) {
+                System.out.println("ms" + (System.currentTimeMillis() - start));
+            }
+            totalMs += (System.currentTimeMillis() - start);
             int minScore = Integer.MAX_VALUE;
             int maxScore = Integer.MIN_VALUE;
             int minBoardId = 0;
@@ -112,7 +126,7 @@ public class Main {
                 board = chessData.board(moveId);
               //  System.out.println(new Terminal().board(board, moveId));
             }
-            System.out.println(new Terminal().board(board,moveId));
+          //  System.out.println(new Terminal().board(board,moveId));
 
             // we make this selection board id 0
 
@@ -127,5 +141,6 @@ public class Main {
             initBoard.parent(0);
             System.out.println(new Terminal().board(initBoard, 0));
         }
+        System.out.println("totalms" + totalMs);
     }
 }
