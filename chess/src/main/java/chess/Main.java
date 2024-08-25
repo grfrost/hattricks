@@ -20,7 +20,7 @@ public class Main {
 
         WeightTable weightTable = WeightTable.create(accelerator);
         // From chess wikipedia we learned that on average each board needs 5.5 bits to encode # of moves so 32-64 approx 48
-        ChessData chessData = ChessData.create(accelerator, 48, 5);
+        ChessData chessData = ChessData.create(accelerator, 50, 5);
         Ply ply = Ply.create(accelerator);
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
         ChessData.Board initBoard = chessData.board(0);
@@ -105,25 +105,25 @@ public class Main {
             // System.out.println(new Terminal().board(chessData.board(maxBoardId), maxBoardId));
 
             var board = chessData.board(maxBoardId);
-            int moveId;
+            int moveId=0;
             //   System.out.println(new Terminal().board(board));
             while (board.parent() != 0) {
                 moveId = board.parent();
                 board = chessData.board(moveId);
               //  System.out.println(new Terminal().board(board, moveId));
             }
-           // System.out.println(new Terminal().board(board,));
+            System.out.println(new Terminal().board(board,moveId));
 
             // we make this selection board id 0
 
-            ply.init(0, ply.side()^WHITE_BIT,0,1);
+            ply.init(0, ply.side(),0,1);
             for (int sqid = 0; sqid <64; sqid++){
                 initBoard.squareBits(sqid,board.squareBits(sqid));
             }
             initBoard.fromSqId(board.fromSqId());
             initBoard.toSqId(board.toSqId());
             initBoard.score(board.score());
-            initBoard.moves((byte)0);
+            initBoard.moves((byte)board.moves());
             initBoard.parent(0);
             System.out.println(new Terminal().board(initBoard, 0));
         }
