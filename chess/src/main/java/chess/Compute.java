@@ -244,22 +244,26 @@ public class Compute {
                 int weightIndex = isWhite(squareBits)?sqId:63-sqId;
                 // now the piece value can be used an index into the weights table
                 int weights = weightTable.weight(weightIndex);
-                // shift and mask to get the weight for this piece
-                int pieceWeight = (weights>>>(piece*4))&0xf;
-                if (pieceWeight>7){
-                    score +=  (7-pieceWeight)*piece;
-                }else{
-                    score +=  pieceWeight*piece;
+                // shift and mask to get the weight for this piece remember pawn=1, knight=2 etc
+                int pieceWeight = (weights>>>(piece*4))&ChessConstants.WEIGHT_MASK;
+                if (pieceWeight>7){// there must be an easier way ;)
+                    pieceWeight = (7-pieceWeight); // 8-F =>  -1,-2,-3,-4,-5,-6,-7
+                    pieceWeight = pieceWeight +8;  //          7, 6, 5, 4, 3, 2, 1
+                    pieceWeight = pieceWeight*-1;  // 8-F  => -7,-6,-5,-4,-3,-2,-1
+                }else {
+                    pieceWeight = pieceWeight;     // 0-7      => 0,1,2,3,4,5,6,7
+                   // pieceWeight = 7-pieceWeight;   // 0-7      => 7,6,5,4,3,2,1,0
                 }
+                score +=  pieceWeight*piece;
                 if (isComrade(opponentSide, squareBits)) {
                     moves += countMovesForSquare(ply,newBoard, squareBits, sqId);
                 }
 
             }
         }
-        score= score+sideMul*parentBoard.score();
+        newBoard.boardScore(score);
         newBoard.moves((byte) moves);
-        newBoard.score((short) score);
+        newBoard.gameScore(score +sideMul*parentBoard.gameScore());
     }
 
     public static void traceCreateBoard( Ply ply,  ChessData.Board parentBoard,ChessData.Board newBoard,  byte fromSqId, byte toSqId) {

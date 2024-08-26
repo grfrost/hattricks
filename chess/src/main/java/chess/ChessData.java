@@ -24,8 +24,10 @@ public interface ChessData extends Buffer {
 
         void parent(int parent);
 
-        int score();
-        void score(int score);
+        int gameScore();
+        void gameScore(int gameScore);
+        int boardScore();
+        void boardScore(int boardScore);
 
         int firstChildIdx();
         void firstChildIdx(int firstChildIdx);
@@ -57,11 +59,12 @@ public interface ChessData extends Buffer {
                     x++;
                 }
 
-            score(0);  // The score after init is zero,
+            gameScore(0);  // The score after init is zero,
+            boardScore(0);
             moves((byte)20);  // The number of moves available to white is 20 =  8 pawn, 4 knight
             firstChildIdx(1); // the first child will be 1
-            fromSqId((byte) 0);   // no move got us here,
-            toSqId((byte) 0);     // no move got us here
+            fromSqId((byte)0);   // no move got us here,
+            toSqId((byte)0);     // no move got us here
             move((byte)0);    // no move got us here
         }
     }
@@ -75,7 +78,7 @@ public interface ChessData extends Buffer {
             .array("board", square -> square
                     .array("squareBits", 64)
                     //              4         4               1        1              1              1       4
-                    .fields("parent", "firstChildIdx","moves","fromSqId","toSqId", "move", "score")
+                    .fields("parent", "firstChildIdx","moves","fromSqId","toSqId", "move", "boardScore","gameScore")
                    // .pad(2) //80
             )
 

@@ -57,7 +57,7 @@ class ChessConstants {
 
     public static final int DxDyMASK = 0b1111;
 
-
+    public static final int WEIGHT_MASK = 0b1111;
 
     public static final byte DIAGS = (byte) 0b1010_0101;
     public static final byte COLROWS = (byte) 0b0101_1010;

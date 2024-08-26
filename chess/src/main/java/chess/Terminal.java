@@ -114,7 +114,7 @@ public class Terminal {
         return this;
     }
     public  Terminal line(ChessData.Board board, int boardId) {
-        intf("Score %4d,", board.score()).space();
+        intf("Score %4d,", board.gameScore()).space();
         intf("BoardId %3d,",boardId).space().intf("Parent %3d,", board.parent()).space();
         intf("Moves %2d,", board.moves()).space().intf("FirstChildIdx %3d,", board.firstChildIdx()).space();
         algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space();
@@ -124,7 +124,7 @@ public class Terminal {
     }
 
     public Terminal board(ChessData.Board board) {
-        intf("Score %4d", board.score()).space();
+        intf("Score %4d", board.gameScore()).space();
         intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
         algebraic("from", board.fromSqId()).space(). algebraic("to", board.toSqId()).space().nl();
@@ -151,7 +151,7 @@ public class Terminal {
     }
 
     public Terminal board(ChessData.Board board, int boardId) {
-        intf("Score %4d", board.score()).space();
+        intf("Score %4d", board.gameScore()).space();
         intf("BoardId %3d", boardId).space().intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
         algebraic("from", board.fromSqId()).space(). algebraic("to", board.toSqId()).space().nl();

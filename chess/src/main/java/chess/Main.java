@@ -3,7 +3,6 @@ package chess;
 
 import hat.Accelerator;
 import hat.backend.Backend;
-import hat.backend.JavaMultiThreadedBackend;
 import hat.buffer.Buffer;
 
 import java.lang.invoke.MethodHandles;
@@ -104,12 +103,12 @@ public class Main {
 
             for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
                 ChessData.Board board = chessData.board(id);
-                if (board.score() < minScore) {
-                    minScore = board.score();
+                if (board.gameScore() < minScore) {
+                    minScore = board.gameScore();
                     minBoardId = id;
                 }
-                if (board.score() >= maxScore) {
-                    maxScore = board.score();
+                if (board.gameScore() >= maxScore) {
+                    maxScore = board.gameScore();
                     maxBoardId = id;
                 }
 
@@ -136,7 +135,7 @@ public class Main {
             }
             initBoard.fromSqId(board.fromSqId());
             initBoard.toSqId(board.toSqId());
-            initBoard.score(board.score());
+            initBoard.gameScore(board.gameScore());
             initBoard.moves((byte)board.moves());
             initBoard.parent(0);
             System.out.println(new Terminal().board(initBoard, 0));

@@ -144,7 +144,9 @@ public interface WeightTable extends Buffer {
     // The tables above are for white.  By subtracting index from 63 we can get the black Values.
     // ((weighted[63-(0-64)])>>>PAWN) yields weighting for black pawn
 
+
     int[] weightMap = new int[]{
+            //_KORBNP_
             0x0bd0d900, 0x0ae0ea00, 0x0ae0eb00, 0x09f0eb00, 0x09f0eb00, 0x0ae0eb00, 0x0ae0ea00, 0x0bd0d900,
             0x0be1ea10, 0x0a020d20, 0x0a020020, 0x090200d0, 0x090200d0, 0x0a020020, 0x0a020d20, 0x0be1ea10,
             0x0befeb10, 0x0a0000f0, 0x0a1012e0, 0x09102200, 0x09102200, 0x0a1012e0, 0x0a0000f0, 0x0befeb10,
