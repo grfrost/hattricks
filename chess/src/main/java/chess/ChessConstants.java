@@ -54,9 +54,8 @@ class ChessConstants {
     //                                        -2,-1  -1,-2  +1,-2  +2,-1  +2,+1  +1,+2  -1,+2  -2,+1
     public final static int KnightDxDyMap = 0b11_10__10_11__00_11__01_10__01_00__00_01__10_01__11_00;
 
-
+    public static final int DxOrDyMASK = 0b11;
     public static final int DxDyMASK = 0b1111;
-
     public static final int WEIGHT_MASK = 0b1111;
 
     public static final byte DIAGS = (byte) 0b1010_0101;

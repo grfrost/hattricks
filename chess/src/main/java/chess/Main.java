@@ -25,7 +25,7 @@ public class Main {
         ChessData.Board initBoard = chessData.board(0);
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
         ply.init(0, WHITE_BIT, 0, 1);
-        boolean useIntStream = false;
+        boolean useIntStream = true;
         if (!useIntStream) {
             accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
         }
