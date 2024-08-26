@@ -108,6 +108,15 @@ public class Compute {
     public static int compassDx(int dxdy) {
         return compassDy(dxdy >>> 2);
     }
+    @CodeReflection
+    public static int pawnDy(int dxdy) {
+        return (dxdy & DxOrDyMASK) - 1;
+    }
+
+    @CodeReflection
+    public static int pawnDx(int dxdy) {
+        return pawnDy(dxdy >>> 2);
+    }
 
     @CodeReflection
     public static int knightDy(int dxdy) {
@@ -124,6 +133,18 @@ public class Compute {
         return ((compassPoints >>> moveIdx) & 1) == 1;
     }
 
+    @CodeReflection
+    public static int compassDxDy( int dirIdx) {
+        return ChessConstants.DxDyMASK & (CompassDxDyMap >>> (dirIdx * 4));
+    }
+    @CodeReflection
+    public static int pawnDxDy( int moveIdx) {
+        return ChessConstants.DxDyMASK & (ChessConstants.PawnDxDyMap >>> (moveIdx * 4));
+    }
+    @CodeReflection
+    public static int knightDxDy( int moveIdx) {
+        return ChessConstants.DxDyMASK & (ChessConstants.KnightDxDyMap >>> (moveIdx * 4));
+    }
     public static void traceCountMovesForSquare(Ply ply, ChessData.Board board, byte fromBits, int fromSqId) {
         System.out.print("     void countMovesForSquare(ply");
         System.out.print("{" + ply.fromBoardId() + "-" + ply.toBoardId() + " size=" + ply.size() + "}");
@@ -147,27 +168,24 @@ public class Compute {
         int fromx = fromSqId % 8;
         int fromy = fromSqId / 8;
         int moves = 0;
-        int sideMul = (ply.side() >>> 2) - 1;  //WHITE=b1000 -> 0b0010 == 2 (-1) -> 1
-        //BLACK=b0000 -> 0b0000 == 0 (-1) -> -1
+        int sideMul = (ply.side() >>> 2) - 1;  //WHITE=b1000 -> 0b0010 == 2 (-1) -> 1 BLACK=b0000 -> 0b0000 == 0 (-1) -> -1
         int otherSideMul = sideMul * -1;
         byte fromPieceValue = pieceValue(fromSqBits);
         if (isKing(fromPieceValue)) {
-            for (int moveIdx = 0; moveIdx < 8; moveIdx++) {
-                int dxdy = ChessConstants.DxDyMASK & (CompassDxDyMap >>> (moveIdx * 4));
+            for (int dirIdx = 0; dirIdx < 8; dirIdx++) {
+                int dxdy = compassDxDy(dirIdx);
                 int tox = fromx + compassDx(dxdy);
                 int toy = fromy + compassDy(dxdy);
-                if (isOnBoard(tox, toy)) {
-                    if (isEmptyOrOpponent(fromSqBits, board.squareBits(toy * 8 + tox))) {
-                        moves++;
-                    }
+                if (isOnBoard(tox, toy) && isEmptyOrOpponent(fromSqBits, board.squareBits(toy * 8 + tox))) {
+                    moves++;
                 }
             }
         } else if (isPawn(fromPieceValue)) {
             int count = (fromy == (isWhite(fromSqBits) ? 6 : 1)) ? 4 : 3;  // four moves if home else three
             for (int moveIdx = 0; moveIdx < count; moveIdx++) {
-                int dxdy = ChessConstants.DxDyMASK & (ChessConstants.PawnDxDyMap >>> (moveIdx * 4));
-                int toy = fromy + otherSideMul * compassDy(dxdy);
-                int tox = fromx + compassDx(dxdy);
+                int dxdy = pawnDxDy(moveIdx);
+                int toy = fromy + otherSideMul * pawnDy(dxdy);
+                int tox = fromx + pawnDx(dxdy);
                 if (isOnBoard(tox, toy)) {
                     byte toBits = board.squareBits(toy * 8 + tox);
                     if (((moveIdx > 1) && isEmpty(toBits)) || (moveIdx < 2) && isOpponent(fromSqBits, toBits)) {
@@ -177,7 +195,7 @@ public class Compute {
             }
         } else if (isKnight(fromPieceValue)) {
             for (int moveIdx = 0; moveIdx < 8; moveIdx++) {
-                int dxdy = ChessConstants.DxDyMASK & (ChessConstants.KnightDxDyMap >>> (moveIdx * 4));
+                int dxdy = knightDxDy(moveIdx);
                 int toy = fromy + knightDy(dxdy); // dy +-2 || dy +- 2
                 int tox = fromx + knightDx(dxdy); // dx +-2 || dy += 2
                 if (isOnBoard(tox, toy) && isEmptyOrOpponent(fromSqBits, board.squareBits(toy * 8 + tox))) {
@@ -206,7 +224,7 @@ public class Compute {
                 // check if we can move this way i.e is bit is set for the compassPoints of this piece
                 if (validDir(compassPoints, dirIdx)) {
                     // Now let's determine what a move in this dir looks like
-                    int dxdy = ChessConstants.DxDyMASK & (CompassDxDyMap >>> (dirIdx * 4));
+                    int dxdy = compassDxDy(dirIdx);
                     int dy = compassDy(dxdy);
                     int dx = compassDx(dxdy);
                     boolean blocked = false;
@@ -340,16 +358,15 @@ public class Compute {
     @CodeReflection
     public static int createBoards(ChessData chessData, Ply ply, WeightTable weightTable, int moves, ChessData.Board parentBoard, int parentBoardId, byte fromSqBits, byte fromSqId) {
         //  traceCreateBoards(ply,moves,parentBoard,parentBoardId,fromSquareBits,fromSqId);
-        int sideMul = (ply.side() >>> 2) - 1;  //WHITE=b1000 -> 0b0010 == 2 (-1) -> 1
-        //BLACK=b0000 -> 0b0000 == 0 (-1) -> -1
+        int sideMul = (ply.side() >>> 2) - 1;  //WHITE=b1000 -> 0b0010 == 2 (-1) -> 1 BLACK=b0000 -> 0b0000 == 0 (-1) -> -1
         int otherSideMul = sideMul * -1;
         int fromx = fromSqId % 8;
         int fromy = fromSqId / 8;
         byte fromPieceValue = pieceValue(fromSqBits);
 
         if (isKing(fromPieceValue)) {
-            for (int moveIdx = 0; moveIdx < 8; moveIdx++) {
-                int dxdy = ChessConstants.DxDyMASK & (CompassDxDyMap >>> (moveIdx * 4));
+            for (int dirIdx = 0; dirIdx < 8; dirIdx++) {
+                int dxdy = compassDxDy(dirIdx);
                 int tox = fromx + compassDx(dxdy);
                 int toy = fromy + compassDy(dxdy);
                 if (isOnBoard(tox, toy)) {
@@ -366,9 +383,9 @@ public class Compute {
         } else if (isPawn(fromPieceValue)) {
             int count = (fromy == (isWhite(fromSqBits) ? 6 : 1)) ? 4 : 3;  // four moves if home else three
             for (int moveIdx = 0; moveIdx < count; moveIdx++) {
-                int dxdy = ChessConstants.DxDyMASK & (ChessConstants.PawnDxDyMap >>> (moveIdx * 4));
-                int toy = fromy + otherSideMul * compassDy(dxdy);
-                int tox = fromx + compassDx(dxdy);
+                int dxdy = pawnDxDy(moveIdx);
+                int toy = fromy + otherSideMul * pawnDy(dxdy);
+                int tox = fromx + pawnDx(dxdy);
                 if (isOnBoard(tox, toy)) {
                     byte toSqId = (byte) (toy * 8 + tox);
                     byte toSqBits = parentBoard.squareBits(toSqId);
@@ -383,7 +400,7 @@ public class Compute {
             }
         } else if (isKnight(fromPieceValue)) {
             for (int moveIdx = 0; moveIdx < 8; moveIdx++) {
-                int dxdy = ChessConstants.DxDyMASK & (ChessConstants.KnightDxDyMap >>> (moveIdx * 4));
+                int dxdy = knightDxDy(moveIdx);
                 int toy = fromy + knightDy(dxdy);
                 int tox = fromx + knightDx(dxdy);
                 if (isOnBoard(tox, toy)) {
