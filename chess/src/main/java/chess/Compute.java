@@ -230,10 +230,9 @@ public class Compute {
     public static void countMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board parentBoard, ChessData.Board newBoard) {
        // traceCountMovesAndScoreBoard(ply, weightTable, newBoard);
         byte opponentSide = (byte)(ply.side()^WHITE_BIT);
-        int sideMul = -1;
-        if (opponentSide!=WHITE_BIT){
-            sideMul = 1;
-        }
+        int sideMul = (ply.side()>>>2) -1;  //WHITE=b1000 -> 0b0010 == 2 (-1) -> 1
+                                            //BLACK=b0000 -> 0b0000 == 0 (-1) -> -1
+
         int moves=0;
         int score=0;
         for (int sqId = 0; sqId < 64; sqId++) {
@@ -261,7 +260,7 @@ public class Compute {
 
             }
         }
-        newBoard.boardScore(score);
+        newBoard.boardScore(score*sideMul);
         newBoard.moves((byte) moves);
         newBoard.gameScore(score +sideMul*parentBoard.gameScore());
     }
