@@ -3,9 +3,11 @@ package chess;
 import java.util.function.Consumer;
 
 import static chess.ChessConstants.BISHOP;
+import static chess.ChessConstants.CHECK;
 import static chess.ChessConstants.EMPTY_SQUARE;
 import static chess.ChessConstants.KING;
 import static chess.ChessConstants.KNIGHT;
+import static chess.ChessConstants.NOT_AT_HOME;
 import static chess.ChessConstants.PAWN;
 import static chess.ChessConstants.PIECE_MASK;
 import static chess.ChessConstants.QUEEN;
@@ -67,6 +69,14 @@ public class Terminal {
         return this;
     }
 
+    public Terminal ohome() {
+        ch('<');
+        return this;
+    }
+    public Terminal chome() {
+        ch('>');
+        return this;
+    }
     public Terminal space() {
         ch(' ');
         return this;
@@ -133,15 +143,23 @@ public class Terminal {
             final int finaly = 7-y;
             border(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits(y*8+x);
+                byte squareBits = board.squareBits((y<<2)+x);
                 square(x,y,false,0,0, _ -> {
-                    space();
+                    if ((squareBits&NOT_AT_HOME)==NOT_AT_HOME) {
+                        ohome();
+                    }else {
+                        space();
+                    }
                     if (Compute.isEmpty(squareBits)) {
                         space();
                     } else {
                         str(piece(squareBits));
                     }
-                    space();
+                    if ((squareBits&NOT_AT_HOME)==NOT_AT_HOME) {
+                        chome();
+                    }else {
+                        space();
+                    }
                 });
             }
             border(_ -> bar()).nl();
@@ -162,13 +180,26 @@ public class Terminal {
             for (int x = 0; x < 8; x++) {
                 byte squareBits = board.squareBits(y*8+x);
                 square(x,y,false,0,0, _ -> {
-                    space();
-                    if (Compute.isEmpty(squareBits)) {
+                    if (!Compute.isSet(squareBits, NOT_AT_HOME)){
                         space();
+                    }else {
+                        ohome();
+                    }
+                    if (Compute.isEmpty(squareBits)) {
+                        if (Compute.isSet(squareBits, CHECK)){
+                            ch('.');
+                        }else {
+                            space();
+                        }
+
                     } else {
                         str(piece(squareBits));
                     }
-                    space();
+                    if (!Compute.isSet(squareBits, NOT_AT_HOME)){
+                        space();
+                    }else {
+                        chome();
+                    }
                 });
             }
             border(_ -> bar()).nl();

@@ -54,8 +54,11 @@ class ChessConstants {
     //                                        -2,-1  -1,-2  +1,-2  +2,-1  +2,+1  +1,+2  -1,+2  -2,+1
     public final static int KnightDxDyMap = 0b11_10__10_11__00_11__01_10__01_00__00_01__10_01__11_00;
 
+    public static final int DyORDxMask_SHIFT = 2;
     public static final int DxOrDyMASK = 0b11;
+    public static final int DyDxMask_SHIFT = 4;
     public static final int DxDyMASK = 0b1111;
+    public static final int WEIGHT_MASK_SHIFT = 4;
     public static final int WEIGHT_MASK = 0b1111;
 
     public static final byte DIAGS = (byte) 0b1010_0101;
@@ -68,9 +71,12 @@ class ChessConstants {
     static public final byte ROOK = (byte) 0b0000_0100;
     static public final byte QUEEN = (byte) 0b0000_0101;
     static public final byte KING = (byte) 0b0000_0110;
-    static public final byte WHITE_BIT = (byte) 0b0000_1000;
+    static public final int WHITE_BIT_SHIFT = 3;
+    static public final byte WHITE_BIT = (byte) (1 << WHITE_BIT_SHIFT);
     static public final byte PIECE_MASK = (byte) 0b0000_0111;
-    static public final byte NOT_AT_HOME = (byte) 0b0001_0000;
-    static public final byte CHECK = (byte) 0b0010_0000;
+    static public final int NOT_AT_HOME_SHIFT = 4;
+    static public final byte NOT_AT_HOME = (byte) (1<< NOT_AT_HOME_SHIFT);
+    static public final int CHECK_SHIFT = 5;
+    static public final byte CHECK = (byte) (1<<CHECK_SHIFT);
 
 }

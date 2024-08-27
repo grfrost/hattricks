@@ -12,9 +12,12 @@ import static chess.ChessConstants.COLROWS;
 import static chess.ChessConstants.CompassDxDyMap;
 import static chess.ChessConstants.DIAGS;
 import static chess.ChessConstants.DxOrDyMASK;
+import static chess.ChessConstants.DyDxMask_SHIFT;
 import static chess.ChessConstants.EMPTY_SQUARE;
 import static chess.ChessConstants.NOT_AT_HOME;
+import static chess.ChessConstants.NOT_AT_HOME_SHIFT;
 import static chess.ChessConstants.ROOK;
+import static chess.ChessConstants.WEIGHT_MASK_SHIFT;
 import static chess.ChessConstants.WHITE_BIT;
 
 public class Compute {
@@ -22,7 +25,10 @@ public class Compute {
     static byte pieceValue(byte squareBits) {
         return (byte) (squareBits & ChessConstants.PIECE_MASK);
     }
-
+    @CodeReflection
+    public static boolean isSet(byte sqBits, byte bit) {
+        return (sqBits & bit) == bit;
+    }
     @CodeReflection
     static byte side(byte squareBits) {
         return (byte) (squareBits & WHITE_BIT);
@@ -97,10 +103,12 @@ public class Compute {
         return pieceValue(squareBits) == ChessConstants.QUEEN;
     }
 
-    //int dy = (dxdy & DxOrDyMASK) - 1;// 00->-1, 01->0, 10->1, 11->2
-    //dxdy >>>= 2;
-    //int dx = (dxdy & DxOrDyMASK) - 1;// 00->-1, 01->0, 10->1, 11->2
-
+    /*
+     * int dy = (dxdy & DxOrDyMASK) - 1;// 00->-1, 01->0, 10->1, 11->2
+     *
+     * dxdy >>>= 2;
+     *int dx = (dxdy & DxOrDyMASK) - 1;// 00->-1, 01->0, 10->1, 11->2
+     */
     @CodeReflection
     public static int compassDy(int dxdy) {
         return (dxdy & DxOrDyMASK) - 1;
@@ -137,15 +145,15 @@ public class Compute {
 
     @CodeReflection
     public static int compassDxDy( int dirIdx) {
-        return ChessConstants.DxDyMASK & (CompassDxDyMap >>> (dirIdx * 4));
+        return ChessConstants.DxDyMASK & (CompassDxDyMap >>> (dirIdx * DyDxMask_SHIFT));
     }
     @CodeReflection
     public static int pawnAtHomeDxDy( int moveIdx) {
-        return ChessConstants.DxDyMASK & (ChessConstants.PawnDxDyMap >>> (moveIdx * 4));
+        return ChessConstants.DxDyMASK & (ChessConstants.PawnDxDyMap >>> (moveIdx * DyDxMask_SHIFT));
     }
     @CodeReflection
     public static int knightDxDy( int moveIdx) {
-        return ChessConstants.DxDyMASK & (ChessConstants.KnightDxDyMap >>> (moveIdx * 4));
+        return ChessConstants.DxDyMASK & (ChessConstants.KnightDxDyMap >>> (moveIdx * DyDxMask_SHIFT));
     }
 
 
@@ -206,7 +214,7 @@ public class Compute {
             }
         } else if (isPawn(fromPieceValue)) {
             int forward = plyDir(ply.side());                //WHITE=-1 BLACK = 1
-            int count = 4-((fromSqBits&NOT_AT_HOME)>>>4);    // 0b0001_0000 -> 1
+            int count = 4-((fromSqBits&NOT_AT_HOME)>>>NOT_AT_HOME_SHIFT);    // 3 or 4
             boolean blocked = false;
             for (int moveIdx = 0; !blocked && moveIdx<count; moveIdx++) {
                 int dxdy = pawnAtHomeDxDy(moveIdx);
@@ -319,7 +327,7 @@ public class Compute {
                 int sqIdWeight = weightTable.weight(isWhite(fromSqBits) ? sqId : 63 - sqId);
                 // now the piece value can be used an index into the weights table
                 // so we shift and mask to get the weight for this piece pawn=1, knight=2 etc
-                int pieceWeight = (sqIdWeight >>> (piece * 4)) & ChessConstants.WEIGHT_MASK;
+                int pieceWeight = (sqIdWeight >>> (piece * WEIGHT_MASK_SHIFT)) & ChessConstants.WEIGHT_MASK;
                 if (pieceWeight > 7) {// there must be an easier way ;)
                     pieceWeight = (7 - pieceWeight); // 8-F =>  -1,-2,-3,-4,-5,-6,-7
                     pieceWeight = pieceWeight + 8;   //          7, 6, 5, 4, 3, 2, 1
@@ -431,7 +439,7 @@ public class Compute {
             }
         } else if (isPawn(fromPieceValue)) {
             int forward = plyDir(ply.side());                //WHITE=-1 BLACK = 1
-            int count = 4-((fromSqBits&NOT_AT_HOME)>>>4);    // 0b0001_0000 -> 1
+            int count = 4-((fromSqBits&NOT_AT_HOME)>>>NOT_AT_HOME_SHIFT);    // 3 or 4 
             boolean blocked = false;
             for (int moveIdx = 0; !blocked && moveIdx<count; moveIdx++) {  //takes
                 int dxdy = pawnAtHomeDxDy(moveIdx);
@@ -561,4 +569,6 @@ public class Compute {
     static public void doMovesCompute(final ComputeContext cc, ChessData chessData, Ply ply, WeightTable weightTable) {
         cc.dispatchKernel(ply.size(), kc -> doMovesKernel(kc, chessData, ply, weightTable));
     }
+
+
 }
