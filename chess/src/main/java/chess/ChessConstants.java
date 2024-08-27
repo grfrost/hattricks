@@ -70,4 +70,7 @@ class ChessConstants {
     static public final byte KING = (byte) 0b0000_0110;
     static public final byte WHITE_BIT = (byte) 0b0000_1000;
     static public final byte PIECE_MASK = (byte) 0b0000_0111;
+    static public final byte NOT_AT_HOME = (byte) 0b0001_0000;
+    static public final byte CHECK = (byte) 0b0010_0000;
+
 }
