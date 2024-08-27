@@ -145,21 +145,16 @@ public class Terminal {
             for (int x = 0; x < 8; x++) {
                 byte squareBits = board.squareBits((y<<2)+x);
                 square(x,y,false,0,0, _ -> {
-                    if ((squareBits&NOT_AT_HOME)==NOT_AT_HOME) {
-                        ohome();
-                    }else {
+
                         space();
-                    }
+
                     if (Compute.isEmpty(squareBits)) {
                         space();
                     } else {
                         str(piece(squareBits));
                     }
-                    if ((squareBits&NOT_AT_HOME)==NOT_AT_HOME) {
-                        chome();
-                    }else {
-                        space();
-                    }
+                    space();
+
                 });
             }
             border(_ -> bar()).nl();

@@ -439,7 +439,7 @@ public class Compute {
             }
         } else if (isPawn(fromPieceValue)) {
             int forward = plyDir(ply.side());                //WHITE=-1 BLACK = 1
-            int count = 4-((fromSqBits&NOT_AT_HOME)>>>NOT_AT_HOME_SHIFT);    // 3 or 4 
+            int count = 4-((fromSqBits&NOT_AT_HOME)>>>NOT_AT_HOME_SHIFT);    // 3 or 4
             boolean blocked = false;
             for (int moveIdx = 0; !blocked && moveIdx<count; moveIdx++) {  //takes
                 int dxdy = pawnAtHomeDxDy(moveIdx);
@@ -499,7 +499,7 @@ public class Compute {
             for (int dirIdx = 0; dirIdx < 8; dirIdx++) {
                 if (validDir(compassPoints, dirIdx)) {
                     // Now let's determine what a move in this dir looks like
-                    int dxdy = compassDxDy(dirIdx);//ChessConstants.DxDyMASK & (CompassDxDyMap >>> (dirIdx * 4));
+                    int dxdy = compassDxDy(dirIdx);
                     int dy = compassDy(dxdy);
                     int dx = compassDx(dxdy);
                     boolean blockedOrOffBoard = false;
