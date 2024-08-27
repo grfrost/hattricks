@@ -22,24 +22,25 @@ public class Terminal {
     static final char chessKingUnicode = 0x2654;
 
     public Terminal bg(int r, int g, int b, Consumer<Terminal> consumer) {
-        str(escBG +  "2;" + r + ";" + g + ";" + b + suffix);
+        str(escBG + "2;" + r + ";" + g + ";" + b + suffix);
         consumer.accept(this);
-        return str(escBG + "0"+suffix);
+        return str(escBG + "0" + suffix);
     }
 
     public Terminal fg(int r, int g, int b, Consumer<Terminal> consumer) {
-        str(escFG +  "2;" + r + ";" + g + ";" + b + suffix);
+        str(escFG + "2;" + r + ";" + g + ";" + b + suffix);
         consumer.accept(this);
-        return str(escFG + "0"+suffix);
+        return str(escFG + "0" + suffix);
     }
 
     public Terminal border(Consumer<Terminal> consumer) {
         return fg(0, 250, 0, fg -> fg.bg(128, 128, 128, consumer));
     }
-    public Terminal square(int x,int y, boolean highlight,int hx, int hy, Consumer<Terminal> consumer) {
-        if (x==hx && y==hy && highlight) {
+
+    public Terminal square(int x, int y, boolean highlight, int hx, int hy, Consumer<Terminal> consumer) {
+        if (x == hx && y == hy && highlight) {
             return bg(64, 24, 24, consumer);
-        }else {
+        } else {
             int grey = 64 + (((x + y) % 2) * 64);
             return bg(grey, grey, grey, consumer);
         }
@@ -73,10 +74,12 @@ public class Terminal {
         ch('<');
         return this;
     }
+
     public Terminal chome() {
         ch('>');
         return this;
     }
+
     public Terminal space() {
         ch(' ');
         return this;
@@ -88,16 +91,18 @@ public class Terminal {
         }
         return this;
     }
+
     public Terminal intf(String format, int value) {
-        return str(String.format(format,value));
+        return str(String.format(format, value));
     }
 
-    public Terminal algebraic(String label, int squareIdx){
+    public Terminal algebraic(String label, int squareIdx) {
 
-        var x = squareIdx%8;
-        var y = squareIdx/8;
-        return str(label).ch(':').str(algebraic(x,y));
+        var x = squareIdx % 8;
+        var y = squareIdx / 8;
+        return str(label).ch(':').str(algebraic(x, y));
     }
+
     public Terminal bar() {
         ch('|');
         return this;
@@ -107,25 +112,35 @@ public class Terminal {
         return str(s).nl();
     }
 
-    public Terminal lineHighlight(ChessData.Board board, boolean highlight,int squareIdx) {
+    public Terminal spaceOrPiece(byte squareBits) {
+        if (Compute.isEmpty(squareBits)) {
+            if (Compute.isSet(squareBits, CHECK)) {
+                ch('.');
+            } else {
+                space();
+            }
+        } else {
+            str(piece(squareBits));
+        }
+        return this;
+    }
+
+    public Terminal lineHighlight(ChessData.Board board, boolean highlight, int squareIdx) {
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits(y*8+x);
-                square(x,y,highlight,squareIdx%8, squareIdx/8,_ -> {
-                    if (Compute.isEmpty(squareBits)) {
-                        space();
-                    } else {
-                        str(piece(squareBits));
-                    }
+                byte squareBits = board.squareBits(y * 8 + x);
+                square(x, y, highlight, squareIdx % 8, squareIdx / 8, _ -> {
+                    spaceOrPiece(squareBits);
                 });
             }
             border(_ -> bar());
         }
         return this;
     }
-    public  Terminal line(ChessData.Board board, int boardId) {
+
+    public Terminal line(ChessData.Board board, int boardId) {
         intf("Score %4d,", board.gameScore()).space();
-        intf("BoardId %3d,",boardId).space().intf("Parent %3d,", board.parent()).space();
+        intf("BoardId %3d,", boardId).space().intf("Parent %3d,", board.parent()).space();
         intf("Moves %2d,", board.moves()).space().intf("FirstChildIdx %3d,", board.firstChildIdx()).space();
         algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space();
         intf("ParentRelativeMove %2d,", board.move()).space();
@@ -137,24 +152,15 @@ public class Terminal {
         intf("Score %4d", board.gameScore()).space();
         intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
-        algebraic("from", board.fromSqId()).space(). algebraic("to", board.toSqId()).space().nl();
-        space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
+        algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
+        space(3).border(_ -> str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
-            final int finaly = 7-y;
+            final int finaly = 7 - y;
             border(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits((y<<2)+x);
-                square(x,y,false,0,0, _ -> {
-
-                        space();
-
-                    if (Compute.isEmpty(squareBits)) {
-                        space();
-                    } else {
-                        str(piece(squareBits));
-                    }
-                    space();
-
+                byte squareBits = board.squareBits((y << 3) + x);
+                square(x, y, false, 0, 0, _ -> {
+                    space().spaceOrPiece(squareBits).space();
                 });
             }
             border(_ -> bar()).nl();
@@ -167,34 +173,15 @@ public class Terminal {
         intf("Score %4d", board.gameScore()).space();
         intf("BoardId %3d", boardId).space().intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
-        algebraic("from", board.fromSqId()).space(). algebraic("to", board.toSqId()).space().nl();
-        space(3).border(_->str("| a  b  c  d  e  f  g  h |")).nl();
+        algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
+        space(3).border(_ -> str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
-            final int finaly = 7-y;
+            final int finaly = 7 - y;
             border(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits(y*8+x);
-                square(x,y,false,0,0, _ -> {
-                    if (!Compute.isSet(squareBits, NOT_AT_HOME)){
-                        space();
-                    }else {
-                        ohome();
-                    }
-                    if (Compute.isEmpty(squareBits)) {
-                        if (Compute.isSet(squareBits, CHECK)){
-                            ch('.');
-                        }else {
-                            space();
-                        }
-
-                    } else {
-                        str(piece(squareBits));
-                    }
-                    if (!Compute.isSet(squareBits, NOT_AT_HOME)){
-                        space();
-                    }else {
-                        chome();
-                    }
+                byte squareBits = board.squareBits((y<<3) + x);
+                square(x, y, false, 0, 0, _ -> {
+                    spaceOrAtHome(squareBits, true).spaceOrPiece(squareBits).spaceOrAtHome(squareBits, false);
                 });
             }
             border(_ -> bar()).nl();
@@ -202,8 +189,22 @@ public class Terminal {
         space(3).border(bg -> bg.str("| a  b  c  d  e  f  g  h |")).nl();
         return this;
     }
+
+    public  Terminal spaceOrAtHome(byte squareBits, boolean open) {
+        if (!Compute.isSet(squareBits, NOT_AT_HOME)) {
+            space();
+        } else {
+            if (open) {
+                ohome();
+            }else{
+                chome();
+            }
+        }
+        return this;
+    }
+
     static String algebraic(int x, int y) {
-        return Character.toString(x + 65 +32) + Integer.toString(8-y);
+        return Character.toString(x + 65 + 32) + Integer.toString(8 - y);
     }
 
     static String piece(byte squareBits) {
@@ -221,22 +222,22 @@ public class Terminal {
          *   chessKingUnicode+6-value converts our 'value' to white unicode
          *   chessKingUnicode+12-value converts our 'value' to black unicode
          */
-        int offset =   Compute.isWhite(squareBits)?12:6;
+        int offset = Compute.isWhite(squareBits) ? 12 : 6;
         return Character.toString(chessKingUnicode + offset - (squareBits & PIECE_MASK));
     }
 
-    static String describe(byte squareBits){
+    static String describe(byte squareBits) {
         StringBuilder sb = new StringBuilder();
-        if (Compute.isEmpty(squareBits)){
+        if (Compute.isEmpty(squareBits)) {
             sb.append("EMPTY");
-        }else {
+        } else {
             int pieceValue = squareBits & PIECE_MASK;
-            if (Compute.isWhite(squareBits)){
+            if (Compute.isWhite(squareBits)) {
                 sb.append("WHITE ");
-            }else{
+            } else {
                 sb.append("BLACK ");
             }
-            switch (pieceValue){
+            switch (pieceValue) {
                 case EMPTY_SQUARE:
                     sb.append("EMPTY");
                     break;
@@ -263,6 +264,7 @@ public class Terminal {
         }
         return sb.toString();
     }
+
     @Override
     public String toString() {
         return stringBuilder.toString();
