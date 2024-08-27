@@ -1,6 +1,9 @@
 package chess;
 
 class ChessConstants {
+
+    public static final int ROW_SHIFT = 3;
+
     // DxDy move bit patterns
     // In 32 bits we can encode a max of 8 4-bit patterns each of which is comprised of pairs of bits
     // For non knight moves we generally only need dx,dy values of -1,0,1,2

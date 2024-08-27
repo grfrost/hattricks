@@ -12,6 +12,7 @@ import static chess.ChessConstants.PAWN;
 import static chess.ChessConstants.PIECE_MASK;
 import static chess.ChessConstants.QUEEN;
 import static chess.ChessConstants.ROOK;
+import static chess.ChessConstants.ROW_SHIFT;
 
 public class Terminal {
     StringBuilder stringBuilder = new StringBuilder();
@@ -128,7 +129,7 @@ public class Terminal {
     public Terminal lineHighlight(ChessData.Board board, boolean highlight, int squareIdx) {
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits(y * 8 + x);
+                byte squareBits = board.squareBits((y<<ROW_SHIFT) + x);
                 square(x, y, highlight, squareIdx % 8, squareIdx / 8, _ -> {
                     spaceOrPiece(squareBits);
                 });
@@ -158,7 +159,7 @@ public class Terminal {
             final int finaly = 7 - y;
             border(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits((y << 3) + x);
+                byte squareBits = board.squareBits((y << ROW_SHIFT) + x);
                 square(x, y, false, 0, 0, _ -> {
                     space().spaceOrPiece(squareBits).space();
                 });
@@ -179,7 +180,7 @@ public class Terminal {
             final int finaly = 7 - y;
             border(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits((y<<3) + x);
+                byte squareBits = board.squareBits((y<<ROW_SHIFT) + x);
                 square(x, y, false, 0, 0, _ -> {
                     spaceOrAtHome(squareBits, true).spaceOrPiece(squareBits).spaceOrAtHome(squareBits, false);
                 });
