@@ -140,17 +140,22 @@ public class Terminal {
     }
 
     public Terminal line(ChessData.Board board, int boardId) {
-        intf("Score %4d,", board.gameScore()).space();
+        lineHighlight(board, false, 0);
+        intf("Score game=%4d", board.gameScore()).space();
+        intf("side=%4d", board.sideScore()).space();
+        intf("opponent=%4d", board.opponentScore()).space();
         intf("BoardId %3d,", boardId).space().intf("Parent %3d,", board.parent()).space();
         intf("Moves %2d,", board.moves()).space().intf("FirstChildIdx %3d,", board.firstChildIdx()).space();
         algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space();
         intf("ParentRelativeMove %2d,", board.move()).space();
-        lineHighlight(board, false, 0);
+     //   lineHighlight(board, false, 0);
         return this;
     }
 
     public Terminal board(ChessData.Board board) {
-        intf("Score %4d", board.gameScore()).space();
+        intf("Score game=%4d", board.gameScore()).space();
+        intf("side=%4d", board.sideScore()).space();
+        intf("opponent=%4d", board.opponentScore()).space();
         intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
         algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
@@ -171,7 +176,9 @@ public class Terminal {
     }
 
     public Terminal board(ChessData.Board board, int boardId) {
-        intf("Score %4d", board.gameScore()).space();
+        intf("Score game=%4d", board.gameScore()).space();
+        intf("side=%4d", board.sideScore()).space();
+        intf("opponent=%4d", board.opponentScore()).space();
         intf("BoardId %3d", boardId).space().intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
         algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();

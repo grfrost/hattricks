@@ -4,6 +4,10 @@ import hat.Accelerator;
 import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
+
 import static chess.ChessConstants.BISHOP;
 import static chess.ChessConstants.EMPTY_SQUARE;
 import static chess.ChessConstants.KING;
@@ -14,6 +18,8 @@ import static chess.ChessConstants.ROOK;
 import static chess.ChessConstants.WHITE_BIT;
 
 public interface ChessData extends Buffer {
+
+
     interface Board extends Struct {
 
         byte squareBits(long idx);
@@ -26,8 +32,10 @@ public interface ChessData extends Buffer {
 
         int gameScore();
         void gameScore(int gameScore);
-        int boardScore();
-        void boardScore(int boardScore);
+        short sideScore();
+        void sideScore(short sideScore);
+        short opponentScore();
+        void opponentScore(short opponentScore);
 
         int firstChildIdx();
         void firstChildIdx(int firstChildIdx);
@@ -46,7 +54,6 @@ public interface ChessData extends Buffer {
         byte move();
 
         default void firstPositions(){
-
                 int x = 0;
                 for (byte bits : new byte[]{ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK}) {
                     squareBits(x, (byte) (bits));
@@ -60,12 +67,29 @@ public interface ChessData extends Buffer {
                 }
 
             gameScore(0);  // The score after init is zero,
-            boardScore(0);
-            moves((byte)20);  // The number of moves available to white is 20 =  8 pawn, 4 knight
-            firstChildIdx(1); // the first child will be 1
+            sideScore((short)0);
+            opponentScore((short)0);
+            moves((byte)20);  // The number of moves available to white is 28 =  8 pawn, 4 knight
+            firstChildIdx(0); // the first child will be 1
             fromSqId((byte)0);   // no move got us here,
             toSqId((byte)0);     // no move got us here
             move((byte)0);    // no move got us here
+        }
+
+        default void select(Board board){
+            for (int sqid = 0; sqid < 64; sqid++) {
+                squareBits(sqid, board.squareBits(sqid));
+            }
+            fromSqId(board.fromSqId());
+            toSqId(board.toSqId());
+            gameScore(board.gameScore());
+            sideScore(board.sideScore());
+            opponentScore(board.opponentScore());
+            moves((byte) board.moves());
+            parent(0);
+           // System.out.print("\033[H\033[2J");
+            //System.out.flush();
+            System.out.println(new Terminal().board(this, 0));
         }
     }
 
@@ -77,8 +101,8 @@ public interface ChessData extends Buffer {
             .arrayLen("length")//.pad(4)  // must be 4 if array has a long ?
             .array("board", square -> square
                     .array("squareBits", 64)
-                    //              4         4               1        1              1              1       4
-                    .fields("parent", "firstChildIdx","moves","fromSqId","toSqId", "move", "boardScore","gameScore")
+                    //              4         4               1       1           1        1       2           2                 4
+                    .fields("parent", "firstChildIdx","moves","fromSqId","toSqId", "move", "sideScore","opponentScore", "gameScore")
                    // .pad(2) //80
             )
 
@@ -92,5 +116,24 @@ public interface ChessData extends Buffer {
             plyPow*=plyGuess;
         }
         return schema.allocate(acc, length);
+    }
+
+    class BoardAndId{
+        Board board;
+        int id;
+        public BoardAndId(Board board, int id) {
+            this.board = board;
+            this.id = id;
+        }
+    }
+
+    default Stack<BoardAndId> getPath(int boardId){
+        Stack<BoardAndId> path = new Stack<>();
+        do {
+            path.push(new BoardAndId(board(boardId), boardId));
+            boardId = path.peek().board.parent();
+        }while (boardId != 0);
+        path.push(new BoardAndId(board(boardId), boardId));
+        return path;
     }
 }

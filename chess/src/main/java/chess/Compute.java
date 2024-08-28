@@ -319,21 +319,25 @@ public class Compute {
     public static void countMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board parentBoard, ChessData.Board board) {
         // traceCountMovesAndScoreBoard(ply, weightTable, newBoard);
         int moves = 0;
-        int score = 0;
+        int opponentScore = 0;
+        int sideScore = 0;
         for (int sqId = 0; sqId < 64; sqId++) {
             byte fromSqBits = board.squareBits(sqId);
             if (!isEmpty(fromSqBits)) {
                 byte piece = pieceValue(fromSqBits);
                 int pieceWeight =  weightTable.weight((piece-1) /* pawn = 1 */ *64 +(isWhite(fromSqBits)?0:6*64));
-                score += pieceWeight * piece;
                 if (plySide(ply.side(),fromSqBits)) {
+                    sideScore+=pieceWeight*piece;
                     moves += countMovesForSquare(ply, board, fromSqBits, sqId);
+                }else{
+                    opponentScore+=pieceWeight*piece;
                 }
             }
         }
-        board.boardScore(score);
+        board.sideScore((short)sideScore);
+        board.opponentScore((short)opponentScore);
         board.moves((byte) moves);
-        board.gameScore(score - parentBoard.gameScore());
+        board.gameScore((sideScore-opponentScore) - parentBoard.gameScore());
     }
 
 
