@@ -104,6 +104,15 @@ public class Terminal {
         return str(label).ch(':').str(algebraic(x, y));
     }
 
+    public Terminal algebraic(String label, int fromSquareIdx, int toSquareIdx) {
+        var fx = fromSquareIdx % 8;
+        var fy = fromSquareIdx / 8;
+        var tx = toSquareIdx % 8;
+        var ty = toSquareIdx / 8;
+        return str(label).str(algebraic(fx, fy)).str("->").str(algebraic(tx,ty));
+
+    }
+
     public Terminal bar() {
         ch('|');
         return this;
@@ -141,13 +150,10 @@ public class Terminal {
 
     public Terminal line(ChessData.Board board, int boardId) {
         lineHighlight(board, false, 0);
-        intf("Score game=%4d", board.gameScore()).space();
-        intf("side=%4d", board.sideScore()).space();
-        intf("opponent=%4d", board.opponentScore()).space();
-        intf("BoardId %3d,", boardId).space().intf("Parent %3d,", board.parent()).space();
-        intf("Moves %2d,", board.moves()).space().intf("FirstChildIdx %3d,", board.firstChildIdx()).space();
-        algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space();
-        intf("ParentRelativeMove %2d,", board.move()).space();
+        intf("#(game=%5d", board.gameScore()).space().intf("side=%5d", board.sideScore()).space().intf("opp=%5d", board.opponentScore()).ch(')').space();
+        intf("id=%6d", boardId).space().intf("par=%6d", board.parent()).space();
+        intf("fid=%6d", board.firstChildIdx()).space().intf("moves=%3d", board.moves()).space();
+        intf("move=%4d,", board.move()).space().algebraic("", board.fromSqId(), board.toSqId());
      //   lineHighlight(board, false, 0);
         return this;
     }
@@ -176,11 +182,11 @@ public class Terminal {
     }
 
     public Terminal board(ChessData.Board board, int boardId) {
-        intf("Score game=%4d", board.gameScore()).space();
+        intf("Score (game=%4d", board.gameScore()).space();
         intf("side=%4d", board.sideScore()).space();
-        intf("opponent=%4d", board.opponentScore()).space();
-        intf("BoardId %3d", boardId).space().intf("Parent %3d", board.parent()).space();
-        intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
+        intf("opponent=%4d", board.opponentScore()).ch(')').space();
+        intf("id=%6d", boardId).space().intf("parent=%6d", board.parent()).space();
+        intf("firstChildIdx=%6d", board.firstChildIdx()).space().intf("moves=%3d", board.moves()).space();
         algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
         space(3).border(_ -> str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
@@ -233,46 +239,6 @@ public class Terminal {
         int offset = Compute.isWhite(squareBits) ? 12 : 6;
         return Character.toString(chessKingUnicode + offset - (squareBits & PIECE_MASK));
     }
-
-    static String describe(byte squareBits) {
-        StringBuilder sb = new StringBuilder();
-        if (Compute.isEmpty(squareBits)) {
-            sb.append("EMPTY");
-        } else {
-            int pieceValue = squareBits & PIECE_MASK;
-            if (Compute.isWhite(squareBits)) {
-                sb.append("WHITE ");
-            } else {
-                sb.append("BLACK ");
-            }
-            switch (pieceValue) {
-                case EMPTY_SQUARE:
-                    sb.append("EMPTY");
-                    break;
-                case PAWN:
-                    sb.append("PAWN");
-                    break;
-                case ROOK:
-                    sb.append("ROOK");
-                    break;
-                case KNIGHT:
-                    sb.append("KNIGHT");
-                    break;
-                case BISHOP:
-                    sb.append("BISHOP");
-                    break;
-                case QUEEN:
-                    sb.append("QUEEN");
-                    break;
-                case KING:
-                    sb.append("KING");
-                    break;
-            }
-
-        }
-        return sb.toString();
-    }
-
     @Override
     public String toString() {
         return stringBuilder.toString();

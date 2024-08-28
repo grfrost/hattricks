@@ -168,7 +168,6 @@ public class Main {
                     maxScore = board.gameScore();
                     maxBoardId = id;
                 }
-
             }
             //  System.out.print("minScore = " + minScore + "minBoard = "+ minBoardId + "maxScore = " + maxScore + "maxBoard = "+ maxBoardId);
             //  System.out.println(new Terminal().board(chessData.board(minBoardId), minBoardId));
@@ -183,11 +182,10 @@ public class Main {
             System.out.println("Selected ->"+new Terminal().line(selected.board,selected.id));
             while (pathStack.size()>0){
                 var from = pathStack.pop();
-                System.out.println("From    ->"+new Terminal().line(from.board,from.id));
+                System.out.println("    Path ->"+new Terminal().line(from.board,from.id));
             }
             ply.init(0, ply.side(), 0, 1); // this assumes we did odd plys!  fix this
             initBoard.select(selected.board);
-
         }
     }
 }
