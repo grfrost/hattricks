@@ -77,9 +77,21 @@ class ChessConstants {
     static public final int WHITE_BIT_SHIFT = 3;
     static public final byte WHITE_BIT = (byte) (1 << WHITE_BIT_SHIFT);
     static public final byte PIECE_MASK = (byte) 0b0000_0111;
-    static public final int NOT_AT_HOME_SHIFT = 4;
-    static public final byte NOT_AT_HOME = (byte) (1<< NOT_AT_HOME_SHIFT);
+    static public final int MOVED_SHIFT = 4;
+    static public final byte MOVED = (byte) (1<< MOVED_SHIFT);
     static public final int CHECK_SHIFT = 5;
     static public final byte CHECK = (byte) (1<<CHECK_SHIFT);
+    static public final byte NOT_CHECK_MASK=(byte)(CHECK^0xff);
+/*
+    static public final byte p=(byte)(1<<0);
+    static public final byte n=(byte)(1<<1);
+    static public final byte b=(byte)(1<<2);
+    static public final byte r=(byte)(1<<3);
+    static public final byte q=(byte)(1<<5);
+    static public final byte k=(byte)(1<<6);
+    static public final byte s=(byte)(1<<7);
 
+    static public final long 0b000_000__000_000_000__000_000__=(byte)(1<<8);
+
+ */
 }

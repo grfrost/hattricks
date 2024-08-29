@@ -14,12 +14,12 @@ import static chess.ChessConstants.DIAGS;
 import static chess.ChessConstants.DxOrDyMASK;
 import static chess.ChessConstants.DyDxMask_SHIFT;
 import static chess.ChessConstants.EMPTY_SQUARE;
-import static chess.ChessConstants.NOT_AT_HOME;
-import static chess.ChessConstants.NOT_AT_HOME_SHIFT;
+import static chess.ChessConstants.MOVED;
+import static chess.ChessConstants.MOVED_SHIFT;
 import static chess.ChessConstants.ROOK;
 import static chess.ChessConstants.ROW_SHIFT;
-import static chess.ChessConstants.WEIGHT_MASK_SHIFT;
 import static chess.ChessConstants.WHITE_BIT;
+import static chess.ChessConstants.WHITE_BIT_SHIFT;
 
 public class Compute {
     @CodeReflection
@@ -30,6 +30,15 @@ public class Compute {
     public static boolean isSet(byte sqBits, byte bit) {
         return (sqBits & bit) == bit;
     }
+    @CodeReflection
+    public static byte set(byte bits, byte bit) {
+        return (byte)(bits | bit);
+    }
+    @CodeReflection
+    public  static byte reset(byte bits, byte bit) {
+        return  (byte)(bits & (bit^0xff));
+    }
+
     @CodeReflection
     static byte side(byte squareBits) {
         return (byte) (squareBits & WHITE_BIT);
@@ -159,8 +168,14 @@ public class Compute {
 
 
     @CodeReflection
-    public static boolean plySide(int side, int bits ){
-        boolean sameSide = (side  & WHITE_BIT) == (bits & WHITE_BIT);
+    public static boolean plySide(int side, byte bits ){
+        boolean sameSide = isPiece(bits) && ((side&WHITE_BIT) == (bits&WHITE_BIT));
+        return sameSide;
+    }
+
+    @CodeReflection
+    public static boolean plyOtherSide(int side, byte bits ){
+        boolean sameSide = isPiece(bits) && ((side&WHITE_BIT) != (bits&WHITE_BIT));
         return sameSide;
     }
 
@@ -172,7 +187,7 @@ public class Compute {
      */
     @CodeReflection
     public static int plyDir(int side) {
-        int shifted = side>>>2;
+        int shifted = side>>>(WHITE_BIT_SHIFT-1);
         int adjusted = shifted-1;
         return adjusted*-1;
     }
@@ -215,7 +230,7 @@ public class Compute {
             }
         } else if (isPawn(fromPieceValue)) {
             int forward = plyDir(ply.side());                //WHITE=-1 BLACK = 1
-            int count = 4-((fromSqBits&NOT_AT_HOME)>>>NOT_AT_HOME_SHIFT);    // 3 or 4
+            int count = 4-((fromSqBits&MOVED)>>>MOVED_SHIFT);    // 3 or 4
             boolean blocked = false;
             for (int moveIdx = 0; !blocked && moveIdx<count; moveIdx++) {
                 int dxdy = pawnAtHomeDxDy(moveIdx);
@@ -254,8 +269,9 @@ public class Compute {
             // sliders Rook, Queen, Bishop
             final int compassPoints = isBishop(fromPieceValue) ? DIAGS : isRook(fromPieceValue) ? COLROWS : /* MUST BE QUEEN */ALL_POINTS;
 
-            // compassPoints have use 1 or 0 for bit for eligible move relative to fromX,fromY
-            // We only encode the neighbours so the 3x3 grid has no center representation
+            // We use compassPoints' 8 bits in to determine which of the points below are
+            // eligible move relative to fromX,fromY. We only encode the neighbours
+            // so the 3x3 grid has no center representation
             //                piece being moved
             //                     is here
             //                        v
@@ -263,7 +279,7 @@ public class Compute {
             //                \ | | | | | | | /
             //                 \\ | | | | | //
             //                  ||| | v | |||
-            //     diags   == 0b101_0___0_101
+            //       diags == 0b101_0___0_101
             //     colrows == 0b010_1___1_010
             //   allpoints == 0b111_1___1_111
 
@@ -318,20 +334,22 @@ public class Compute {
     @CodeReflection
     public static void countMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board parentBoard, ChessData.Board board) {
         // traceCountMovesAndScoreBoard(ply, weightTable, newBoard);
+        String s = board.text();
         int moves = 0;
         int opponentScore = 0;
         int sideScore = 0;
-        for (int sqId = 0; sqId < 64; sqId++) {
-            byte fromSqBits = board.squareBits(sqId);
+        for (int fromSqId = 0; fromSqId < 64; fromSqId++) {
+            byte fromSqBits = board.squareBits(fromSqId);
             if (!isEmpty(fromSqBits)) {
-                byte piece = pieceValue(fromSqBits);
-                int pieceWeight =  weightTable.weight((piece-1) /* pawn = 1 */ *64 +(isWhite(fromSqBits)?0:6*64));
-                if (plySide(ply.side(),fromSqBits)) {
-                    sideScore+=pieceWeight*piece;
-                    moves += countMovesForSquare(ply, board, fromSqBits, sqId);
-                }else{
-                    opponentScore+=pieceWeight*piece;
+                byte pieceValue = pieceValue(fromSqBits);
+                int pieceWeight =  pieceValue* weightTable.weight((pieceValue-1) /* pawn = 1 */ *64 +(isWhite(fromSqBits)?0:6*64));
+                if (plyOtherSide(ply.side(),fromSqBits)) {
+                    sideScore+=pieceWeight;
+                 }else{
+                    moves += countMovesForSquare(ply, board, fromSqBits, fromSqId);
+                    opponentScore+=pieceWeight;
                 }
+
             }
         }
         board.sideScore((short)sideScore);
@@ -364,29 +382,47 @@ public class Compute {
     @CodeReflection
     public static void createBoard(ChessData chessData, Ply ply, WeightTable weightTable, ChessData.Board parentBoard, int parentBoardId, int move, byte fromSqId, byte toSqId) {
         // traceCreateBoard(ply,parentBoard,newBoard,fromSqId,toSqId);
-        ChessData.Board newBoard = chessData.board(parentBoard.firstChildIdx() + move);
+        byte fromSqBits = parentBoard.squareBits(fromSqId);
+        if (isEmpty(fromSqBits)){
+            throw new IllegalStateException("WTF");
+        }
+        if (!plySide(ply.side(),fromSqBits)) {
+            throw new IllegalStateException("WTF");
+        }
+        fromSqBits = Compute.set(fromSqBits,MOVED);
+        int newBoardId = parentBoard.firstChildIdx()+move;
+        ChessData.Board newBoard = chessData.board(newBoardId);
         newBoard.parent(parentBoardId);
         newBoard.move((byte) move);
         newBoard.fromSqId(fromSqId);
         newBoard.toSqId(toSqId);
         for (int sqId = 0; sqId < 64; sqId++) {
-            newBoard.squareBits(sqId, parentBoard.squareBits(sqId));
+            byte parentSqBits = parentBoard.squareBits(sqId);
+            parentSqBits = Compute.reset(parentSqBits,CHECK);
+            newBoard.squareBits(sqId, parentSqBits);
         }
+
         newBoard.squareBits(fromSqId, EMPTY_SQUARE);
-        newBoard.squareBits(toSqId, (byte)(parentBoard.squareBits(fromSqId)|NOT_AT_HOME));  // it is not at home now
+        newBoard.squareBits(toSqId, fromSqBits);  // it is not at home now
+
+
+
+        String s = new Terminal().boardText(newBoard).toString();
 
         // We take the opportunity to mark the parents squareBits for the toSqId id as 'in check'
-        // meaning that parent(toSqId) in the next ply can move here  to it
-        // this is somewhat scary as the parent is shared.. multiple pieces might be able to move to it
+        // meaning that one of the children in the next ply can move to toSqId
+        // This is somewhat scary as the children of this parent are currently being processed
+        // in parallel, so multiple pieces might be able to move to it
         // and all the piece moves are currently in flight ie there are multiple threads possibly racing on this square
         // it is possible that a runtime might not like this.
         // However, as the mutation is flipping a single bit we don't expect anyone to see any 'invalid' bit patterns
-        parentBoard.squareBits(toSqId,(byte)(parentBoard.squareBits(toSqId)|CHECK)); // danger we are racing here!
-
+       // parentBoard.squareBits(toSqId,(byte)(parentBoard.squareBits(toSqId)|CHECK)); // danger we are racing here!
 
         countMovesAndScoreBoard(ply, weightTable, parentBoard, newBoard);
         // traceOutCreateBoard(ply,parentBoard,newBoard,fromSqId,toSqId);
     }
+
+
 
     public static void traceCreateBoards(Ply ply, int moves, ChessData.Board parentBoard, int parentBoardId, byte fromSquareBits, int fromSqId) {
         System.out.print("  void createBoards(chessData, ply");
@@ -413,6 +449,12 @@ public class Compute {
 
         int fromX = fromSqId % 8;
         int fromY = fromSqId / 8;
+        if (isEmpty(fromSqBits)){
+            throw new IllegalStateException("WTF");
+        }
+        if (!plySide(ply.side(), fromSqBits)){
+            throw new IllegalStateException("WTF");
+        }
         byte fromPieceValue = pieceValue(fromSqBits);
 
         if (isKing(fromPieceValue)) {
@@ -431,7 +473,7 @@ public class Compute {
             }
         } else if (isPawn(fromPieceValue)) {
             int forward = plyDir(ply.side());                //WHITE=-1 BLACK = 1
-            int count = 4-((fromSqBits&NOT_AT_HOME)>>>NOT_AT_HOME_SHIFT);    // 3 or 4
+            int count = 4-((fromSqBits&MOVED)>>>MOVED_SHIFT);    // 3 or 4
             boolean blocked = false;
             for (int moveIdx = 0; !blocked && moveIdx<count; moveIdx++) {  //takes
                 int dxdy = pawnAtHomeDxDy(moveIdx);
@@ -536,14 +578,14 @@ public class Compute {
     }
 
     @CodeReflection
-    public static void doMovesKernelCore(ChessData chessData, Ply ply, WeightTable weightTable, int parentBoardId) {
+    public static void createBoardsForParentBoardId(ChessData chessData, Ply ply, WeightTable weightTable, int parentBoardId) {
         ChessData.Board parentBoard = chessData.board(parentBoardId);
         //  traceInDoMovesKernelCore(ply,parentBoard, parentBoardId);
         int moves = 0;
-        for (byte sqId = 0; sqId < 64; sqId++) {
-            byte squareBits = parentBoard.squareBits(sqId);
-            if (plySide(ply.side(), squareBits)){
-                moves = createBoards(chessData, ply, weightTable, moves, parentBoard, parentBoardId, squareBits, sqId);
+        for (byte fromSqId = 0; fromSqId < 64; fromSqId++) {
+            byte fromSqBits = parentBoard.squareBits(fromSqId);
+            if (plySide(ply.side(), fromSqBits)){
+                moves = createBoards(chessData, ply, weightTable, moves, parentBoard, parentBoardId, fromSqBits, fromSqId);
             }
         }
         //  traceOutDoMovesKernelCore(ply,parentBoard, parentBoardId, moves);
@@ -551,15 +593,16 @@ public class Compute {
     }
 
     @CodeReflection
-    public static void doMovesKernel(KernelContext kc, ChessData chessData, Ply ply, WeightTable weightTable) {
+    public static void createBoardsKernel(KernelContext kc, ChessData chessData, Ply ply, WeightTable weightTable) {
         if (kc.x < kc.maxX) {
-            doMovesKernelCore(chessData, ply, weightTable, kc.x + ply.fromBoardId());
+            int parentBoardId = kc.x+ply.fromBoardId();
+            createBoardsForParentBoardId(chessData, ply, weightTable, parentBoardId);
         }
     }
 
     @CodeReflection
-    static public void doMovesCompute(final ComputeContext cc, ChessData chessData, Ply ply, WeightTable weightTable) {
-        cc.dispatchKernel(ply.size(), kc -> doMovesKernel(kc, chessData, ply, weightTable));
+    static public void createBoardsCompute(final ComputeContext cc, ChessData chessData, Ply ply, WeightTable weightTable) {
+        cc.dispatchKernel(ply.size(), kc -> createBoardsKernel(kc, chessData, ply, weightTable));
     }
 
 

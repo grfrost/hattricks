@@ -4,10 +4,9 @@ import java.util.function.Consumer;
 
 import static chess.ChessConstants.BISHOP;
 import static chess.ChessConstants.CHECK;
-import static chess.ChessConstants.EMPTY_SQUARE;
 import static chess.ChessConstants.KING;
 import static chess.ChessConstants.KNIGHT;
-import static chess.ChessConstants.NOT_AT_HOME;
+import static chess.ChessConstants.MOVED;
 import static chess.ChessConstants.PAWN;
 import static chess.ChessConstants.PIECE_MASK;
 import static chess.ChessConstants.QUEEN;
@@ -122,6 +121,18 @@ public class Terminal {
         return str(s).nl();
     }
 
+    public Terminal spaceOrTextPiece(byte squareBits) {
+        if (Compute.isEmpty(squareBits)) {
+            if (Compute.isSet(squareBits, CHECK)) {
+                ch('.');
+            } else {
+                space();
+            }
+        } else {
+            str(textPiece(squareBits));
+        }
+        return this;
+    }
     public Terminal spaceOrPiece(byte squareBits) {
         if (Compute.isEmpty(squareBits)) {
             if (Compute.isSet(squareBits, CHECK)) {
@@ -155,6 +166,21 @@ public class Terminal {
         intf("fid=%6d", board.firstChildIdx()).space().intf("moves=%3d", board.moves()).space();
         intf("move=%4d,", board.move()).space().algebraic("", board.fromSqId(), board.toSqId());
      //   lineHighlight(board, false, 0);
+        return this;
+    }
+
+    public Terminal boardText(ChessData.Board board) {
+        algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
+
+        for (int y = 0; y < 8; y++) {
+
+            for (int x = 0; x < 8; x++) {
+                byte squareBits = board.squareBits((y << ROW_SHIFT) + x);
+                space().spaceOrTextPiece(squareBits).space();
+
+            }
+           nl();
+        }
         return this;
     }
 
@@ -195,7 +221,7 @@ public class Terminal {
             for (int x = 0; x < 8; x++) {
                 byte squareBits = board.squareBits((y<<ROW_SHIFT) + x);
                 square(x, y, false, 0, 0, _ -> {
-                    spaceOrAtHome(squareBits, true).spaceOrPiece(squareBits).spaceOrAtHome(squareBits, false);
+                    spaceOrMoved(squareBits, true).spaceOrPiece(squareBits).spaceOrMoved(squareBits, false);
                 });
             }
             border(_ -> bar()).nl();
@@ -204,8 +230,8 @@ public class Terminal {
         return this;
     }
 
-    public  Terminal spaceOrAtHome(byte squareBits, boolean open) {
-        if (!Compute.isSet(squareBits, NOT_AT_HOME)) {
+    public  Terminal spaceOrMoved(byte squareBits, boolean open) {
+        if (!Compute.isSet(squareBits, MOVED)) {
             space();
         } else {
             if (open) {
@@ -220,7 +246,6 @@ public class Terminal {
     static String algebraic(int x, int y) {
         return Character.toString(x + 65 + 32) + Integer.toString(8 - y);
     }
-
     static String piece(byte squareBits) {
         /*
          * Note order for unicode chess pieces descend P -> K
@@ -238,6 +263,20 @@ public class Terminal {
          */
         int offset = Compute.isWhite(squareBits) ? 12 : 6;
         return Character.toString(chessKingUnicode + offset - (squareBits & PIECE_MASK));
+    }
+
+    static String textPiece(byte squareBits) {
+        int offset =Compute.isWhite(squareBits)?0:32;
+        char ch = switch (Compute.pieceValue(squareBits)) {
+            case PAWN -> 'P';
+            case KNIGHT -> 'N';
+            case BISHOP -> 'B';
+            case ROOK -> 'R';
+            case QUEEN -> 'Q';
+            case KING -> 'K';
+            default -> throw new IllegalStateException("Unexpected value: " + Compute.pieceValue(squareBits));
+        };
+        return Character.toString(ch+offset);
     }
     @Override
     public String toString() {

@@ -91,6 +91,10 @@ public interface ChessData extends Buffer {
             //System.out.flush();
             System.out.println(new Terminal().board(this, 0));
         }
+
+        default String text(){
+            return new Terminal().boardText(this).toString();
+        }
     }
 
     int length();

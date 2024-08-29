@@ -51,7 +51,7 @@ public class Main {
         ply.init(0, WHITE_BIT, 0, 1);
         boolean useIntStream = true;
         if (!useIntStream) {
-            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
+            accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
         }
         boolean timing = false;
         boolean tracing = false;
@@ -138,12 +138,15 @@ public class Main {
                     time("Compute ", () -> {
                         if (useIntStream) {
                             //Here we bypass compute on entrypoint.  This way we get to fully control execution from Java.
-                            IntStream.range(0, ply.size()).parallel()
-                                    .forEach(id ->
-                                            Compute.doMovesKernelCore(chessData, ply, weightTable, id + ply.fromBoardId())
+                            IntStream.range(0, ply.size())
+                                    .parallel()
+                                    .forEach(id -> {
+                                                int parentBoardId = id+ply.fromBoardId();
+                                                Compute.createBoardsForParentBoardId(chessData, ply, weightTable, parentBoardId);
+                                            }
                                     );
                         } else {
-                            accelerator.compute(cc -> Compute.doMovesCompute(cc, chessData, ply, weightTable));
+                            accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
                         }
                     });
 
