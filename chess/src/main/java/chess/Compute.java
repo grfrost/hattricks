@@ -342,7 +342,7 @@ public class Compute {
             byte fromSqBits = board.squareBits(fromSqId);
             if (!isEmpty(fromSqBits)) {
                 byte pieceValue = pieceValue(fromSqBits);
-                int pieceWeight =  pieceValue* weightTable.weight((pieceValue-1) /* pawn = 1 */ *64 +(isWhite(fromSqBits)?0:6*64));
+                int pieceWeight =  weightTable.weight((pieceValue-1) /* pawn = 1 */ *64 +(isWhite(fromSqBits)?0:6*64));
                 if (plyOtherSide(ply.side(),fromSqBits)) {
                     sideScore+=pieceWeight;
                  }else{
