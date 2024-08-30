@@ -326,7 +326,6 @@ public class Compute {
         board.sideScore((short)sideScore);
         board.opponentScore((short)opponentScore);
         board.moves((byte) moves);
-        board.gameScore((sideScore-opponentScore) - parentBoard.gameScore());
     }
 
 

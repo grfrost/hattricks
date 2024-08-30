@@ -139,7 +139,7 @@ public class Main {
                         if (useIntStream) {
                             //Here we bypass compute on entrypoint.  This way we get to fully control execution from Java.
                             IntStream.range(0, ply.size())
-                                   // .parallel()
+                                    .parallel()
                                     .forEach(id -> {
                                                 int parentBoardId = id+ply.fromBoardId();
                                                 Compute.createBoardsForParentBoardId(chessData, ply, weightTable, parentBoardId);
@@ -164,16 +164,21 @@ public class Main {
 
             for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
                 ChessData.Board board = chessData.board(id);
-                if (board.fromSqId() == board.toSqId()) {
-                    System.out.println("bad board at " + id);
-                }else{
-                    if (board.gameScore() < minScore) {
-                        minScore = board.gameScore();
-                        minBoardId = id;
-                    }
-                    if (board.gameScore() >= maxScore) {
-                        maxScore = board.gameScore();
-                        maxBoardId = id;
+                if (board.id() != id) {
+                    System.out.println("bad board id at " + id);
+                }else {
+                    if (board.fromSqId() == board.toSqId()) {
+                        System.out.println("bad board at " + id);
+                    } else {
+                        var gameScore = chessData.gameScore(board);
+                        if (gameScore < minScore) {
+                            minScore = gameScore;
+                            minBoardId = id;
+                        }
+                        if (gameScore > maxScore) {
+                            maxScore = gameScore;
+                            maxBoardId = id;
+                        }
                     }
                 }
             }
@@ -181,7 +186,7 @@ public class Main {
             //  System.out.println(new Terminal().board(chessData.board(minBoardId), minBoardId));
             // System.out.println(new Terminal().board(chessData.board(maxBoardId), maxBoardId));
 
-            var pathStack = chessData.getPath(minBoardId);
+            var pathStack = chessData.getPath((ply.side()!=WHITE_BIT)?maxBoardId:minBoardId);
             String indent = "            ";
 
             var root = pathStack.pop();

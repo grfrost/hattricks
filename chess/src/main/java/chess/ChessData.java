@@ -30,8 +30,8 @@ public interface ChessData extends Buffer {
 
         void parent(int parent);
 
-        int gameScore();
-        void gameScore(int gameScore);
+       // int gameScore();
+        //void gameScore(int gameScore);
         short sideScore();
         void sideScore(short sideScore);
         short opponentScore();
@@ -67,7 +67,7 @@ public interface ChessData extends Buffer {
                 }
                 id(0);
             parent(0);
-            gameScore(0);  // The score after init is zero,
+           // gameScore(0);  // The score after init is zero,
             sideScore((short)0);
             opponentScore((short)0);
             moves((byte)20);  // The number of moves available to white is 28 =  8 pawn, 4 knight
@@ -85,7 +85,7 @@ public interface ChessData extends Buffer {
             firstChildIdx(1);
             fromSqId(board.fromSqId());
             toSqId(board.toSqId());
-            gameScore(0);
+          //  gameScore(0);
             sideScore((short)0);
             opponentScore((short)0);
             moves(board.moves());
@@ -93,6 +93,8 @@ public interface ChessData extends Buffer {
             parent(0);
             System.out.println(BoardRenderer.unicode(this));
         }
+
+
     }
 
     int length();
@@ -103,8 +105,8 @@ public interface ChessData extends Buffer {
             .arrayLen("length")//.pad(4)  // must be 4 if array has a long ?
             .array("board", square -> square
                     .array("squareBits", 64)
-                    //              4     4         4               1       1           1        1       2           2                 4
-                    .fields("id", "parent", "firstChildIdx","moves","fromSqId","toSqId", "move", "sideScore","opponentScore", "gameScore")
+                    //              4     4         4               1       1           1        1       2           2
+                    .fields("id", "parent", "firstChildIdx","moves","fromSqId","toSqId", "move", "sideScore","opponentScore")
                    // .pad(2) //80
             )
 
@@ -128,5 +130,15 @@ public interface ChessData extends Buffer {
         }while (boardId != 0);
         path.push(board(boardId));
         return path;
+    }
+
+    default int  gameScore(Board board){
+        if (board.parent()==0){
+            return 0;
+        }else{
+            var parent = board(board.parent());
+            var total = board.sideScore()+board.opponentScore() + gameScore(parent);
+            return total;
+        }
     }
 }

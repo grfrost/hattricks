@@ -158,7 +158,7 @@ public class BoardRenderer {
 
     private BoardRenderer lineUnicode(ChessData.Board board) {
         lineHighlightUnicode(board, false, 0);
-        intf("#(game=%5d", board.gameScore()).space().intf("side=%5d", board.sideScore()).space().intf("opp=%5d", board.opponentScore()).ch(')').space();
+        intf("#(side=%5d", board.sideScore()).space().intf("opp=%5d", board.opponentScore()).ch(')').space();
         intf("id=%6d", board.id()).space().intf("par=%6d", board.parent()).space();
         intf("fid=%6d", board.firstChildIdx()).space().intf("moves=%3d", board.moves()).space();
         intf("move=%4d,", board.move()).space().algebraic("", board.fromSqId(), board.toSqId());
@@ -179,8 +179,7 @@ public class BoardRenderer {
     }
 
     private BoardRenderer board(ChessData.Board board) {
-        intf("Score game=%4d", board.gameScore()).space();
-        intf("side=%4d", board.sideScore()).space();
+        intf("Score side=%4d", board.sideScore()).space();
         intf("opponent=%4d", board.opponentScore()).space();
         intf("id=%6d", board.id()).space().intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
