@@ -13,7 +13,7 @@ import static chess.ChessConstants.QUEEN;
 import static chess.ChessConstants.ROOK;
 import static chess.ChessConstants.ROW_SHIFT;
 
-public class Terminal {
+public class BoardRenderer {
     StringBuilder stringBuilder = new StringBuilder();
     public static final String esc = "\u001b[";
     public static final String suffix = "m";
@@ -21,23 +21,23 @@ public class Terminal {
     public final static String escBG = esc + "48;";
     static final char chessKingUnicode = 0x2654;
 
-    public Terminal bg(int r, int g, int b, Consumer<Terminal> consumer) {
+    public BoardRenderer bg(int r, int g, int b, Consumer<BoardRenderer> consumer) {
         str(escBG + "2;" + r + ";" + g + ";" + b + suffix);
         consumer.accept(this);
         return str(escBG + "0" + suffix);
     }
 
-    public Terminal fg(int r, int g, int b, Consumer<Terminal> consumer) {
+    public BoardRenderer fg(int r, int g, int b, Consumer<BoardRenderer> consumer) {
         str(escFG + "2;" + r + ";" + g + ";" + b + suffix);
         consumer.accept(this);
         return str(escFG + "0" + suffix);
     }
 
-    public Terminal border(Consumer<Terminal> consumer) {
+    public BoardRenderer border(Consumer<BoardRenderer> consumer) {
         return fg(0, 250, 0, fg -> fg.bg(128, 128, 128, consumer));
     }
 
-    public Terminal square(int x, int y, boolean highlight, int hx, int hy, Consumer<Terminal> consumer) {
+    public BoardRenderer square(int x, int y, boolean highlight, int hx, int hy, Consumer<BoardRenderer> consumer) {
         if (x == hx && y == hy && highlight) {
             return bg(64, 24, 24, consumer);
         } else {
@@ -47,81 +47,77 @@ public class Terminal {
     }
 
 
-    public Terminal ch(char ch) {
+    public BoardRenderer ch(char ch) {
         stringBuilder.append(ch);
         return this;
     }
 
-    public Terminal ch(int ch) {
+    public BoardRenderer ch(int ch) {
         return ch((char) ch);
     }
 
-    public Terminal chln(char ch) {
+    public BoardRenderer chln(char ch) {
         return ch(ch).nl();
     }
 
-    public Terminal str(String s) {
+    public BoardRenderer str(String s) {
         stringBuilder.append(s);
         return this;
     }
 
-    public Terminal nl() {
+    public BoardRenderer nl() {
         ch('\n');
         return this;
     }
 
-    public Terminal ohome() {
+    public BoardRenderer ohome() {
         ch('<');
         return this;
     }
 
-    public Terminal chome() {
+    public BoardRenderer chome() {
         ch('>');
         return this;
     }
 
-    public Terminal space() {
+    public BoardRenderer space() {
         ch(' ');
         return this;
     }
 
-    public Terminal space(int n) {
+    public BoardRenderer space(int n) {
         while (n-- > 0) {
             space();
         }
         return this;
     }
 
-    public Terminal intf(String format, int value) {
+    public BoardRenderer intf(String format, int value) {
         return str(String.format(format, value));
     }
 
-    public Terminal algebraic(String label, int squareIdx) {
-
-        var x = squareIdx % 8;
-        var y = squareIdx / 8;
-        return str(label).ch(':').str(algebraic(x, y));
+    public BoardRenderer algebraic(String label, int squareIdx) {
+        return str(label).ch(':').str(algebraic(squareIdx % 8, squareIdx / 8));
     }
 
-    public Terminal algebraic(String label, int fromSquareIdx, int toSquareIdx) {
-        var fx = fromSquareIdx % 8;
-        var fy = fromSquareIdx / 8;
-        var tx = toSquareIdx % 8;
-        var ty = toSquareIdx / 8;
-        return str(label).str(algebraic(fx, fy)).str("->").str(algebraic(tx,ty));
+    public BoardRenderer algebraic(String label, int fromSqId, int toSqId) {
+        return str(label)
+                .str(algebraic(fromSqId % 8, fromSqId / 8))
+                .str("->")
+                .str(algebraic(toSqId % 8, toSqId / 8));
 
     }
 
-    public Terminal bar() {
+    public BoardRenderer bar() {
         ch('|');
         return this;
     }
 
-    public Terminal strln(String s) {
+    public BoardRenderer strln(String s) {
         return str(s).nl();
     }
 
-    public Terminal spaceOrTextPiece(byte squareBits) {
+    public BoardRenderer spaceOrTextPiece(byte squareBits) {
         if (Compute.isEmpty(squareBits)) {
             if (Compute.isSet(squareBits, CHECK)) {
                 ch('.');
@@ -133,7 +129,8 @@ public class Terminal {
         }
         return this;
     }
-    public Terminal spaceOrPiece(byte squareBits) {
+
+    public BoardRenderer spaceOrPiece(byte squareBits) {
         if (Compute.isEmpty(squareBits)) {
             if (Compute.isSet(squareBits, CHECK)) {
                 ch('.');
@@ -146,10 +143,10 @@ public class Terminal {
         return this;
     }
 
-    public Terminal lineHighlight(ChessData.Board board, boolean highlight, int squareIdx) {
+    private BoardRenderer lineHighlightUnicode(ChessData.Board board, boolean highlight, int squareIdx) {
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits((y<<ROW_SHIFT) + x);
+                byte squareBits = board.squareBits((y << ROW_SHIFT) + x);
                 square(x, y, highlight, squareIdx % 8, squareIdx / 8, _ -> {
                     spaceOrPiece(squareBits);
                 });
@@ -159,36 +156,33 @@ public class Terminal {
         return this;
     }
 
-    public Terminal line(ChessData.Board board, int boardId) {
-        lineHighlight(board, false, 0);
+    private BoardRenderer lineUnicode(ChessData.Board board) {
+        lineHighlightUnicode(board, false, 0);
         intf("#(game=%5d", board.gameScore()).space().intf("side=%5d", board.sideScore()).space().intf("opp=%5d", board.opponentScore()).ch(')').space();
-        intf("id=%6d", boardId).space().intf("par=%6d", board.parent()).space();
+        intf("id=%6d", board.id()).space().intf("par=%6d", board.parent()).space();
         intf("fid=%6d", board.firstChildIdx()).space().intf("moves=%3d", board.moves()).space();
         intf("move=%4d,", board.move()).space().algebraic("", board.fromSqId(), board.toSqId());
-     //   lineHighlight(board, false, 0);
+        //   lineHighlight(board, false, 0);
         return this;
     }
 
-    public Terminal boardText(ChessData.Board board) {
+    private BoardRenderer boardText(ChessData.Board board) {
         algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
-
         for (int y = 0; y < 8; y++) {
-
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits((y << ROW_SHIFT) + x);
-                space().spaceOrTextPiece(squareBits).space();
-
+                byte sqBits = board.squareBits((y << ROW_SHIFT) + x);
+                space().spaceOrTextPiece(sqBits).space();
             }
-           nl();
+            nl();
         }
         return this;
     }
 
-    public Terminal board(ChessData.Board board) {
+    private BoardRenderer board(ChessData.Board board) {
         intf("Score game=%4d", board.gameScore()).space();
         intf("side=%4d", board.sideScore()).space();
         intf("opponent=%4d", board.opponentScore()).space();
-        intf("Parent %3d", board.parent()).space();
+        intf("id=%6d", board.id()).space().intf("Parent %3d", board.parent()).space();
         intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
         algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
         space(3).border(_ -> str("| a  b  c  d  e  f  g  h |")).nl();
@@ -196,9 +190,9 @@ public class Terminal {
             final int finaly = 7 - y;
             border(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits((y << ROW_SHIFT) + x);
+                byte sqBits = board.squareBits((y << ROW_SHIFT) + x);
                 square(x, y, false, 0, 0, _ -> {
-                    space().spaceOrPiece(squareBits).space();
+                    space().spaceOrPiece(sqBits).space();
                 });
             }
             border(_ -> bar()).nl();
@@ -207,36 +201,14 @@ public class Terminal {
         return this;
     }
 
-    public Terminal board(ChessData.Board board, int boardId) {
-        intf("Score (game=%4d", board.gameScore()).space();
-        intf("side=%4d", board.sideScore()).space();
-        intf("opponent=%4d", board.opponentScore()).ch(')').space();
-        intf("id=%6d", boardId).space().intf("parent=%6d", board.parent()).space();
-        intf("firstChildIdx=%6d", board.firstChildIdx()).space().intf("moves=%3d", board.moves()).space();
-        algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
-        space(3).border(_ -> str("| a  b  c  d  e  f  g  h |")).nl();
-        for (int y = 0; y < 8; y++) {
-            final int finaly = 7 - y;
-            border(_ -> space().ch(0x31 + finaly).space().bar());
-            for (int x = 0; x < 8; x++) {
-                byte squareBits = board.squareBits((y<<ROW_SHIFT) + x);
-                square(x, y, false, 0, 0, _ -> {
-                    spaceOrMoved(squareBits, true).spaceOrPiece(squareBits).spaceOrMoved(squareBits, false);
-                });
-            }
-            border(_ -> bar()).nl();
-        }
-        space(3).border(bg -> bg.str("| a  b  c  d  e  f  g  h |")).nl();
-        return this;
-    }
 
-    public  Terminal spaceOrMoved(byte squareBits, boolean open) {
+    public BoardRenderer spaceOrMoved(byte squareBits, boolean open) {
         if (!Compute.isSet(squareBits, MOVED)) {
             space();
         } else {
             if (open) {
                 ohome();
-            }else{
+            } else {
                 chome();
             }
         }
@@ -246,7 +218,8 @@ public class Terminal {
     static String algebraic(int x, int y) {
         return Character.toString(x + 65 + 32) + Integer.toString(8 - y);
     }
-    static String piece(byte squareBits) {
+
+    static String piece(byte sqBits) {
         /*
          * Note order for unicode chess pieces descend P -> K
          *
@@ -261,25 +234,36 @@ public class Terminal {
          *   chessKingUnicode+6-value converts our 'value' to white unicode
          *   chessKingUnicode+12-value converts our 'value' to black unicode
          */
-        int offset = Compute.isWhite(squareBits) ? 12 : 6;
-        return Character.toString(chessKingUnicode + offset - (squareBits & PIECE_MASK));
+        int offset = Compute.isWhite(sqBits) ? 12 : 6;
+        return Character.toString(chessKingUnicode + offset - (sqBits & PIECE_MASK));
     }
 
-    static String textPiece(byte squareBits) {
-        int offset =Compute.isWhite(squareBits)?0:32;
-        char ch = switch (Compute.pieceValue(squareBits)) {
+    static String textPiece(byte sqBits) {
+        int offset = Compute.isWhite(sqBits) ? 0 : 32;
+        char ch = switch (Compute.pieceValue(sqBits)) {
             case PAWN -> 'P';
             case KNIGHT -> 'N';
             case BISHOP -> 'B';
             case ROOK -> 'R';
             case QUEEN -> 'Q';
             case KING -> 'K';
-            default -> throw new IllegalStateException("Unexpected value: " + Compute.pieceValue(squareBits));
+            default -> throw new IllegalStateException("Unexpected value: " + Compute.pieceValue(sqBits));
         };
-        return Character.toString(ch+offset);
+        return Character.toString(ch + offset);
     }
+
     @Override
     public String toString() {
         return stringBuilder.toString();
+    }
+
+    static String unicode(ChessData.Board board){
+        return new BoardRenderer().board(board).toString();
+    }
+    static String text(ChessData.Board board){
+        return new BoardRenderer().boardText(board).toString();
+    }
+    static String line(ChessData.Board board){
+        return new BoardRenderer().lineUnicode(board).toString();
     }
 }

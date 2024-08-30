@@ -4,8 +4,6 @@ import hat.Accelerator;
 import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Stack;
 
 import static chess.ChessConstants.BISHOP;
@@ -25,7 +23,9 @@ public interface ChessData extends Buffer {
         byte squareBits(long idx);
 
         void squareBits(long idx, byte squareBits);
+        int id();
 
+        void id(int id);
         int parent();
 
         void parent(int parent);
@@ -65,35 +65,33 @@ public interface ChessData extends Buffer {
                     squareBits(x + 56, (byte) (WHITE_BIT | bits));
                     x++;
                 }
-
+                id(0);
+            parent(0);
             gameScore(0);  // The score after init is zero,
             sideScore((short)0);
             opponentScore((short)0);
             moves((byte)20);  // The number of moves available to white is 28 =  8 pawn, 4 knight
-            firstChildIdx(0); // the first child will be 1
+            firstChildIdx(1); // the first child will be 0
             fromSqId((byte)0);   // no move got us here,
             toSqId((byte)0);     // no move got us here
             move((byte)0);    // no move got us here
+            System.out.println(BoardRenderer.unicode(this));
         }
 
         default void select(Board board){
             for (int sqid = 0; sqid < 64; sqid++) {
                 squareBits(sqid, board.squareBits(sqid));
             }
+            firstChildIdx(1);
             fromSqId(board.fromSqId());
             toSqId(board.toSqId());
-            gameScore(board.gameScore());
-            sideScore(board.sideScore());
-            opponentScore(board.opponentScore());
-            moves((byte) board.moves());
+            gameScore(0);
+            sideScore((short)0);
+            opponentScore((short)0);
+            moves(board.moves());
+            id(0);
             parent(0);
-           // System.out.print("\033[H\033[2J");
-            //System.out.flush();
-            System.out.println(new Terminal().board(this, 0));
-        }
-
-        default String text(){
-            return new Terminal().boardText(this).toString();
+            System.out.println(BoardRenderer.unicode(this));
         }
     }
 
@@ -105,8 +103,8 @@ public interface ChessData extends Buffer {
             .arrayLen("length")//.pad(4)  // must be 4 if array has a long ?
             .array("board", square -> square
                     .array("squareBits", 64)
-                    //              4         4               1       1           1        1       2           2                 4
-                    .fields("parent", "firstChildIdx","moves","fromSqId","toSqId", "move", "sideScore","opponentScore", "gameScore")
+                    //              4     4         4               1       1           1        1       2           2                 4
+                    .fields("id", "parent", "firstChildIdx","moves","fromSqId","toSqId", "move", "sideScore","opponentScore", "gameScore")
                    // .pad(2) //80
             )
 
@@ -122,22 +120,13 @@ public interface ChessData extends Buffer {
         return schema.allocate(acc, length);
     }
 
-    class BoardAndId{
-        Board board;
-        int id;
-        public BoardAndId(Board board, int id) {
-            this.board = board;
-            this.id = id;
-        }
-    }
-
-    default Stack<BoardAndId> getPath(int boardId){
-        Stack<BoardAndId> path = new Stack<>();
+    default Stack<Board> getPath(int boardId){
+        Stack<Board> path = new Stack<>();
         do {
-            path.push(new BoardAndId(board(boardId), boardId));
-            boardId = path.peek().board.parent();
+            path.push(board(boardId));
+            boardId = path.peek().parent();
         }while (boardId != 0);
-        path.push(new BoardAndId(board(boardId), boardId));
+        path.push(board(boardId));
         return path;
     }
 }

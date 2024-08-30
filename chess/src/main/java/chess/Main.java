@@ -56,7 +56,6 @@ public class Main {
         boolean timing = false;
         boolean tracing = false;
         long totalMs = 0;
-        System.out.println(new Terminal().board(initBoard,0));
         for (int i = 0; i < 32; i++) {
             time("Move ", () -> {
                 while (ply.id() < 5) {
@@ -82,17 +81,18 @@ public class Main {
                      *             |   ?   |   20  |   ?   |   31  |   ?   |   42  |   ?   |   30  |   ?   |   70  |
                      *
                      *  We first initialize the first board in the ply's firstChildIdx with this ply's toBoardIdx
-                     *
+                     *<pre>
                      *   ply(n)    |       0       |       1       |       2       |       3       |       4       |
                      * toBoardIdx  |  fci  | moves |  fci  | moves |  fci  | moves |  fci  | moves |  fci  | moves |
                      *      6      |   6   |   20  |    ?  |   31  |   ?   |   42  |   ?   |   30  |   ?   |   70  |
                      *        \       ^
                      *         \    /
                      *           +
-                     *
+                     *</pre>
                      *  We can now prefix scan all moves fields into firstChildIdx fields, by adding the sum of the previous board's
                      *  firstChildId()+moves() fields to populate this board's firstChildId().
                      *
+                     * <pre>
                      *   ply(n)    |       0       |       1       |       2       |       3       |       4       |
                      * toBoardIdx  |  fci  | moves |  fci  | moves |  fci  | moves |  fci  | moves |  fci  | moves |
                      *      5      |   5   |   20  |   25  |   31  |   ?   |   42  |   ?   |   30  |   ?   |   70  |
@@ -108,7 +108,7 @@ public class Main {
                      *         \    /    \   /        /  \   /        /  \   /        /  \   /        /  \   /
                      *           +         + --------/     + --------/     + --------/     + --------/     + ----> 199
                      *
-                     *
+                     *</pre>
                      *
                      *  So now each firstChildId() in each board of this ply is now set up for populating the next ply
                      *
@@ -130,7 +130,7 @@ public class Main {
                     int nextPlySize = plyIdx - ply.toBoardId();
 
                     /*
-                     * plyMoves() requires that board.moves for each boards move field
+                     * createBoardsXXXX() requires that board.moves for each boards move field
                      * (boardId between ply.fromBoardId() and ply.toBoardId()) be set appropriately
                      * board initialization does this for the start of game
                      * after that we depend on the previous loop's execution of plyMoves()
@@ -139,7 +139,7 @@ public class Main {
                         if (useIntStream) {
                             //Here we bypass compute on entrypoint.  This way we get to fully control execution from Java.
                             IntStream.range(0, ply.size())
-                                    .parallel()
+                                   // .parallel()
                                     .forEach(id -> {
                                                 int parentBoardId = id+ply.fromBoardId();
                                                 Compute.createBoardsForParentBoardId(chessData, ply, weightTable, parentBoardId);
@@ -149,9 +149,10 @@ public class Main {
                             accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
                         }
                     });
+                    System.out.println("ply id="+ply.id()+" from="+ply.fromBoardId()+" to="+ply.toBoardId());
+                  ply.init(ply.id() + 1, ply.side() ^ WHITE_BIT, ply.toBoardId(), nextPlySize);
+                  System.out.println("ply id="+ply.id()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()+"  chessData="+chessData.length());
 
-
-                    ply.init(ply.id() + 1, ply.side() ^ WHITE_BIT, ply.toBoardId(), nextPlySize);
                 }
             });
 
@@ -163,32 +164,37 @@ public class Main {
 
             for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
                 ChessData.Board board = chessData.board(id);
-                if (board.gameScore() < minScore) {
-                    minScore = board.gameScore();
-                    minBoardId = id;
-                }
-                if (board.gameScore() >= maxScore) {
-                    maxScore = board.gameScore();
-                    maxBoardId = id;
+                if (board.fromSqId() == board.toSqId()) {
+                    System.out.println("bad board at " + id);
+                }else{
+                    if (board.gameScore() < minScore) {
+                        minScore = board.gameScore();
+                        minBoardId = id;
+                    }
+                    if (board.gameScore() >= maxScore) {
+                        maxScore = board.gameScore();
+                        maxBoardId = id;
+                    }
                 }
             }
             //  System.out.print("minScore = " + minScore + "minBoard = "+ minBoardId + "maxScore = " + maxScore + "maxBoard = "+ maxBoardId);
             //  System.out.println(new Terminal().board(chessData.board(minBoardId), minBoardId));
             // System.out.println(new Terminal().board(chessData.board(maxBoardId), maxBoardId));
 
-            var pathStack = chessData.getPath(maxBoardId);
+            var pathStack = chessData.getPath(minBoardId);
             String indent = "            ";
 
             var root = pathStack.pop();
-            System.out.println("    Root ->"+ new Terminal().line(root.board, root.id));
+            System.out.println("    Root ->"+ BoardRenderer.line(root));
             var selected = pathStack.pop();
-            System.out.println("Selected ->"+new Terminal().line(selected.board,selected.id));
+            System.out.println("Selected ->"+BoardRenderer.line(selected));
             while (pathStack.size()>0){
                 var from = pathStack.pop();
-                System.out.println("    Path ->"+new Terminal().line(from.board,from.id));
+                System.out.println("    Path ->"+BoardRenderer.line(from));
             }
             ply.init(0, ply.side(), 0, 1); // this assumes we did odd plys!  fix this
-            initBoard.select(selected.board);
+            initBoard.select(selected);
+            System.out.println("---");
         }
     }
 }
