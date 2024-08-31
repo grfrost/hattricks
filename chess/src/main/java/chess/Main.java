@@ -188,15 +188,16 @@ public class Main {
 
             var pathStack = chessData.getPath((ply.side()!=WHITE_BIT)?maxBoardId:minBoardId);
             String indent = "            ";
-
+            System.out.println(BoardRenderer.unicode(pathStack));
             var root = pathStack.pop();
             System.out.println("    Root ->"+ BoardRenderer.line(root));
             var selected = pathStack.pop();
             System.out.println("Selected ->"+BoardRenderer.line(selected));
-            while (pathStack.size()>0){
-                var from = pathStack.pop();
-                System.out.println("    Path ->"+BoardRenderer.line(from));
-            }
+          //  while (pathStack.size()>0){
+            //    var from = pathStack.pop();
+             //   System.out.println("    Path ->"+BoardRenderer.line(from));
+           // }
+
             ply.init(0, ply.side(), 0, 1); // this assumes we did odd plys!  fix this
             initBoard.select(selected);
             System.out.println("---");
