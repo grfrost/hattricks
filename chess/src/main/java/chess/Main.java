@@ -188,7 +188,7 @@ public class Main {
 
             var pathStack = chessData.getPath((ply.side()!=WHITE_BIT)?maxBoardId:minBoardId);
             String indent = "            ";
-            System.out.println(BoardRenderer.unicode(pathStack));
+            System.out.println(BoardRenderer.unicodeMin(pathStack));
             var root = pathStack.pop();
             System.out.println("    Root ->"+ BoardRenderer.line(root));
             var selected = pathStack.pop();
