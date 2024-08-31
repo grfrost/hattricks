@@ -170,7 +170,7 @@ public class Main {
                     if (board.fromSqId() == board.toSqId()) {
                         System.out.println("bad board at " + id);
                     } else {
-                        var gameScore = chessData.gameScore(board);
+                        var gameScore = board.score();
                         if (gameScore < minScore) {
                             minScore = gameScore;
                             minBoardId = id;

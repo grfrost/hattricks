@@ -323,8 +323,7 @@ public class Compute {
         if (moves==0){
             throw new IllegalStateException("WTF");
         }
-        board.sideScore((short)sideScore);
-        board.opponentScore((short)opponentScore);
+        board.score(sideScore+opponentScore+parentBoard.score());
         board.moves((byte) moves);
     }
 

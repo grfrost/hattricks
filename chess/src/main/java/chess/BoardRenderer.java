@@ -6,7 +6,6 @@ import static chess.ChessConstants.BISHOP;
 import static chess.ChessConstants.CHECK;
 import static chess.ChessConstants.KING;
 import static chess.ChessConstants.KNIGHT;
-import static chess.ChessConstants.MOVED;
 import static chess.ChessConstants.PAWN;
 import static chess.ChessConstants.PIECE_MASK;
 import static chess.ChessConstants.QUEEN;
@@ -66,23 +65,19 @@ public class BoardRenderer {
     }
 
     public BoardRenderer nl() {
-        ch('\n');
-        return this;
+        return ch('\n');
     }
 
     public BoardRenderer ohome() {
-        ch('<');
-        return this;
+        return ch('<');
     }
 
     public BoardRenderer chome() {
-        ch('>');
-        return this;
+        return ch('>');
     }
 
     public BoardRenderer space() {
-        ch(' ');
-        return this;
+        return ch(' ');
     }
 
     public BoardRenderer space(int n) {
@@ -91,6 +86,31 @@ public class BoardRenderer {
         }
         return this;
     }
+    public BoardRenderer either(boolean test, Consumer<BoardRenderer> yes, Consumer<BoardRenderer> no) {
+        if(test){
+            yes.accept(this);
+        } else {
+            no.accept(this);
+        }
+        return this;
+    }
+    public BoardRenderer ifPiece(byte squareBits, Consumer<BoardRenderer> piece, Consumer<BoardRenderer> empty ) {
+        if (Compute.isEmpty(squareBits)) {
+            empty.accept(this);
+        } else {
+           piece.accept(this);
+        }
+        return this;
+    }
+    public BoardRenderer ifInCheck(byte squareBits, Consumer<BoardRenderer> inCheck, Consumer<BoardRenderer> notInCheck ) {
+        if (Compute.isSet(squareBits, CHECK)) {
+            inCheck.accept(this);
+        } else {
+            notInCheck.accept(this);
+        }
+        return this;
+    }
+
 
     public BoardRenderer intf(String format, int value) {
         return str(String.format(format, value));
@@ -109,37 +129,21 @@ public class BoardRenderer {
     }
 
     public BoardRenderer bar() {
-        ch('|');
-        return this;
+        return ch('|');
     }
 
     public BoardRenderer strln(String s) {
         return str(s).nl();
     }
 
-    public BoardRenderer spaceOrTextPiece(byte squareBits) {
-        if (Compute.isEmpty(squareBits)) {
-            if (Compute.isSet(squareBits, CHECK)) {
-                ch('.');
-            } else {
-                space();
-            }
-        } else {
-            str(textPiece(squareBits));
-        }
-        return this;
-    }
-
     public BoardRenderer spaceOrPiece(byte squareBits) {
-        if (Compute.isEmpty(squareBits)) {
-            if (Compute.isSet(squareBits, CHECK)) {
-                ch('.');
-            } else {
-                space();
-            }
-        } else {
-            str(piece(squareBits));
-        }
+        ifPiece(squareBits,
+                then-> str(piece(squareBits)),
+                otherwise->ifInCheck(squareBits,
+                        inCheck->ch('.'),
+                        notInCheck->space()
+                )
+        );
         return this;
     }
 
@@ -155,15 +159,16 @@ public class BoardRenderer {
         }
         return this;
     }
+    BoardRenderer detail(ChessData.Board board){
+        intf("score=%5d", board.score()).space();
+        intf("id=%6d", board.id()).space().intf("parent %3d", board.parent()).space();
+        intf("moves %2d", board.moves()).space().intf("firstChildIdx %3d", board.firstChildIdx()).space();
+        algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
+        return this;
+    }
 
     private BoardRenderer lineUnicode(ChessData.Board board) {
-        lineHighlightUnicode(board, false, 0);
-        intf("#(side=%5d", board.sideScore()).space().intf("opp=%5d", board.opponentScore()).ch(')').space();
-        intf("id=%6d", board.id()).space().intf("par=%6d", board.parent()).space();
-        intf("fid=%6d", board.firstChildIdx()).space().intf("moves=%3d", board.moves()).space();
-        intf("move=%4d,", board.move()).space().algebraic("", board.fromSqId(), board.toSqId());
-        //   lineHighlight(board, false, 0);
-        return this;
+        return lineHighlightUnicode(board, false, 0).detail(board);
     }
 
     private BoardRenderer boardText(ChessData.Board board) {
@@ -171,19 +176,23 @@ public class BoardRenderer {
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
                 byte sqBits = board.squareBits((y << ROW_SHIFT) + x);
-                space().spaceOrTextPiece(sqBits).space();
+                space();
+                ifPiece(sqBits,
+                        then -> str(textPiece(sqBits)),
+                        otherwise -> ifInCheck(sqBits,
+                                inCheck -> ch('.'),
+                                notInCheck -> space())
+                        );
+                space();
             }
             nl();
         }
         return this;
     }
 
+
     private BoardRenderer board(ChessData.Board board) {
-        intf("Score side=%4d", board.sideScore()).space();
-        intf("opponent=%4d", board.opponentScore()).space();
-        intf("id=%6d", board.id()).space().intf("Parent %3d", board.parent()).space();
-        intf("Moves %2d", board.moves()).space().intf("FirstChildIdx %3d", board.firstChildIdx()).space();
-        algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space().nl();
+        detail(board);
         space(3).border(_ -> str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
             final int finaly = 7 - y;
@@ -197,20 +206,6 @@ public class BoardRenderer {
             border(_ -> bar()).nl();
         }
         space(3).border(bg -> bg.str("| a  b  c  d  e  f  g  h |")).nl();
-        return this;
-    }
-
-
-    public BoardRenderer spaceOrMoved(byte squareBits, boolean open) {
-        if (!Compute.isSet(squareBits, MOVED)) {
-            space();
-        } else {
-            if (open) {
-                ohome();
-            } else {
-                chome();
-            }
-        }
         return this;
     }
 
@@ -255,7 +250,6 @@ public class BoardRenderer {
     public String toString() {
         return stringBuilder.toString();
     }
-
     static String unicode(ChessData.Board board){
         return new BoardRenderer().board(board).toString();
     }
