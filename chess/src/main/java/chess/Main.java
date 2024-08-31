@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
+import static chess.ChessConstants.SIDE_MASK;
 import static chess.ChessConstants.WHITE_BIT;
 
 
@@ -149,9 +150,10 @@ public class Main {
                             accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
                         }
                     });
-                    System.out.println("ply id="+ply.id()+" from="+ply.fromBoardId()+" to="+ply.toBoardId());
-                  ply.init(ply.id() + 1, ply.side() ^ WHITE_BIT, ply.toBoardId(), nextPlySize);
-                  System.out.println("ply id="+ply.id()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()+"  chessData="+chessData.length());
+
+                    System.out.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId());
+                    ply.init(ply.id() + 1, ply.side() ^ SIDE_MASK, ply.toBoardId(), nextPlySize);
+                    System.out.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()+"  chessData="+chessData.length());
 
                 }
             });

@@ -7,6 +7,7 @@ import java.lang.runtime.CodeReflection;
 
 import static chess.ChessConstants.ALL_POINTS;
 import static chess.ChessConstants.BISHOP;
+import static chess.ChessConstants.BLACK_BIT;
 import static chess.ChessConstants.CHECK;
 import static chess.ChessConstants.COLROWS;
 import static chess.ChessConstants.CompassDxDyMap;
@@ -14,17 +15,23 @@ import static chess.ChessConstants.DIAGS;
 import static chess.ChessConstants.DxOrDyMASK;
 import static chess.ChessConstants.DyDxMask_SHIFT;
 import static chess.ChessConstants.EMPTY_SQUARE;
+import static chess.ChessConstants.KNIGHT;
+import static chess.ChessConstants.KnightDxDyMap;
 import static chess.ChessConstants.MOVED;
 import static chess.ChessConstants.MOVED_SHIFT;
+import static chess.ChessConstants.PAWN;
+import static chess.ChessConstants.PIECE_MASK;
+import static chess.ChessConstants.PawnDxDyMap;
 import static chess.ChessConstants.ROOK;
 import static chess.ChessConstants.ROW_SHIFT;
+import static chess.ChessConstants.SIDE_MASK;
 import static chess.ChessConstants.WHITE_BIT;
 import static chess.ChessConstants.WHITE_BIT_SHIFT;
 
 public class Compute {
     @CodeReflection
     static byte pieceValue(byte squareBits) {
-        return (byte) (squareBits & ChessConstants.PIECE_MASK);
+        return (byte) (squareBits & PIECE_MASK);
     }
     @CodeReflection
     public static boolean isSet(byte sqBits, byte bit) {
@@ -40,9 +47,7 @@ public class Compute {
     }
 
     @CodeReflection
-    static byte side(byte squareBits) {
-        return (byte) (squareBits & WHITE_BIT);
-    }
+    static byte side(byte squareBits) {return (byte) (squareBits & SIDE_MASK);}
 
     @CodeReflection
     public static boolean isEmpty(byte squareBits) {
@@ -51,21 +56,25 @@ public class Compute {
 
     @CodeReflection
     static boolean isPiece(byte squareBits) {
-        return pieceValue(squareBits) != 0;
+        return pieceValue(squareBits) != EMPTY_SQUARE;
     }
 
     @CodeReflection
     public static boolean isWhite(byte squareBits) {
-        return isPiece(squareBits) && (side(squareBits) == ChessConstants.WHITE_BIT);
+        return side(squareBits) == WHITE_BIT;
+    }
+    @CodeReflection
+    public static boolean isBlack(byte squareBits) {
+        return side(squareBits) == BLACK_BIT;
     }
 
     @CodeReflection
     public static boolean isOpponent(byte fromBits, byte toBits) {
-        return isPiece(toBits) &&  side(fromBits)!=side(toBits);
+        return side(fromBits)!=side(toBits);
     }
     @CodeReflection
     public static boolean isComrade(byte fromBits, byte toBits) {
-        return isPiece(toBits) &&  side(fromBits)==side(toBits);
+        return side(fromBits)==side(toBits);
     }
     @CodeReflection
     public static boolean isEmptyOrOpponent(byte fromBits, byte toBits) {
@@ -84,12 +93,12 @@ public class Compute {
 
     @CodeReflection
     static boolean isPawn(byte squareBits) {
-        return pieceValue(squareBits) == ChessConstants.PAWN;
+        return pieceValue(squareBits) == PAWN;
     }
 
     @CodeReflection
     static boolean isKnight(byte squareBits) {
-        return pieceValue(squareBits) == ChessConstants.KNIGHT;
+        return pieceValue(squareBits) == KNIGHT;
     }
 
     @CodeReflection
@@ -159,37 +168,48 @@ public class Compute {
     }
     @CodeReflection
     public static int pawnAtHomeDxDy( int moveIdx) {
-        return ChessConstants.DxDyMASK & (ChessConstants.PawnDxDyMap >>> (moveIdx * DyDxMask_SHIFT));
+        return ChessConstants.DxDyMASK & (PawnDxDyMap >>> (moveIdx * DyDxMask_SHIFT));
     }
     @CodeReflection
     public static int knightDxDy( int moveIdx) {
-        return ChessConstants.DxDyMASK & (ChessConstants.KnightDxDyMap >>> (moveIdx * DyDxMask_SHIFT));
+        return ChessConstants.DxDyMASK & (KnightDxDyMap >>> (moveIdx * DyDxMask_SHIFT));
     }
 
 
     @CodeReflection
     public static boolean plySide(int side, byte bits ){
-        boolean sameSide = isPiece(bits) && ((side&WHITE_BIT) == (bits&WHITE_BIT));
-        return sameSide;
+        return  isPiece(bits) && ((side&SIDE_MASK) == (bits&SIDE_MASK));
     }
 
     @CodeReflection
     public static boolean plyOtherSide(int side, byte bits ){
-        boolean sameSide = isPiece(bits) && ((side&WHITE_BIT) != (bits&WHITE_BIT));
-        return sameSide;
+       return isPiece(bits) && ((side&SIDE_MASK) != (bits&SIDE_MASK));
     }
 
     /*
      * -1 if white, 1 if black
-     *                 >>2        -1      *-1
-     * WHITE=b1000 -> 0b0010 -> 0b0001 ->  -1
-     * BLACK=b0000 -> 0b0000 -> 0b1111 ->   1
+     * BLACK = 0b0001_0000  1<<4
+     * WHITE = 0b0000_1000  1<<3
+     *
+     *                        >>>(WHITE_BIT_SHIFT-1)      &0b0000_0010     -1
+     * WHITE=0b0000_1000 ->   0b0000_0001              -> 0b0000_00000 ->  0b1111_1111   -1
+     * BLACK=0b0001_0000 ->   0b0000_0010              -> 0b0000_00010 ->  0b0000_0000    1
      */
     @CodeReflection
     public static int plyDir(int side) {
-        int shifted = side>>>(WHITE_BIT_SHIFT-1);
-        int adjusted = shifted-1;
-        return adjusted*-1;
+        if ((side & SIDE_MASK)==0){
+            throw new IllegalStateException("WTF");
+        }
+        int shifted = side>>>(WHITE_BIT_SHIFT);
+        int masked = shifted&2;
+        int adjusted = masked-1;
+        if (side==WHITE_BIT && adjusted!=-1){
+            throw new IllegalStateException("WTF2");
+        }
+        if (side==BLACK_BIT && adjusted!=1){
+            throw new IllegalStateException("WTF3");
+        }
+        return adjusted;
     }
 
 
@@ -402,7 +422,8 @@ public class Compute {
                 }
             }
         } else if (isPawn(fromPieceValue)) {
-            int forward = plyDir(ply.side());                //WHITE=-1 BLACK = 1
+            int side = ply.side();
+            int forward = plyDir(side);                //WHITE=-1 BLACK = 1
             int count = 4-((fromSqBits&MOVED)>>>MOVED_SHIFT);    // 3 or 4
             boolean blocked = false;
             for (int moveIdx = 0; !blocked && moveIdx<count; moveIdx++) {  //takes

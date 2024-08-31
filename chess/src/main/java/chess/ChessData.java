@@ -7,6 +7,7 @@ import hat.ifacemapper.Schema;
 import java.util.Stack;
 
 import static chess.ChessConstants.BISHOP;
+import static chess.ChessConstants.BLACK_BIT;
 import static chess.ChessConstants.EMPTY_SQUARE;
 import static chess.ChessConstants.KING;
 import static chess.ChessConstants.KNIGHT;
@@ -46,8 +47,8 @@ public interface ChessData extends Buffer {
         default void firstPositions(){
                 int x = 0;
                 for (byte bits : new byte[]{ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK}) {
-                    squareBits(x, (byte) (bits));
-                    squareBits(x + 8, (byte) (PAWN));
+                    squareBits(x, (byte) (BLACK_BIT|bits));
+                    squareBits(x + 8, (byte) (BLACK_BIT|PAWN));
                     for (int i = 16; i < 48; i += 8) {
                         squareBits(x + i, (byte) (EMPTY_SQUARE));
                     }
@@ -58,8 +59,6 @@ public interface ChessData extends Buffer {
                 id(0);
             parent(0);
             score(0);  // The score after init is zero,
-           // sideScore((short)0);
-           // opponentScore((short)0);
             moves((byte)20);  // The number of moves available to white is 28 =  8 pawn, 4 knight
             firstChildIdx(1); // the first child will be 1
             fromSqId((byte)0);   // no move got us here,
@@ -76,8 +75,6 @@ public interface ChessData extends Buffer {
             fromSqId(board.fromSqId());
             toSqId(board.toSqId());
             score(board.score());
-            //sideScore((short)0);
-            //opponentScore((short)0);
             moves(board.moves());
             id(0);
             parent(0);

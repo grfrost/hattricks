@@ -46,7 +46,7 @@ public interface Ply extends Buffer {
         StringBuilder stringBuilder = new StringBuilder();
         for (int id = fromBoardId(); id < toBoardId(); id++) {
             ChessData.Board board = chessData.board(id);
-            stringBuilder.append(id()).append(':').append(tag).append(new BoardRenderer().line(board)).append('\n');
+            stringBuilder.append(id()).append(':').append(tag).append(BoardRenderer.line(board)).append('\n');
         }
         return stringBuilder.toString();
 

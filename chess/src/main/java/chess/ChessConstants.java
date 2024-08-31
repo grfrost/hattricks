@@ -67,6 +67,9 @@ class ChessConstants {
     public static final byte DIAGS = (byte) 0b1010_0101;
     public static final byte COLROWS = (byte) 0b0101_1010;
     public static final byte ALL_POINTS = (byte) 0b1111_1111;
+    //                   7  6  5  4  3  2  1  0
+    // Generally byte = {?}{C}{M}{B}{W}{ PIECE }
+    //                           {SIDE}{0PNBRQK} P=1,N=2,B=3,R=4,Q=5,K=6,?=7
     static public final byte EMPTY_SQUARE = (byte) 0b0000_0000;
     static public final byte PAWN = (byte) 0b0000_0001;
     static public final byte KNIGHT = (byte) 0b0000_0010;
@@ -74,24 +77,23 @@ class ChessConstants {
     static public final byte ROOK = (byte) 0b0000_0100;
     static public final byte QUEEN = (byte) 0b0000_0101;
     static public final byte KING = (byte) 0b0000_0110;
+
+    static public final byte PIECE_MASK = (byte) 0b0000_0111;
+
     static public final int WHITE_BIT_SHIFT = 3;
     static public final byte WHITE_BIT = (byte) (1 << WHITE_BIT_SHIFT);
-    static public final byte PIECE_MASK = (byte) 0b0000_0111;
-    static public final int MOVED_SHIFT = 4;
+
+    static public final int BLACK_BIT_SHIFT = 4;
+    static public final byte BLACK_BIT = (byte) (1 << BLACK_BIT_SHIFT);
+
+
+
+    static public final byte SIDE_MASK = (byte)(WHITE_BIT|BLACK_BIT);
+
+    static public final int MOVED_SHIFT = 5;
     static public final byte MOVED = (byte) (1<< MOVED_SHIFT);
-    static public final int CHECK_SHIFT = 5;
+    static public final int CHECK_SHIFT = 6;
     static public final byte CHECK = (byte) (1<<CHECK_SHIFT);
     static public final byte NOT_CHECK_MASK=(byte)(CHECK^0xff);
-/*
-    static public final byte p=(byte)(1<<0);
-    static public final byte n=(byte)(1<<1);
-    static public final byte b=(byte)(1<<2);
-    static public final byte r=(byte)(1<<3);
-    static public final byte q=(byte)(1<<5);
-    static public final byte k=(byte)(1<<6);
-    static public final byte s=(byte)(1<<7);
 
-    static public final long 0b000_000__000_000_000__000_000__=(byte)(1<<8);
-
- */
 }
