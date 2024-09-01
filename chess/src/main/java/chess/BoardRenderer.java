@@ -3,7 +3,6 @@ package chess;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Stack;
 import java.util.function.Consumer;
 
 import static chess.ChessConstants.BISHOP;
@@ -24,7 +23,8 @@ public class BoardRenderer {
     public BoardRenderer rgb(int r, int g, int b) {
         return str("2;" + r + ";" + g + ";" + b);
     }
-    public BoardRenderer esc(){
+
+    public BoardRenderer esc() {
         return str("\u001b[");
     }
 
@@ -34,23 +34,29 @@ public class BoardRenderer {
     }
 
     public BoardRenderer escXrgb(String x, int r, int g, int b, Consumer<BoardRenderer> consumer) {
-         return esc().str(x).rgb(r,g,b).ch('m').consume(consumer).esc().str(x).ch('0').ch('m');
+        return esc().str(x).rgb(r, g, b).ch('m').consume(consumer).esc().str(x).ch('0').ch('m');
     }
 
     public BoardRenderer bg(int r, int g, int b, Consumer<BoardRenderer> consumer) {
-      return  escXrgb("48;", r, g, b, consumer);
+        return escXrgb("48;", r, g, b, consumer);
     }
 
     public BoardRenderer fg(int r, int g, int b, Consumer<BoardRenderer> consumer) {
-        return  escXrgb("38;", r, g, b, consumer);
+        return escXrgb("38;", r, g, b, consumer);
     }
 
     public BoardRenderer greenForeground(Consumer<BoardRenderer> consumer) {
-        return fg(0, 250, 0,consumer);
+        return fg(0, 250, 0, consumer);
+    }
+
+    public BoardRenderer pieceForeground(byte sqbits, Consumer<BoardRenderer> consumer) {
+        var col = Compute.isWhite(sqbits) ? 0 : 254;
+        return fg(col, col, col, consumer);
+
     }
 
     public BoardRenderer greenOnGrey(Consumer<BoardRenderer> consumer) {
-        return greenForeground(fg -> fg.bg(128, 128, 128, consumer));
+        return greenForeground(fg -> fg.bg(148, 148, 148, consumer));
     }
 
     public BoardRenderer ch(char ch) {
@@ -70,17 +76,18 @@ public class BoardRenderer {
         stringBuilder.append(s);
         return this;
     }
-    int len(String escapedString){
+
+    int len(String escapedString) {
         int length = 0;
         boolean escaped = false;
-        for (var c: escapedString.toCharArray()) {
-            if (c=='\u001b'){
+        for (var c : escapedString.toCharArray()) {
+            if (c == '\u001b') {
                 escaped = true;
-            }else if (escaped){
-                if ( c=='m') {
+            } else if (escaped) {
+                if (c == 'm') {
                     escaped = false;
                 }
-            }else {
+            } else {
                 length++;
             }
         }
@@ -103,9 +110,9 @@ public class BoardRenderer {
 
     public BoardRenderer square(int x, int y, boolean highlight, int hx, int hy, Consumer<BoardRenderer> consumer) {
         if (x == hx && y == hy && highlight) {
-            return bg(64, 24, 24, consumer);
+            return bg(128, 128, 128, consumer);
         } else {
-            int grey = 64 + (((x + y) % 2) * 64);
+            int grey = 128 + (((x + y) % 2) * 64);
             return bg(grey, grey, grey, consumer);
         }
     }
@@ -128,23 +135,26 @@ public class BoardRenderer {
         }
         return this;
     }
+
     public BoardRenderer either(boolean test, Consumer<BoardRenderer> yes, Consumer<BoardRenderer> no) {
-        if(test){
+        if (test) {
             yes.accept(this);
         } else {
             no.accept(this);
         }
         return this;
     }
-    public BoardRenderer ifPiece(byte squareBits, Consumer<BoardRenderer> piece, Consumer<BoardRenderer> empty ) {
+
+    public BoardRenderer ifPiece(byte squareBits, Consumer<BoardRenderer> piece, Consumer<BoardRenderer> empty) {
         if (Compute.isEmpty(squareBits)) {
             empty.accept(this);
         } else {
-           piece.accept(this);
+            piece.accept(this);
         }
         return this;
     }
-    public BoardRenderer ifInCheck(byte squareBits, Consumer<BoardRenderer> inCheck, Consumer<BoardRenderer> notInCheck ) {
+
+    public BoardRenderer ifInCheck(byte squareBits, Consumer<BoardRenderer> inCheck, Consumer<BoardRenderer> notInCheck) {
         if (Compute.isSet(squareBits, CHECK)) {
             inCheck.accept(this);
         } else {
@@ -179,13 +189,13 @@ public class BoardRenderer {
     }
 
     public BoardRenderer spaceOrPiece(byte squareBits) {
-        ifPiece(squareBits,
-                then-> str(piece(squareBits)),
-                otherwise->ifInCheck(squareBits,
-                        inCheck->ch('.'),
-                        notInCheck->space()
+        pieceForeground(squareBits, _ -> ifPiece(squareBits,
+                then -> str(piece(squareBits)),
+                otherwise -> ifInCheck(squareBits,
+                        inCheck -> ch('.'),
+                        notInCheck -> space()
                 )
-        );
+        ));
         return this;
     }
 
@@ -194,26 +204,28 @@ public class BoardRenderer {
             for (int x = 0; x < 8; x++) {
                 byte squareBits = board.squareBits((y << ROW_SHIFT) + x);
                 square(x, y, highlight, squareIdx % 8, squareIdx / 8, _ -> {
-                    spaceOrPiece(squareBits);
+                    pieceForeground(squareBits, _ -> spaceOrPiece(squareBits));
                 });
             }
             greenOnGrey(_ -> bar());
         }
         return this;
     }
-    BoardRenderer detail(ChessData.Board board){
+
+    BoardRenderer detail(ChessData.Board board) {
         intf("score=%5d", board.score()).space();
         intf("id=%-4d", board.id()).space().intf("parent %-4d", board.parent()).space();
         intf("moves %2d", board.moves()).space().intf("firstChildIdx %3d", board.firstChildIdx()).space();
         algebraic("from", board.fromSqId()).space().algebraic("to", board.toSqId()).space();
         return this;
     }
-    BoardRenderer det(ChessData.Board board){
-        intf("s=%-5d", board.score()).space();
-        intf("i=%-4d", board.id()).space();
-        intf("p=%-4d", board.parent()).space().nl();
-        intf("mvs=%2d", board.moves()).space().intf("fci=%3d", board.firstChildIdx()).space();
-        algebraic("", board.fromSqId(), board.toSqId()).space();
+
+    BoardRenderer det(ChessData.Board board) {
+        intf("s=%-5d", board.score()).nl();
+        intf("i=%-4d", board.id()).nl();
+        intf("p=%-4d", board.parent()).nl();
+        intf("mvs=%2d", board.moves()).nl().intf("fci=%3d", board.firstChildIdx()).nl();
+        algebraic("", board.fromSqId(), board.toSqId());
         return this;
     }
 
@@ -227,18 +239,19 @@ public class BoardRenderer {
             for (int x = 0; x < 8; x++) {
                 byte sqBits = board.squareBits((y << ROW_SHIFT) + x);
                 space();
-                ifPiece(sqBits,
+                pieceForeground(sqBits, _ -> ifPiece(sqBits,
                         then -> str(textPiece(sqBits)),
                         otherwise -> ifInCheck(sqBits,
                                 inCheck -> ch('.'),
                                 notInCheck -> space())
-                        );
+                ));
                 space();
             }
             nl();
         }
         return this;
     }
+
     private BoardRenderer rawBoard(ChessData.Board board) {
         space(3).greenOnGrey(_ -> str("| a  b  c  d  e  f  g  h |")).nl();
         for (int y = 0; y < 8; y++) {
@@ -246,8 +259,14 @@ public class BoardRenderer {
             greenOnGrey(_ -> space().ch(0x31 + finaly).space().bar());
             for (int x = 0; x < 8; x++) {
                 int finalx = x;
-                square(x, y, false, 0, 0, _ ->
-                    space().spaceOrPiece( board.squareBits((finaly << ROW_SHIFT) + finalx)).space()
+                square(x, y, false, 0, 0, _ -> {
+                            space();
+                            byte sqbits = board.squareBits((finaly << ROW_SHIFT) + finalx);
+                            pieceForeground(sqbits, _ ->
+                                    spaceOrPiece(sqbits)
+                            );
+                            space();
+                        }
                 );
             }
             greenOnGrey(_ -> bar()).nl();
@@ -255,6 +274,7 @@ public class BoardRenderer {
         space(3).greenOnGrey(bg -> bg.str("| a  b  c  d  e  f  g  h |")).nl();
         return this;
     }
+
     private BoardRenderer rawBoardMin(ChessData.Board board) {
         for (int y = 0; y < 8; y++) {
             final int finaly = 7 - y;
@@ -263,13 +283,17 @@ public class BoardRenderer {
                 int finalx = x;
                 square(x, y, false, 0, 0, _ -> {
                             var sqBits = board.squareBits((finaly << ROW_SHIFT) + finalx);
-                    space().ifPiece(sqBits, then -> str(piece(sqBits)), otherwise -> space()).space();
+                           // space();
+                            pieceForeground(sqBits, _ ->
+                                    ifPiece(sqBits, then -> str(piece(sqBits)), otherwise -> space())
+                            );
+                           // space();
                         }
                 );
             }
             nl();
         }
-        space().greenOnGrey(bg -> bg.str("| a  b  c  d  e  f  g  h |")).nl().det(board).nl();
+        space().greenOnGrey(bg -> bg.str("|abcdefgh|")).nl().det(board).nl();
         return this;
     }
 
@@ -277,6 +301,7 @@ public class BoardRenderer {
 
         return Arrays.stream(new BoardRenderer().rawBoard(board).toString().split("\n")).toList();
     }
+
     private static List<String> rawBoardMinLines(ChessData.Board board) {
 
         return Arrays.stream(new BoardRenderer().rawBoardMin(board).toString().split("\n")).toList();
@@ -293,16 +318,16 @@ public class BoardRenderer {
         int widest = Integer.MIN_VALUE;
         for (ChessData.Board board : iter) {
             var rawLines = rawBoardLines(board);
-            for (var line:rawLines) {
+            for (var line : rawLines) {
                 widest = Math.max(widest, line.length());
             }
             lines.add(rawLines);
-            longest = Math.max(longest,rawLines.size() );
+            longest = Math.max(longest, rawLines.size());
         }
-        for (int i=0; i<longest;i++){
+        for (int i = 0; i < longest; i++) {
             int finalI = i;
             int finalWidest = widest;
-            lines.forEach(l-> {
+            lines.forEach(l -> {
                 pad(l.get(finalI), finalWidest);
             });
             nl();
@@ -310,22 +335,23 @@ public class BoardRenderer {
 
         return this;
     }
+
     private BoardRenderer boardsMin(Iterable<ChessData.Board> iter) {
         List<List<String>> lines = new ArrayList<>();
         int longest = Integer.MIN_VALUE;
         int widest = Integer.MIN_VALUE;
         for (ChessData.Board board : iter) {
             var rawLines = rawBoardMinLines(board);
-            for (var line:rawLines) {
+            for (var line : rawLines) {
                 widest = Math.max(widest, len(line));
             }
             lines.add(rawLines);
-            longest = Math.max(longest,rawLines.size() );
+            longest = Math.max(longest, rawLines.size());
         }
-        for (int i=0; i<longest;i++){
+        for (int i = 0; i < longest; i++) {
             int finalI = i;
             int finalWidest = widest;
-            lines.forEach(l-> {
+            lines.forEach(l -> {
                 pad(l.get(finalI), finalWidest);
             });
             nl();
@@ -336,6 +362,25 @@ public class BoardRenderer {
 
     static String algebraic(int x, int y) {
         return Character.toString(x + 65 + 32) + Integer.toString(8 - y);
+    }
+
+    static String pieceold(byte sqBits) {
+        /*
+         * Note order for unicode chess pieces descend P -> K
+         *
+         * WHITE P'\u2659', N'\u2658', B'\u2657', R'\u2656', Q'\u2655', K'\u2654',
+         * BLACK P'\u265f', N'\u265e', B'\u265d', R'\u265c', Q'\u265b', K'\u265a',
+         *
+         * Also if we add 6 to the WHITE unicode we get BLACK unicode of same piece
+         *
+         * Our square bit values ascend  P=1,N=2,B=3,R=4,Q=5,K=6,
+         *
+         * So
+         *   chessKingUnicode+6-value converts our 'value' to white unicode
+         *   chessKingUnicode+12-value converts our 'value' to black unicode
+         */
+        int offset = Compute.isWhite(sqBits) ? 12 : 6;
+        return Character.toString(chessKingUnicode + offset - (sqBits & PIECE_MASK));
     }
 
     static String piece(byte sqBits) {
@@ -353,8 +398,8 @@ public class BoardRenderer {
          *   chessKingUnicode+6-value converts our 'value' to white unicode
          *   chessKingUnicode+12-value converts our 'value' to black unicode
          */
-        int offset = Compute.isWhite(sqBits) ? 12 : 6;
-        return Character.toString(chessKingUnicode + offset - (sqBits & PIECE_MASK));
+
+        return Character.toString(chessKingUnicode + 12 - (sqBits & PIECE_MASK));
     }
 
     static String textPiece(byte sqBits) {
@@ -375,20 +420,24 @@ public class BoardRenderer {
     public String toString() {
         return stringBuilder.toString();
     }
-    static String unicode(ChessData.Board board){
+
+    static String unicode(ChessData.Board board) {
         return new BoardRenderer().board(board).toString();
     }
 
-    static String unicodeMin(Iterable<ChessData.Board> i){
+    static String unicodeMin(Iterable<ChessData.Board> i) {
         return new BoardRenderer().boardsMin(i).toString();
     }
-    static String unicode(Iterable<ChessData.Board> i){
+
+    static String unicode(Iterable<ChessData.Board> i) {
         return new BoardRenderer().boards(i).toString();
     }
-    static String text(ChessData.Board board){
+
+    static String text(ChessData.Board board) {
         return new BoardRenderer().boardText(board).toString();
     }
-    static String line(ChessData.Board board){
+
+    static String line(ChessData.Board board) {
         return new BoardRenderer().lineUnicode(board).toString();
     }
 }
