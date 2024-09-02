@@ -17,7 +17,7 @@ public interface WeightTable extends Buffer {
 
 
      byte[] pnbrqk = {
-            //Pawn
+            //Pawn + 0 | 384+
             0, 0, 0, 0, 0, 0, 0, 0,
             5, 10, 10, -20, -20, 10, 10, 5,
             5, -5, -10, 0, 0, -10, -5, 5,
@@ -26,7 +26,7 @@ public interface WeightTable extends Buffer {
             10, 10, 20, 30, 30, 20, 10, 10,
             50, 50, 50, 50, 50, 50, 50, 50,
             0, 0, 0, 0, 0, 0, 0, 0,
-            //Knight
+            //Knight + 64 | 448
             -50, -40, -30, -30, -30, -30, -40, -50,
             -40, -20, 0, 0, 0, 0, -20, -40,
             -30, 0, 10, 15, 15, 10, 0, -30,
@@ -35,7 +35,7 @@ public interface WeightTable extends Buffer {
             -30, 5, 10, 15, 15, 10, 5, -30,
             -40, -20, 0, 5, 5, 0, -20, -40,
             -50, -40, -30, -30, -30, -30, -40, -50,
-            //Bishop
+            //Bishop +128 | 512
             -20, -10, -10, -10, -10, -10, -10, -20,
             -10, 0, 0, 0, 0, 0, 0, -10,
             -10, 0, 5, 10, 10, 5, 0, -10,
@@ -44,7 +44,7 @@ public interface WeightTable extends Buffer {
             -10, 10, 10, 10, 10, 10, 10, -10,
             -10, 5, 0, 0, 0, 0, 5, -10,
             -20, -10, -10, -10, -10, -10, -10, -20,
-            //Rook
+            //Rook + 192 | 576
             0, 0, 0, 0, 0, 0, 0, 0,
             5, 10, 10, 10, 10, 10, 10, 5,
             -5, 0, 0, 0, 0, 0, 0, -5,
@@ -53,7 +53,7 @@ public interface WeightTable extends Buffer {
             -5, 0, 0, 0, 0, 0, 0, -5,
             -5, 0, 0, 0, 0, 0, 0, -5,
             0, 0, 0, 5, 5, 0, 0, 0,
-            //Queen
+            //Queen +256 | 640
             -20, -10, -10, -5, -5, -10, -10, -20,
             -10, 0, 0, 0, 0, 0, 0, -10,
             -10, 0, 5, 5, 5, 5, 0, -10,
@@ -62,7 +62,7 @@ public interface WeightTable extends Buffer {
             -10, 5, 5, 5, 5, 5, 0, -10,
             -10, 0, 5, 0, 0, 0, 0, -10,
             -20, -10, -10, -5, -5, -10, -10, -20,
-            //King
+            //King + 320 | 704
             -30, -40, -40, -50, -50, -40, -40, -30,
             -30, -40, -40, -50, -50, -40, -40, -30,
             -30, -40, -40, -50, -50, -40, -40, -30,
@@ -78,17 +78,17 @@ public interface WeightTable extends Buffer {
     void weight(long idx, byte weight);
 
     Schema<WeightTable> schema = Schema.of(WeightTable.class, control -> control
-            .array("weight", 64*12)
+            .array("weight", 64*6)
     );
 
     static WeightTable create(Accelerator acc) {
         var weightTable = schema.allocate(acc);
-        for (int p = 0; p<6; p++){
-           for (int i = 0; i < 64; i++) {
-               weightTable.weight(p*64+i, pnbrqk[p*64+i]);
-               weightTable.weight(((p+6)*64)+(63-i), (byte)(pnbrqk[p*64+i]*-1));
+
+           for (int i = 0; i < pnbrqk.length; i++) {
+               weightTable.weight(i, pnbrqk[i]);
+             //  weightTable.weight(((p+6)*64)+(63-i), (byte)(pnbrqk[p*64+i]*-1));
            }
-        }
+
 /*
         for (int r = 0; r<96; r++){
             if (r>0 && (r%8)==0){

@@ -320,22 +320,34 @@ public class Compute {
         return moves;
     }
 
+    @CodeReflection public static int weight(WeightTable weightTable, int sqId,  byte sqBits ){
+        // https://github.com/Kyle-L/Simple-Chess-Engine
+        // p100, n300, b300, r500, q900 why not just add these values to the weightTables?
+
+        byte pV = pieceValue(sqBits);
+        int bankOffset = (pV-1) *64; // Banks of 64 so  pawn1=(1-1)*64=0 night2=(2-1)*64=64 rook4=(4-1)*64=192 etc
+        int adj =  isWhite(sqBits)?63-sqId:sqId;// remember sqid 0 = black last row.
+        int pW =  (pV*100) + weightTable.weight(adj+bankOffset);
+        //  System.out.println((isWhite(fromSqBits)?"White ":"Black ")+BoardRenderer.piece(fromSqBits)+ " on "+fromSqId+" = "+pieceWeight
+        //        +" pieceValue="+(100*pieceValue)+ " offset="+offset+" index="+index+" index+offset="+(index+offset));
+        return pW;
+    }
 
     @CodeReflection
     public static void countMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board parentBoard, ChessData.Board board) {
         int moves = 0;
-        int opponentScore = 0;
-        int sideScore = 0;
-        for (int fromSqId = 0; fromSqId < 64; fromSqId++) {
-            byte fromSqBits = board.squareBits(fromSqId);
-            if (!isEmpty(fromSqBits)) {
-                byte pieceValue = pieceValue(fromSqBits);
-                int pieceWeight =  weightTable.weight((pieceValue-1) /* pawn = 1 */ *64 +(isWhite(fromSqBits)?0:6*64));
-                if (plySide(ply.side(),fromSqBits)) {
-                    sideScore+=pieceWeight;
+     //   int opponentScore = 0;
+        int score = 0;
+
+        for (int sqId = 0; sqId < 64; sqId++) {
+            byte sqBits = board.squareBits(sqId);
+            if (!isEmpty(sqBits)) {
+                int pw = weight(weightTable,sqId,sqBits);
+                  if (plySide(ply.side(),sqBits)) {
+                    score=pw;
                  }else{
-                    moves += countMovesForSquare(ply, board, fromSqBits, fromSqId);
-                    opponentScore+=pieceWeight;
+                    moves += countMovesForSquare(ply, board, sqBits, sqId);
+                    score-=pw;
                 }
 
             }
@@ -343,7 +355,7 @@ public class Compute {
         if (moves==0){
             throw new IllegalStateException("WTF");
         }
-        board.score(sideScore+opponentScore+parentBoard.score());
+        board.score(parentBoard.score()+score);
         board.moves((byte) moves);
     }
 
