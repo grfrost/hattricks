@@ -59,7 +59,7 @@ public class Main {
         long totalMs = 0;
         for (int i = 0; i < 32; i++) {
             time("Move ", () -> {
-                while (ply.id() < 5) {
+                while (ply.id() < 3) {
                     trace(true, System.out, o->{
                         o.println("Ply " + ply.id() + " side="+ply.side()+" boards=" + ply.fromBoardId() + "-" + ply.toBoardId() + " count=" + ply.size());
                     });
@@ -141,10 +141,8 @@ public class Main {
                             //Here we bypass compute on entrypoint.  This way we get to fully control execution from Java.
                             IntStream.range(0, ply.size())
                                     .parallel()
-                                    .forEach(id -> {
-                                                int parentBoardId = id+ply.fromBoardId();
-                                                Compute.createBoardsForParentBoardId(chessData, (byte)ply.side(), weightTable, parentBoardId);
-                                            }
+                                    .forEach(id ->
+                                            Compute.createBoardsForParentBoardId(chessData, (byte)ply.side(), weightTable, id+ply.fromBoardId())
                                     );
                         } else {
                             accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
@@ -192,9 +190,8 @@ public class Main {
             String indent = "            ";
             System.out.println(BoardRenderer.unicodeMin(pathStack));
             var root = pathStack.pop();
-            System.out.println("    Root ->"+ BoardRenderer.line(root));
             var selected = pathStack.pop();
-            System.out.println("Selected ->"+BoardRenderer.line(selected));
+            //System.out.println("Selected ->"+BoardRenderer.line(selected));
           //  while (pathStack.size()>0){
             //    var from = pathStack.pop();
              //   System.out.println("    Path ->"+BoardRenderer.line(from));
