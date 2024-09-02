@@ -60,8 +60,8 @@ public class Main {
         for (int i = 0; i < 32; i++) {
             time("Move ", () -> {
                 while (ply.id() < 5) {
-                    trace(tracing, System.out, o->{
-                        o.println("Ply " + ply.id() + " boards " + ply.fromBoardId() + " - " + ply.toBoardId() + " count = " + ply.size());
+                    trace(true, System.out, o->{
+                        o.println("Ply " + ply.id() + " side="+ply.side()+" boards=" + ply.fromBoardId() + "-" + ply.toBoardId() + " count=" + ply.size());
                     });
                     /*
                      *  To determine the space needed for the next ply we prefix scan the moves field of each board in
@@ -143,7 +143,7 @@ public class Main {
                                     .parallel()
                                     .forEach(id -> {
                                                 int parentBoardId = id+ply.fromBoardId();
-                                                Compute.createBoardsForParentBoardId(chessData, ply, weightTable, parentBoardId);
+                                                Compute.createBoardsForParentBoardId(chessData, (byte)ply.side(), weightTable, parentBoardId);
                                             }
                                     );
                         } else {

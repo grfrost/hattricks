@@ -33,21 +33,22 @@ public class Compute {
     static byte pieceValue(byte squareBits) {
         return (byte) (squareBits & PIECE_MASK);
     }
+
     @CodeReflection
     public static boolean isSet(byte sqBits, byte bit) {
         return (sqBits & bit) == bit;
     }
+
     @CodeReflection
     public static byte set(byte bits, byte bit) {
-        return (byte)(bits | bit);
-    }
-    @CodeReflection
-    public  static byte reset(byte bits, byte bit) {
-        return  (byte)(bits & (bit^0xff));
+        return (byte) (bits | bit);
     }
 
     @CodeReflection
-    static byte side(byte squareBits) {return (byte) (squareBits & SIDE_MASK);}
+    public static byte reset(byte bits, byte bit) {
+        return (byte) (bits & (bit ^ 0xff));
+    }
+
 
     @CodeReflection
     public static boolean isEmpty(byte squareBits) {
@@ -61,21 +62,19 @@ public class Compute {
 
     @CodeReflection
     public static boolean isWhite(byte squareBits) {
-        return side(squareBits) == WHITE_BIT;
+        return  isSet(squareBits,WHITE_BIT);
     }
+
     @CodeReflection
     public static boolean isBlack(byte squareBits) {
-        return side(squareBits) == BLACK_BIT;
+        return isSet(squareBits,BLACK_BIT);
     }
 
     @CodeReflection
     public static boolean isOpponent(byte fromBits, byte toBits) {
-        return side(fromBits)!=side(toBits);
+        return (fromBits^SIDE_MASK) == (toBits&SIDE_MASK);
     }
-    @CodeReflection
-    public static boolean isComrade(byte fromBits, byte toBits) {
-        return side(fromBits)==side(toBits);
-    }
+
     @CodeReflection
     public static boolean isEmptyOrOpponent(byte fromBits, byte toBits) {
         return isEmpty(toBits) || isOpponent(fromBits, toBits);
@@ -137,6 +136,7 @@ public class Compute {
     public static int compassDx(int dxdy) {
         return compassDy(dxdy >>> 2);
     }
+
     @CodeReflection
     public static int pawnDy(int dxdy) {
         return (dxdy & DxOrDyMASK) - 1;
@@ -163,27 +163,29 @@ public class Compute {
     }
 
     @CodeReflection
-    public static int compassDxDy( int dirIdx) {
+    public static int compassDxDy(int dirIdx) {
         return ChessConstants.DxDyMASK & (CompassDxDyMap >>> (dirIdx * DyDxMask_SHIFT));
     }
+
     @CodeReflection
-    public static int pawnAtHomeDxDy( int moveIdx) {
+    public static int pawnAtHomeDxDy(int moveIdx) {
         return ChessConstants.DxDyMASK & (PawnDxDyMap >>> (moveIdx * DyDxMask_SHIFT));
     }
+
     @CodeReflection
-    public static int knightDxDy( int moveIdx) {
+    public static int knightDxDy(int moveIdx) {
         return ChessConstants.DxDyMASK & (KnightDxDyMap >>> (moveIdx * DyDxMask_SHIFT));
     }
 
 
     @CodeReflection
-    public static boolean plySide(int side, byte bits ){
-        return  isPiece(bits) && ((side&SIDE_MASK) == (bits&SIDE_MASK));
+    public static boolean plySide(int side, byte bits) {
+        return isPiece(bits) && ((side & SIDE_MASK) == (bits & SIDE_MASK));
     }
 
     @CodeReflection
-    public static boolean plyOtherSide(int side, byte bits ){
-       return isPiece(bits) && ((side&SIDE_MASK) != (bits&SIDE_MASK));
+    public static boolean plyOtherSide(int side, byte bits) {
+        return isPiece(bits) && ((side & SIDE_MASK) != (bits & SIDE_MASK));
     }
 
     /*
@@ -197,57 +199,48 @@ public class Compute {
      */
     @CodeReflection
     public static int plyDir(int side) {
-        if ((side & SIDE_MASK)==0){
-            throw new IllegalStateException("WTF");
-        }
-        int shifted = side>>>(WHITE_BIT_SHIFT);
-        int masked = shifted&2;
-        int adjusted = masked-1;
-        if (side==WHITE_BIT && adjusted!=-1){
-            throw new IllegalStateException("WTF2");
-        }
-        if (side==BLACK_BIT && adjusted!=1){
-            throw new IllegalStateException("WTF3");
-        }
+        int shifted = side >>> (WHITE_BIT_SHIFT);
+        int masked = shifted & 2;
+        int adjusted = masked - 1;
         return adjusted;
     }
 
 
     @CodeReflection
-    public static int countMovesForSquare(Ply ply, ChessData.Board board, byte fromSqBits, int fromSqId) {
+    public static int countMovesForSquare(byte side, ChessData.Board board, byte fromSqBits, int fromSqId) {
         int fromX = fromSqId % 8;
         int fromY = fromSqId / 8;
         int moves = 0;
-         byte fromPieceValue = pieceValue(fromSqBits);
+        byte fromPieceValue = pieceValue(fromSqBits);
         if (isKing(fromPieceValue)) {
             for (int dirIdx = 0; dirIdx < 8; dirIdx++) {
                 int dxdy = compassDxDy(dirIdx);
                 int toX = fromX + compassDx(dxdy);
                 int toY = fromY + compassDy(dxdy);
-                if (isOnBoard(toX, toY)){
-                    byte toSqId = (byte)((toY<<ROW_SHIFT) + toX);
-                    byte toSqBits= board.squareBits(toSqId);
+                if (isOnBoard(toX, toY)) {
+                    byte toSqId = (byte) ((toY << ROW_SHIFT) + toX);
+                    byte toSqBits = board.squareBits(toSqId);
                     if (isEmptyOrOpponent(fromSqBits, toSqBits)) {
                         moves++;
                     }
                 }
             }
         } else if (isPawn(fromPieceValue)) {
-            int forward = plyDir(ply.side());                //WHITE=-1 BLACK = 1
-            int count = 4-((fromSqBits&MOVED)>>>MOVED_SHIFT);    // 3 or 4
+            int forward = plyDir(side);                //WHITE=-1 BLACK = 1
+            int count = 4 - ((fromSqBits & MOVED) >>> MOVED_SHIFT);    // 3 or 4
             boolean blocked = false;
-            for (int moveIdx = 0; !blocked && moveIdx<count; moveIdx++) {
+            for (int moveIdx = 0; !blocked && moveIdx < count; moveIdx++) {
                 int dxdy = pawnAtHomeDxDy(moveIdx);
                 int toY = fromY + forward * pawnDy(dxdy);
                 int toX = fromX + pawnDx(dxdy);
                 if (isOnBoard(toX, toY)) {
-                    byte toSqId= (byte)((toY<<ROW_SHIFT) + toX);
+                    byte toSqId = (byte) ((toY << ROW_SHIFT) + toX);
                     byte toSqBits = board.squareBits(toSqId);
-                    if (toX!=fromX) { // we can take!
+                    if (toX != fromX) { // we can take!
                         if (isOpponent(fromSqBits, toSqBits)) {
                             moves++;
                         }
-                    }else{
+                    } else {
                         if (isEmpty(toSqBits)) { // we can move
                             moves++;
                         } else {
@@ -261,10 +254,10 @@ public class Compute {
                 int dxdy = knightDxDy(moveIdx);
                 int toY = fromY + knightDy(dxdy); // dy +-2 || dy +- 2
                 int toX = fromX + knightDx(dxdy); // dx +-2 || dy += 2
-                if (isOnBoard(toX, toY)){
-                    byte toSqId= (byte)((toY<<ROW_SHIFT) + toX);
+                if (isOnBoard(toX, toY)) {
+                    byte toSqId = (byte) ((toY << ROW_SHIFT) + toX);
                     byte toSqBits = board.squareBits(toSqId);
-                    if (isEmptyOrOpponent(fromSqBits,toSqBits)) {
+                    if (isEmptyOrOpponent(fromSqBits, toSqBits)) {
                         moves++;
                     }
                 }
@@ -296,12 +289,12 @@ public class Compute {
                     int dy = compassDy(dxdy);
                     int dx = compassDx(dxdy);
                     boolean blocked = false;
-                    for (int r = 1; !blocked && r<8; r++) { //1,2,3,4,5,6,7
+                    for (int r = 1; !blocked && r < 8; r++) { //1,2,3,4,5,6,7
                         int toX = fromX + r * dx;
                         int toY = fromY + r * dy;
                         blocked = isOffBoard(toX, toY);
                         if (!blocked) {
-                            byte toSqId = (byte)((toY<<ROW_SHIFT) + toX);
+                            byte toSqId = (byte) ((toY << ROW_SHIFT) + toX);
                             byte toSqBits = board.squareBits(toSqId);
                             if (isEmptyOrOpponent(fromSqBits, toSqBits)) {
                                 moves++;
@@ -320,58 +313,47 @@ public class Compute {
         return moves;
     }
 
-    @CodeReflection public static int weight(WeightTable weightTable, int sqId,  byte sqBits ){
+    @CodeReflection
+    public static int weight(WeightTable weightTable, int sqId, byte sqBits) {
         // https://github.com/Kyle-L/Simple-Chess-Engine
         // p100, n300, b300, r500, q900 why not just add these values to the weightTables?
 
         byte pV = pieceValue(sqBits);
-        int bankOffset = (pV-1) *64; // Banks of 64 so  pawn1=(1-1)*64=0 night2=(2-1)*64=64 rook4=(4-1)*64=192 etc
-        int adj =  isWhite(sqBits)?63-sqId:sqId;// remember sqid 0 = black last row.
-        int pW =  (pV*100) + weightTable.weight(adj+bankOffset);
-        //  System.out.println((isWhite(fromSqBits)?"White ":"Black ")+BoardRenderer.piece(fromSqBits)+ " on "+fromSqId+" = "+pieceWeight
-        //        +" pieceValue="+(100*pieceValue)+ " offset="+offset+" index="+index+" index+offset="+(index+offset));
+        int bankOffset = (pV - 1) * 64; // Banks of 64 so  pawn1=(1-1)*64=0 night2=(2-1)*64=64 rook4=(4-1)*64=192 etc
+        int adj = isWhite(sqBits) ? 63 - sqId : sqId;// remember sqid 0 = black last row.
+        int pW = (pV * 100) + weightTable.weight(adj + bankOffset);
         return pW;
     }
 
     @CodeReflection
-    public static void countMovesAndScoreBoard(Ply ply, WeightTable weightTable, ChessData.Board parentBoard, ChessData.Board board) {
+    public static void countMovesAndScoreBoard(byte side, WeightTable weightTable, ChessData.Board parentBoard, ChessData.Board board) {
         int moves = 0;
-     //   int opponentScore = 0;
         int score = 0;
-
         for (int sqId = 0; sqId < 64; sqId++) {
             byte sqBits = board.squareBits(sqId);
             if (!isEmpty(sqBits)) {
-                int pw = weight(weightTable,sqId,sqBits);
-                  if (plySide(ply.side(),sqBits)) {
-                    score=pw;
-                 }else{
-                    moves += countMovesForSquare(ply, board, sqBits, sqId);
-                    score-=pw;
+                int pw = weight(weightTable, sqId, sqBits);
+                if (plySide(side, sqBits)) {
+                    score = pw;
+                } else {
+                    moves += countMovesForSquare(side, board, sqBits, sqId);
+                    score -= pw;
                 }
 
             }
         }
-        if (moves==0){
-            throw new IllegalStateException("WTF");
-        }
-        board.score(parentBoard.score()+score);
+        board.score(parentBoard.score() + score);
         board.moves((byte) moves);
     }
 
 
     @CodeReflection
-    public static void createBoard(ChessData chessData, Ply ply, WeightTable weightTable, ChessData.Board parentBoard, int parentId, int move, byte fromSqId, byte toSqId) {
-
+    public static void createBoard(ChessData chessData, byte side, WeightTable weightTable, ChessData.Board parentBoard, int parentId, int move, byte fromSqId, byte toSqId) {
         byte fromSqBits = parentBoard.squareBits(fromSqId);
-        if (isEmpty(fromSqBits)){
-            throw new IllegalStateException("WTF");
-        }
-        if (!plySide(ply.side(),fromSqBits)) {
-            throw new IllegalStateException("WTF");
-        }
-        fromSqBits = Compute.set(fromSqBits,MOVED);
-        int id = parentBoard.firstChildIdx()+move;
+     if (isBlack(fromSqBits)) {
+         fromSqBits= fromSqBits;
+     }
+        int id = parentBoard.firstChildIdx() + move;
         ChessData.Board newBoard = chessData.board(id);
         newBoard.id(id);
         newBoard.parent(parentId);
@@ -380,43 +362,32 @@ public class Compute {
         newBoard.toSqId(toSqId);
         for (int sqId = 0; sqId < 64; sqId++) {
             byte parentSqBits = parentBoard.squareBits(sqId);
-            parentSqBits = Compute.reset(parentSqBits,CHECK);
+            parentSqBits = Compute.reset(parentSqBits, CHECK);
             newBoard.squareBits(sqId, parentSqBits);
         }
-
         newBoard.squareBits(fromSqId, EMPTY_SQUARE);
+        fromSqBits = Compute.set(fromSqBits, MOVED);
         newBoard.squareBits(toSqId, fromSqBits);  // it is not at home now
 
+        /* We take the opportunity to mark the parents squareBits for the toSqId id as 'in check'
+         * meaning that one of the children in the next ply can move to toSqId
+         * This is somewhat scary as the children of this parent are currently being processed
+         * in parallel, so multiple pieces might be able to move to it
+         *  and all the piece moves are currently in flight ie there are multiple threads possibly racing on this square
+         * it is possible that a runtime might not like this.
+         * However, as the mutation is flipping a single bit we don't expect anyone to see any 'invalid' bit patterns
+         */
+        parentBoard.squareBits(toSqId, (byte) (parentBoard.squareBits(toSqId) | CHECK)); //  we are racing here!
 
-
-      //  String s = BoardRenderer.text(newBoard);
-       // new Terminal().boardText(newBoard).toString();
-
-        // We take the opportunity to mark the parents squareBits for the toSqId id as 'in check'
-        // meaning that one of the children in the next ply can move to toSqId
-        // This is somewhat scary as the children of this parent are currently being processed
-        // in parallel, so multiple pieces might be able to move to it
-        // and all the piece moves are currently in flight ie there are multiple threads possibly racing on this square
-        // it is possible that a runtime might not like this.
-        // However, as the mutation is flipping a single bit we don't expect anyone to see any 'invalid' bit patterns
-        parentBoard.squareBits(toSqId,(byte)(parentBoard.squareBits(toSqId)|CHECK)); // danger will robinson, we are racing here!
-
-        countMovesAndScoreBoard(ply, weightTable, parentBoard, newBoard);
-        // traceOutCreateBoard(ply,parentBoard,newBoard,fromSqId,toSqId);
+        countMovesAndScoreBoard(side, weightTable, parentBoard, newBoard);
     }
 
 
     @CodeReflection
-    public static int createBoards(ChessData chessData, Ply ply, WeightTable weightTable,
+    public static int createBoards(ChessData chessData, byte side, WeightTable weightTable,
                                    int moves, ChessData.Board parentBoard, int parentBoardId, byte fromSqBits, byte fromSqId) {
-         int fromX = fromSqId % 8;
+        int fromX = fromSqId % 8;
         int fromY = fromSqId / 8;
-        if (isEmpty(fromSqBits)){
-            throw new IllegalStateException("WTF");
-        }
-        if (!plySide(ply.side(), fromSqBits)){
-            throw new IllegalStateException("WTF");
-        }
         byte fromPieceValue = pieceValue(fromSqBits);
 
         if (isKing(fromPieceValue)) {
@@ -425,35 +396,34 @@ public class Compute {
                 int toX = fromX + compassDx(dxdy);
                 int toY = fromY + compassDy(dxdy);
                 if (isOnBoard(toX, toY)) {
-                    byte toSqId = (byte)((toY<<ROW_SHIFT) + toX);
+                    byte toSqId = (byte) ((toY << ROW_SHIFT) + toX);
                     byte toSqBits = parentBoard.squareBits(toSqId);
                     if (isEmptyOrOpponent(fromSqBits, toSqBits)) {
-                        createBoard(chessData,ply, weightTable, parentBoard,parentBoardId,moves,  fromSqId, toSqId);
+                        createBoard(chessData, side, weightTable, parentBoard, parentBoardId, moves, fromSqId, toSqId);
                         moves++;
                     }
                 }
             }
         } else if (isPawn(fromPieceValue)) {
-            int side = ply.side();
             int forward = plyDir(side);                //WHITE=-1 BLACK = 1
-            int count = 4-((fromSqBits&MOVED)>>>MOVED_SHIFT);    // 3 or 4
+            int count = 4 - ((fromSqBits & MOVED) >>> MOVED_SHIFT);    // 3 or 4
             boolean blocked = false;
-            for (int moveIdx = 0; !blocked && moveIdx<count; moveIdx++) {  //takes
+            for (int moveIdx = 0; !blocked && moveIdx < count; moveIdx++) {  //takes
                 int dxdy = pawnAtHomeDxDy(moveIdx);
                 int dy = pawnDy(dxdy);
                 int toY = fromY + forward * dy;
                 int toX = fromX + pawnDx(dxdy);
                 if (isOnBoard(toX, toY)) {
-                    byte toSqId= (byte)((toY<<ROW_SHIFT) + toX);
+                    byte toSqId = (byte) ((toY << ROW_SHIFT) + toX);
                     byte toSqBits = parentBoard.squareBits(toSqId);
-                    if (toX!=fromX) {
+                    if (toX != fromX) {
                         if (isOpponent(fromSqBits, toSqBits)) {
-                            createBoard(chessData, ply, weightTable, parentBoard, parentBoardId, moves, fromSqId, toSqId);
+                            createBoard(chessData, side, weightTable, parentBoard, parentBoardId, moves, fromSqId, toSqId);
                             moves++;
                         }
-                    }else{
+                    } else {
                         if (isEmpty(toSqBits)) {
-                            createBoard(chessData,ply, weightTable, parentBoard,parentBoardId,moves, fromSqId, toSqId);
+                            createBoard(chessData, side, weightTable, parentBoard, parentBoardId, moves, fromSqId, toSqId);
                             moves++;
                         } else {
                             blocked = true;
@@ -468,9 +438,9 @@ public class Compute {
                 int toY = fromY + knightDy(dxdy);
                 int toX = fromX + knightDx(dxdy);
                 if (isOnBoard(toX, toY)) {
-                    byte toSqId= (byte)((toY<<ROW_SHIFT) + toX);
+                    byte toSqId = (byte) ((toY << ROW_SHIFT) + toX);
                     if (isEmptyOrOpponent(fromSqBits, parentBoard.squareBits(toSqId))) {
-                        createBoard(chessData,ply, weightTable, parentBoard, parentBoardId, moves, fromSqId, toSqId);
+                        createBoard(chessData, side, weightTable, parentBoard, parentBoardId, moves, fromSqId, toSqId);
                         moves++;
                     }
                 }
@@ -505,16 +475,16 @@ public class Compute {
                         int toY = fromY + r * dy;
                         blockedOrOffBoard = isOffBoard(toX, toY);
                         if (!blockedOrOffBoard) {
-                            byte toSqId = (byte)((toY<<ROW_SHIFT)+toX);
+                            byte toSqId = (byte) ((toY << ROW_SHIFT) + toX);
                             var toSqBits = parentBoard.squareBits(toSqId);
                             if (isEmptyOrOpponent(fromSqBits, toSqBits)) {
-                                createBoard(chessData, ply,weightTable, parentBoard,parentBoardId,moves, fromSqId, toSqId);
+                                createBoard(chessData, side, weightTable, parentBoard, parentBoardId, moves, fromSqId, toSqId);
                                 moves++;
                                 if (isOpponent(fromSqBits, toSqBits)) {
                                     blockedOrOffBoard = true;
                                 }
-                            }else{
-                                blockedOrOffBoard=true;
+                            } else {
+                                blockedOrOffBoard = true;
                             }
                         }
                     }
@@ -526,28 +496,22 @@ public class Compute {
     }
 
     @CodeReflection
-    public static void createBoardsForParentBoardId(ChessData chessData, Ply ply, WeightTable weightTable, int parentBoardId) {
+    public static void createBoardsForParentBoardId(ChessData chessData, byte side, WeightTable weightTable, int parentBoardId) {
         ChessData.Board parentBoard = chessData.board(parentBoardId);
-       int moves = 0;
+        int moves = 0;
         for (byte fromSqId = 0; fromSqId < 64; fromSqId++) {
             byte fromSqBits = parentBoard.squareBits(fromSqId);
-            if (plySide(ply.side(), fromSqBits)){
-                moves = createBoards(chessData, ply, weightTable, moves, parentBoard, parentBoardId, fromSqBits, fromSqId);
+            if (plySide(side, fromSqBits)) {
+                moves = createBoards(chessData, side, weightTable, moves, parentBoard, parentBoardId, fromSqBits, fromSqId);
             }
         }
-        if (moves==0) {
-            System.out.println("NO moves\n" + BoardRenderer.unicode(parentBoard));
-        }
-     //   System.out.println(BoardRenderer.unicode(parentBoard));
-
-    //    System.out.println("board ="+parentBoard.parent()+"/"+parentBoardId+" total moves"+moves);
     }
 
     @CodeReflection
     public static void createBoardsKernel(KernelContext kc, ChessData chessData, Ply ply, WeightTable weightTable) {
         if (kc.x < kc.maxX) {
-            int parentBoardId = kc.x+ply.fromBoardId();
-            createBoardsForParentBoardId(chessData, ply, weightTable, parentBoardId);
+            int parentBoardId = kc.x + ply.fromBoardId();
+            createBoardsForParentBoardId(chessData, (byte)ply.side(), weightTable, parentBoardId);
         }
     }
 
