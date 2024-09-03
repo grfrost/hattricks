@@ -82,21 +82,23 @@ public class Main {
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
         ChessData.Board initBoard = chessData.board(0);
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
-        ply.init(0, WHITE_BIT, 0, 1);
-        boolean useIntStream = false;
+
+        byte side = WHITE_BIT;
+        ply.init(0, side, 0, 1);
+        boolean useIntStream = true;
         if (!useIntStream) {
             accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
         }
-        boolean timing = false;
-        PrintStream tracer = null;
+        PrintStream off = null;
+        PrintStream on = null;
 
-        long totalMs = 0;
+
         for (int i = 0; i < 32; i++) {
             time("Move ", () -> {
                 while (ply.id() < 3) {
-                    trace(tracer, o->{
-                        o.println("Ply " + ply.id() + " side="+ply.side()+" boards=" + ply.fromBoardId() + "-" + ply.toBoardId() + " count=" + ply.size());
-                    });
+                    trace(off, o->
+                        o.println("Ply " + ply.id() + " side="+ply.side()+" boards=" + ply.fromBoardId() + "-" + ply.toBoardId() + " count=" + ply.size())
+                    );
                     /*
                      *  To determine the space needed for the next ply we prefix scan the moves field of each board in
                      *  this ply, feeding the scanned value as firstChildIdx's back into the board.
@@ -152,12 +154,12 @@ public class Main {
                      */
                     int plyIdx = time("Prefix", () -> {
                         int nextPlyEndIdx = ply.toBoardId();
-                        trace(tracer,o->o.print("prefix -> "));
+                        trace(off,o->o.print("prefix -> "));
                         for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
                             int finalId = id;
                             ChessData.Board board = chessData.board(id);
                             board.firstChildIdx(nextPlyEndIdx);
-                            trace(tracer,o->o.print(finalId + "{fc=" + board.firstChildIdx() + ",m=" + board.moves() + "} "));
+                            trace(off,o->o.print(finalId + "{fc=" + board.firstChildIdx() + ",m=" + board.moves() + "} "));
                             nextPlyEndIdx += board.moves(); // include current board
                         }
                         return nextPlyEndIdx;
@@ -181,10 +183,9 @@ public class Main {
                             accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
                         }
                     });
-
-                    System.out.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId());
+                    trace(on,o->o.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()));
                     ply.init(ply.id() + 1, ply.side() ^ SIDE_MASK, ply.toBoardId(), nextPlySize);
-                    System.out.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()+"  chessData="+chessData.length());
+                    trace(on, o->o.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()+"  chessData="+chessData.length()));
 
                 }
             });
@@ -210,24 +211,15 @@ public class Main {
                 }else{
                     throw new IllegalStateException("failed sanity");
                 }
-
             }
-            //  System.out.print("minScore = " + minScore + "minBoard = "+ minBoardId + "maxScore = " + maxScore + "maxBoard = "+ maxBoardId);
-            //  System.out.println(new Terminal().board(chessData.board(minBoardId), minBoardId));
-            // System.out.println(new Terminal().board(chessData.board(maxBoardId), maxBoardId));
 
             var pathStack = chessData.getPath((ply.side()!=WHITE_BIT)?maxBoardId:minBoardId);
-            String indent = "            ";
             System.out.println(BoardRenderer.unicodeMin(pathStack));
             var root = pathStack.pop();
             var selected = pathStack.pop();
-            //System.out.println("Selected ->"+BoardRenderer.line(selected));
-          //  while (pathStack.size()>0){
-            //    var from = pathStack.pop();
-             //   System.out.println("    Path ->"+BoardRenderer.line(from));
-           // }
 
-            ply.init(0, ply.side(), 0, 1); // this assumes we did odd plys!  fix this
+            side = (byte)(side^SIDE_MASK);
+            ply.init(0, side, 0, 1); // this assumes we did odd plys!  fix this
             initBoard.select(selected);
             System.out.println("---");
         }
