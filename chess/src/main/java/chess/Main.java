@@ -7,6 +7,7 @@ import hat.buffer.Buffer;
 
 import java.io.PrintStream;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -23,8 +24,8 @@ public class Main {
         System.out.println(label + " " + (end - start) + " ms");
     }
 
-    static void trace(boolean tracing, PrintStream printStream,Consumer<PrintStream> printStreamConsumer) {
-        if (tracing){
+    static void trace( PrintStream printStream,Consumer<PrintStream> printStreamConsumer) {
+        if (printStream != null){
             printStreamConsumer.accept(printStream);
         }
     }
@@ -82,17 +83,18 @@ public class Main {
         ChessData.Board initBoard = chessData.board(0);
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
         ply.init(0, WHITE_BIT, 0, 1);
-        boolean useIntStream = true;
+        boolean useIntStream = false;
         if (!useIntStream) {
             accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
         }
         boolean timing = false;
-        boolean tracing = false;
+        PrintStream tracer = null;
+
         long totalMs = 0;
         for (int i = 0; i < 32; i++) {
             time("Move ", () -> {
                 while (ply.id() < 3) {
-                    trace(true, System.out, o->{
+                    trace(tracer, o->{
                         o.println("Ply " + ply.id() + " side="+ply.side()+" boards=" + ply.fromBoardId() + "-" + ply.toBoardId() + " count=" + ply.size());
                     });
                     /*
@@ -150,18 +152,17 @@ public class Main {
                      */
                     int plyIdx = time("Prefix", () -> {
                         int nextPlyEndIdx = ply.toBoardId();
-                        trace(tracing,System.out,o->o.print("prefix -> "));
+                        trace(tracer,o->o.print("prefix -> "));
                         for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
                             int finalId = id;
                             ChessData.Board board = chessData.board(id);
                             board.firstChildIdx(nextPlyEndIdx);
-                            trace(tracing,System.out,o->o.print(finalId + "{fc=" + board.firstChildIdx() + ",m=" + board.moves() + "} "));
+                            trace(tracer,o->o.print(finalId + "{fc=" + board.firstChildIdx() + ",m=" + board.moves() + "} "));
                             nextPlyEndIdx += board.moves(); // include current board
                         }
                         return nextPlyEndIdx;
                     });
                     int nextPlySize = plyIdx - ply.toBoardId();
-
                     /*
                      * createBoardsXXXX() requires that board.moves for each boards move field
                      * (boardId between ply.fromBoardId() and ply.toBoardId()) be set appropriately
