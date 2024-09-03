@@ -37,7 +37,36 @@ public class Main {
         return returnValue;
     }
 
+    public static boolean sanity(ChessData chessData, ChessData.Board board, int id){
+        if (board.id() != id) {
+            System.out.println("bad board id at " + id);
+        }else {
+            if (board.fromSqId() == board.toSqId()) {
+                System.out.println("bad board at " + id);
+            } else {
+                ChessData.Board parent = chessData.board(board.parent());
+                if (parent.id() != board.parent()) {
+                    System.out.println("bad parent board at " + id);
+                } else {
+                    if (board.id() < parent.firstChildIdx()) {
+                        System.out.println("not a child (< parent.firstChildIdx) " + id);
+
+                    } else {
+                        if (board.id() >= (parent.firstChildIdx() + parent.moves())) {
+                            System.out.println("not a child (>= (parent.firstChildIdx + parent.moves)  " + id);
+                        } else {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     public static void main(String[] args) {
+
+
         boolean headless = Boolean.getBoolean("headless") || (args.length > 0 && args[0].equals("--headless"));
         Accelerator accelerator = new Accelerator(MethodHandles.lookup(), /*new JavaMultiThreadedBackend());*/ Backend.FIRST);
         // Viewer viewer = new Viewer();
@@ -45,7 +74,10 @@ public class Main {
         WeightTable weightTable = WeightTable.create(accelerator);
         // From chess wikipedia we learned that on average each board needs 5.5 bits to encode # of moves so 32-64 approx 48
         ChessData chessData = ChessData.create(accelerator, 96, 5);
+
         Ply ply = Ply.create(accelerator);
+
+        Compute.test(chessData,weightTable);
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
         ChessData.Board initBoard = chessData.board(0);
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
@@ -164,23 +196,20 @@ public class Main {
 
             for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
                 ChessData.Board board = chessData.board(id);
-                if (board.id() != id) {
-                    System.out.println("bad board id at " + id);
-                }else {
-                    if (board.fromSqId() == board.toSqId()) {
-                        System.out.println("bad board at " + id);
-                    } else {
-                        var gameScore = board.score();
-                        if (gameScore < minScore) {
-                            minScore = gameScore;
-                            minBoardId = id;
-                        }
-                        if (gameScore > maxScore) {
-                            maxScore = gameScore;
-                            maxBoardId = id;
-                        }
+                if (sanity(chessData, board, id)) {
+                    var gameScore = board.score();
+                    if (gameScore < minScore) {
+                        minScore = gameScore;
+                        minBoardId = id;
                     }
+                    if (gameScore > maxScore) {
+                        maxScore = gameScore;
+                        maxBoardId = id;
+                    }
+                }else{
+                    throw new IllegalStateException("failed sanity");
                 }
+
             }
             //  System.out.print("minScore = " + minScore + "minBoard = "+ minBoardId + "maxScore = " + maxScore + "maxBoard = "+ maxBoardId);
             //  System.out.println(new Terminal().board(chessData.board(minBoardId), minBoardId));

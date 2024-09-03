@@ -75,6 +75,10 @@ public class Compute {
         return (fromBits ^ SIDE_MASK) == (toBits & SIDE_MASK);
     }
 
+    @CodeReflection public static boolean areComrades(byte lhs, byte rhs) {
+        return ((lhs&SIDE_MASK)!=0) && ((lhs&SIDE_MASK)==(rhs&SIDE_MASK));
+    }
+
     @CodeReflection
     public static boolean isEmptyOrOpponent(byte fromBits, byte toBits) {
         return isEmpty(toBits) || isOpponent(fromBits, toBits);
@@ -168,7 +172,7 @@ public class Compute {
     }
 
     @CodeReflection
-    public static int pawnAtHomeDxDy(int moveIdx) {
+    public static int pawnDxDy(int moveIdx) {
         return ChessConstants.DxDyMASK & (PawnDxDyMap >>> (moveIdx * DyDxMask_SHIFT));
     }
 
@@ -187,16 +191,97 @@ public class Compute {
      * BLACK=0b0001_0000 ->   0b0000_0010              -> 0b0000_00010 ->  0b0000_0000    1
      */
     @CodeReflection
-    public static int plyDir(int side) {
-        int shifted = side >>> (WHITE_BIT_SHIFT);
+    public static int forwardDir(byte sqBits) {
+        int shifted = (sqBits&SIDE_MASK) >>> (WHITE_BIT_SHIFT);
         int masked = shifted & 2;
-        int adjusted = masked - 1;
-        return adjusted;
+        return masked - 1;
+    }
+
+    @CodeReflection public static int pawnMoves(byte pawnSqBits ){
+        return 4 - ((pawnSqBits & MOVED) >>> MOVED_SHIFT);    // 3 or 4
+    }
+
+
+
+
+    public static void test (ChessData chessData, WeightTable weightTable){
+        if (forwardDir(WHITE_BIT)!=-1){
+            throw new RuntimeException("forwardDir(WHITE_BIT) failed ");
+        }
+        if (forwardDir(BLACK_BIT)!=1){
+            throw new RuntimeException("forwardDir(BLACK_BIT) failed ");
+        }
+        if (forwardDir((byte)0)!=-1){
+            throw new RuntimeException("forwardDir((byte)0) expected to return -1 : Not really an error but something changed!");
+        }
+
+        if (pawnMoves((byte)(WHITE_BIT|PAWN|MOVED))!=3){
+            throw new RuntimeException("pawnMoves((byte)(WHITE_BIT|PAWN_VALUE|MOVED)) should be 3");
+        }
+        if (pawnMoves((byte)(WHITE_BIT|PAWN))!=4){
+            throw new RuntimeException("pawnMoves((byte)(WHITE_BIT|PAWN_VALUE)) should be 4");
+        }
+
+        byte sqBits = PAWN;
+        if (isSet(sqBits, WHITE_BIT)) {
+            throw new RuntimeException("!isSet(sqBits,WHITE_BIT) failed ");
+        }
+        sqBits = set(sqBits,WHITE_BIT);
+
+
+        if (!isSet(sqBits, WHITE_BIT)) {
+            throw new RuntimeException("set(sqBits, WHITE_BIT) failed ");
+        }
+        sqBits = reset(sqBits,WHITE_BIT);
+        if (isSet(sqBits, WHITE_BIT)) {
+            throw new RuntimeException("reset(sqBits, WHITE_BIT) failed ");
+        }
+        sqBits |= BLACK_BIT;
+        sqBits = (byte)(sqBits^SIDE_MASK); //should be white
+        if (!isSet(sqBits, WHITE_BIT)) {
+            throw new RuntimeException("sqBits^SIDE_MASK failed to switch black to white  ");
+        }
+        if (isSet(sqBits, BLACK_BIT)) {
+            throw new RuntimeException("sqBits^SIDE_MASK failed to switch black to white  ");
+        }
+        sqBits = (byte)(sqBits^SIDE_MASK); //should be black
+        if (isSet(sqBits, WHITE_BIT)) {
+            throw new RuntimeException("sqBits^SIDE_MASK failed to switch white to black  ");
+        }
+        if (!isSet(sqBits, BLACK_BIT)) {
+            throw new RuntimeException("sqBits^SIDE_MASK failed to switch white to black  ");
+        }
+
+        if (isOpponent((byte)(WHITE_BIT|PAWN), (byte)(BLACK_BIT|PAWN))) {
+            throw new RuntimeException("isOpponent((byte)(WHITE_BIT|PAWN), (byte)(BLACK_BIT|PAWN) failed  ");
+        }
+        if (isOpponent((byte)(WHITE_BIT|PAWN), (byte)(WHITE_BIT|PAWN))) {
+            throw new RuntimeException("!isOpponent((byte)(WHITE_BIT|PAWN), (byte)(WHITE_BIT|PAWN) failed  ");
+        }
+
+        if (areComrades((byte)(WHITE_BIT|PAWN), (byte)(BLACK_BIT|PAWN))) {
+            throw new RuntimeException("!areComrades((byte)(WHITE_BIT|PAWN), (byte)(BLACK_BIT|PAWN) failed  ");
+        }
+        if (!areComrades((byte)(WHITE_BIT|PAWN), (byte)(WHITE_BIT|PAWN))) {
+            throw new RuntimeException("areComrades((byte)(WHITE_BIT|PAWN), (byte)(WHITE_BIT|PAWN) failed  ");
+        }
+
+
+     //   @CodeReflection
+       // public static boolean isEmptyOrOpponent(byte fromBits, byte toBits) {
+         //   return isEmpty(toBits) || isOpponent(fromBits, toBits);
+       // }
+
+
+
+
+
+
     }
 
 
     @CodeReflection
-    public static int countMovesForSquare(byte side, ChessData.Board board, byte fromSqBits, int fromSqId) {
+    public static int countMovesForSquare( ChessData.Board board, byte fromSqBits, int fromSqId) {
         int fromX = fromSqId % 8;
         int fromY = fromSqId / 8;
         int moves = 0;
@@ -215,11 +300,11 @@ public class Compute {
                 }
             }
         } else if (isPawn(fromPieceValue)) {
-            int forward = plyDir(side);                //WHITE=-1 BLACK = 1
-            int count = 4 - ((fromSqBits & MOVED) >>> MOVED_SHIFT);    // 3 or 4
+            int forward = forwardDir(fromSqBits);                //WHITE=-1 BLACK = 1
+            int count = pawnMoves(fromSqBits);
             boolean blocked = false;
             for (int moveIdx = 0; !blocked && moveIdx < count; moveIdx++) {
-                int dxdy = pawnAtHomeDxDy(moveIdx);
+                int dxdy = pawnDxDy(moveIdx);
                 int toY = fromY + forward * pawnDy(dxdy);
                 int toX = fromX + pawnDx(dxdy);
                 if (isOnBoard(toX, toY)) {
@@ -320,12 +405,12 @@ public class Compute {
         int score = 0;
         for (int sqId = 0; sqId < 64; sqId++) {
             byte sqBits = board.squareBits(sqId);
-            if (!isEmpty(sqBits)) {
+            if (isPiece(sqBits)) {
                 int pw = weight(weightTable, sqId, sqBits);
-                if ((side & sqBits) == side) {
+                if (areComrades(side, sqBits)){
                     score = pw;
                 } else {
-                    moves += countMovesForSquare(side, board, sqBits, sqId);
+                    moves += countMovesForSquare( board, sqBits, sqId);
                     score -= pw;
                 }
 
@@ -391,11 +476,11 @@ public class Compute {
                 }
             }
         } else if (isPawn(fromPieceValue)) {
-            int forward = plyDir(side);                //WHITE=-1 BLACK = 1
-            int count = 4 - ((fromSqBits & MOVED) >>> MOVED_SHIFT);    // 3 or 4
+            int forward = forwardDir(fromSqBits);  //WHITE=-1 BLACK = 1
+            int count = pawnMoves(fromSqBits);    // 3 or 4
             boolean blocked = false;
             for (int moveIdx = 0; !blocked && moveIdx < count; moveIdx++) {  //takes
-                int dxdy = pawnAtHomeDxDy(moveIdx);
+                int dxdy = pawnDxDy(moveIdx);
                 int dy = pawnDy(dxdy);
                 int toY = fromY + forward * dy;
                 int toX = fromX + pawnDx(dxdy);
