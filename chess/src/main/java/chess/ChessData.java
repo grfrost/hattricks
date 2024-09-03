@@ -4,6 +4,8 @@ import hat.Accelerator;
 import hat.buffer.Buffer;
 import hat.ifacemapper.Schema;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 
 import static chess.ChessConstants.BISHOP;
@@ -109,13 +111,14 @@ public interface ChessData extends Buffer {
         return schema.allocate(acc, length);
     }
 
-    default Stack<Board> getPath(int boardId){
-        Stack<Board> path = new Stack<>();
+    default List<Board> getPath(int boardId){
+        List<Board> path = new ArrayList<>();
         do {
-            path.push(board(boardId));
-            boardId = path.peek().parent();
+            var board = board(boardId);
+            path.add(board);
+            boardId = board.parent();
         }while (boardId != 0);
-        path.push(board(boardId));
+        //path.add(board(boardId));
         return path;
     }
 }

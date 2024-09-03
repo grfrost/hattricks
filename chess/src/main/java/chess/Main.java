@@ -213,14 +213,13 @@ public class Main {
                 }
             }
 
-            var pathStack = chessData.getPath((ply.side()!=WHITE_BIT)?maxBoardId:minBoardId);
-            System.out.println(BoardRenderer.unicodeMin(pathStack));
-            var root = pathStack.pop();
-            var selected = pathStack.pop();
+            var path = chessData.getPath((ply.side()!=WHITE_BIT)?maxBoardId:minBoardId);
+            System.out.println(BoardRenderer.unicodeMin(path));
 
             side = (byte)(side^SIDE_MASK);
+            System.out.println(side==WHITE_BIT?"WHITE":"BLACK");
             ply.init(0, side, 0, 1); // this assumes we did odd plys!  fix this
-            initBoard.select(selected);
+            initBoard.select(path.getLast());
             System.out.println("---");
         }
     }
