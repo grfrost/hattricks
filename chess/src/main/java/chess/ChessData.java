@@ -10,6 +10,7 @@ import java.util.Stack;
 
 import static chess.ChessConstants.BISHOP;
 import static chess.ChessConstants.BLACK_BIT;
+import static chess.ChessConstants.BLACK_PAWN;
 import static chess.ChessConstants.EMPTY_SQUARE;
 import static chess.ChessConstants.KING;
 import static chess.ChessConstants.KNIGHT;
@@ -17,6 +18,7 @@ import static chess.ChessConstants.PAWN;
 import static chess.ChessConstants.QUEEN;
 import static chess.ChessConstants.ROOK;
 import static chess.ChessConstants.WHITE_BIT;
+import static chess.ChessConstants.WHITE_PAWN;
 
 public interface ChessData extends Buffer {
     interface Board extends Struct {
@@ -49,12 +51,13 @@ public interface ChessData extends Buffer {
         default void firstPositions(){
                 int x = 0;
                 for (byte bits : new byte[]{ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK}) {
-                    squareBits(x, (byte) (BLACK_BIT|bits));
-                    squareBits(x + 8, (byte) (BLACK_BIT|PAWN));
-                    for (int i = 16; i < 48; i += 8) {
-                        squareBits(x + i, (byte) (EMPTY_SQUARE));
-                    }
-                    squareBits(x + 48, (byte) (WHITE_BIT | PAWN));
+                    squareBits(x + 0, (byte) (BLACK_BIT|bits));
+                    squareBits(x + 8, BLACK_PAWN);
+                    squareBits(x + 16, EMPTY_SQUARE);
+                    squareBits(x + 24, EMPTY_SQUARE);
+                    squareBits(x + 32, EMPTY_SQUARE);
+                    squareBits(x + 40, EMPTY_SQUARE);
+                    squareBits(x + 48, WHITE_PAWN);
                     squareBits(x + 56, (byte) (WHITE_BIT | bits));
                     x++;
                 }
@@ -111,14 +114,6 @@ public interface ChessData extends Buffer {
         return schema.allocate(acc, length);
     }
 
-    default List<Board> getPath(int boardId){
-        List<Board> path = new ArrayList<>();
-        do {
-            var board = board(boardId);
-            path.add(board);
-            boardId = board.parent();
-        }while (boardId != 0);
-        //path.add(board(boardId));
-        return path;
-    }
+
+
 }

@@ -8,6 +8,8 @@ import java.lang.runtime.CodeReflection;
 import static chess.ChessConstants.ALL_POINTS;
 import static chess.ChessConstants.BISHOP;
 import static chess.ChessConstants.BLACK_BIT;
+import static chess.ChessConstants.BLACK_PAWN;
+import static chess.ChessConstants.BLACK_ROOK;
 import static chess.ChessConstants.CHECK;
 import static chess.ChessConstants.COLROWS;
 import static chess.ChessConstants.CompassDxDyMap;
@@ -27,6 +29,7 @@ import static chess.ChessConstants.ROW_SHIFT;
 import static chess.ChessConstants.SIDE_MASK;
 import static chess.ChessConstants.WHITE_BIT;
 import static chess.ChessConstants.WHITE_BIT_SHIFT;
+import static chess.ChessConstants.WHITE_PAWN;
 
 public class Compute {
     @CodeReflection
@@ -201,7 +204,12 @@ public class Compute {
         return 4 - ((pawnSqBits & MOVED) >>> MOVED_SHIFT);    // 3 or 4
     }
 
-
+    @CodeReflection
+    public static byte otherSide(byte side) {
+        byte newSide =  (byte)(side^SIDE_MASK);
+        System.out.println(isWhite(side)?"WHITE":"BLACK");
+        return newSide;
+    }
 
 
     public static void test (ChessData chessData, WeightTable weightTable){
@@ -215,10 +223,10 @@ public class Compute {
             throw new RuntimeException("forwardDir((byte)0) expected to return -1 : Not really an error but something changed!");
         }
 
-        if (pawnMoves((byte)(WHITE_BIT|PAWN|MOVED))!=3){
+        if (pawnMoves((byte)(WHITE_PAWN|MOVED))!=3){
             throw new RuntimeException("pawnMoves((byte)(WHITE_BIT|PAWN_VALUE|MOVED)) should be 3");
         }
-        if (pawnMoves((byte)(WHITE_BIT|PAWN))!=4){
+        if (pawnMoves(WHITE_PAWN)!=4){
             throw new RuntimeException("pawnMoves((byte)(WHITE_BIT|PAWN_VALUE)) should be 4");
         }
 
@@ -244,7 +252,7 @@ public class Compute {
         if (isSet(sqBits, BLACK_BIT)) {
             throw new RuntimeException("sqBits^SIDE_MASK failed to switch black to white  ");
         }
-        sqBits = (byte)(sqBits^SIDE_MASK); //should be black
+        sqBits = otherSide(sqBits); //should be black
         if (isSet(sqBits, WHITE_BIT)) {
             throw new RuntimeException("sqBits^SIDE_MASK failed to switch white to black  ");
         }
@@ -252,35 +260,28 @@ public class Compute {
             throw new RuntimeException("sqBits^SIDE_MASK failed to switch white to black  ");
         }
 
-        if (isOpponent((byte)(WHITE_BIT|PAWN), (byte)(BLACK_BIT|PAWN))) {
-            throw new RuntimeException("isOpponent((byte)(WHITE_BIT|PAWN), (byte)(BLACK_BIT|PAWN) failed  ");
+        if (isOpponent(WHITE_PAWN, BLACK_PAWN)) {
+            throw new RuntimeException("isOpponent(WHITE_PAWN, BLACK_PAWN failed  ");
         }
-        if (isOpponent((byte)(WHITE_BIT|PAWN), (byte)(WHITE_BIT|PAWN))) {
-            throw new RuntimeException("!isOpponent((byte)(WHITE_BIT|PAWN), (byte)(WHITE_BIT|PAWN) failed  ");
-        }
-
-        if (areComrades((byte)(WHITE_BIT|PAWN), (byte)(BLACK_BIT|PAWN))) {
-            throw new RuntimeException("!areComrades((byte)(WHITE_BIT|PAWN), (byte)(BLACK_BIT|PAWN) failed  ");
-        }
-        if (!areComrades((byte)(WHITE_BIT|PAWN), (byte)(WHITE_BIT|PAWN))) {
-            throw new RuntimeException("areComrades((byte)(WHITE_BIT|PAWN), (byte)(WHITE_BIT|PAWN) failed  ");
+        if (isOpponent(WHITE_PAWN, WHITE_PAWN)) {
+            throw new RuntimeException("!isOpponent(WHITE_PAWN, WHITE_PAWN failed  ");
         }
 
+        if (areComrades(WHITE_PAWN, BLACK_PAWN)) {
+            throw new RuntimeException("!areComrades(WHITE_PAWN, WHITE_PAWN failed  ");
+        }
+        if (!areComrades(WHITE_PAWN, WHITE_PAWN)) {
+            throw new RuntimeException("areComrades(WHITE_PAWN, WHITE_PAWN) failed  ");
+        }
 
-     //   @CodeReflection
-       // public static boolean isEmptyOrOpponent(byte fromBits, byte toBits) {
-         //   return isEmpty(toBits) || isOpponent(fromBits, toBits);
-       // }
-
-
-
-
-
+        if (!(weight(weightTable,0, BLACK_ROOK ) == 400) ){
+            throw new RuntimeException("weight(weightTable,0, BLACK_ROOK) == 400) failed");
+        }
 
     }
 
 
-    @CodeReflection
+     @CodeReflection
     public static int countMovesForSquare( ChessData.Board board, byte fromSqBits, int fromSqId) {
         int fromX = fromSqId % 8;
         int fromY = fromSqId / 8;
@@ -390,7 +391,7 @@ public class Compute {
     @CodeReflection
     public static int weight(WeightTable weightTable, int sqId, byte sqBits) {
         // https://github.com/Kyle-L/Simple-Chess-Engine
-        // p100, n300, b300, r500, q900 why not just add these values to the weightTables?
+        // p100, n300, b300, r500, q900 why are we not just adding these values to all slots the weightTables?
 
         byte pV = pieceValue(sqBits);
         int bankOffset = (pV - 1) * 64; // Banks of 64 so  pawn1=(1-1)*64=0 night2=(2-1)*64=64 rook4=(4-1)*64=192 etc
@@ -583,11 +584,12 @@ public class Compute {
         if ((kc.x + ply.fromBoardId()) < ply.toBoardId()) {
             createBoardsForParentBoardId(chessData, (byte) ply.side(), weightTable, kc.x + ply.fromBoardId());
         }
-
     }
 
     @CodeReflection
     static public void createBoardsCompute(final ComputeContext cc, ChessData chessData, Ply ply, WeightTable weightTable) {
         cc.dispatchKernel(ply.size(), kc -> createBoardsKernel(kc, chessData, ply, weightTable));
     }
+
+
 }

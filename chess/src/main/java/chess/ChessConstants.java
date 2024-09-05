@@ -96,4 +96,17 @@ class ChessConstants {
     static public final byte CHECK = (byte) (1<<CHECK_SHIFT);
     static public final byte NOT_CHECK_MASK=(byte)(CHECK^0xff);
 
+    static public final byte BLACK_ROOK = (byte)(BLACK_BIT|ROOK);
+    static public final byte BLACK_KNIGHT = (byte)(BLACK_BIT|KNIGHT);
+    static public final byte BLACK_BISHOP = (byte)(BLACK_BIT|BISHOP);
+    static public final byte BLACK_QUEEN = (byte)(BLACK_BIT|QUEEN);
+    static public final byte BLACK_KING = (byte)(BLACK_BIT|KING);
+    static public final byte BLACK_PAWN = (byte)(BLACK_BIT|PAWN);
+
+    static public final byte WHITE_ROOK = (byte)(WHITE_BIT|ROOK);
+    static public final byte WHITE_KNIGHT = (byte)(WHITE_BIT|KNIGHT);
+    static public final byte WHITE_BISHOP = (byte)(WHITE_BIT|BISHOP);
+    static public final byte WHITE_QUEEN = (byte)(WHITE_BIT|QUEEN);
+    static public final byte WHITE_KING = (byte)(WHITE_BIT|KING);
+    static public final byte WHITE_PAWN = (byte)(WHITE_BIT|PAWN);
 }

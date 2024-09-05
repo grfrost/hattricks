@@ -8,6 +8,8 @@ import hat.buffer.Buffer;
 import java.io.PrintStream;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -73,7 +75,8 @@ public class Main {
         // Viewer viewer = new Viewer();
 
         WeightTable weightTable = WeightTable.create(accelerator);
-        // From chess wikipedia we learned that on average each board needs 5.5 bits to encode # of moves so 32-64 approx 48
+        // From chess wikipedia we learned that each board needs 5.5 bits to
+        // encode moves for the next ply so 32-64 approx 48
         ChessData chessData = ChessData.create(accelerator, 96, 5);
 
         Ply ply = Ply.create(accelerator);
@@ -100,24 +103,27 @@ public class Main {
                         o.println("Ply " + ply.id() + " side="+ply.side()+" boards=" + ply.fromBoardId() + "-" + ply.toBoardId() + " count=" + ply.size())
                     );
                     /*
-                     *  To determine the space needed for the next ply we prefix scan the moves field of each board in
-                     *  this ply, feeding the scanned value as firstChildIdx's back into the board.
-                     *
                      *  Each ply has a fromBoardIdx and toBoardIdx accessors
                      *
                      *  Each board in a ply has firstChildIdx (holding index to board for firstMove) and moves (holding
                      *  the count of the number of moves) accessors.
                      *
-                     *  Assume we just completed ply 'n' with 5 boards (fromBoardIdx=1, toBoardIdx=5)
-                     *  with move counts (moves) of 20,31,42,30 and 70 moves
+                     *  To determine the space needed for the next ply we prefix scan the moves field of
+                     *  each board in this ply, feeding the scanned value as firstChildIdx's back into
+                     *  the board.
+                     */
+
+                     /*
+                     *  Assume we just completed ply 'n' with 5 boards where fromBoardIdx=1 and toBoardIdx=5
+                     *  And the move counts (moves()) of each of these boards are 20,31,42,30 and 70 moves
                      *
-                     *  At this point firstChildIdx =0 and is unknown. We use fci for 'firstChildIdx' below.
+                     *  At this point firstChildIdx (fci below ) for each board is unknown.
                      *
                      *             |       0       |       1       |       2       |       3       |       4       |
                      *             |  fci  | moves |  fci  | moves |  fci  | moves |  fci  | moves |  fci  | moves |
                      *             |   ?   |   20  |   ?   |   31  |   ?   |   42  |   ?   |   30  |   ?   |   70  |
                      *
-                     *  We first initialize the first board in the ply's firstChildIdx with this ply's toBoardIdx
+                     *  We initialize the first board in the ply's firstChildIdx with this ply's toBoardIdx
                      *<pre>
                      *   ply(n)    |       0       |       1       |       2       |       3       |       4       |
                      * toBoardIdx  |  fci  | moves |  fci  | moves |  fci  | moves |  fci  | moves |  fci  | moves |
@@ -126,7 +132,8 @@ public class Main {
                      *         \    /
                      *           +
                      *</pre>
-                     *  We can now prefix scan all moves fields into firstChildIdx fields, by adding the sum of the previous board's
+                     */
+                     /*  We can now prefix scan all moves fields into firstChildIdx fields, by adding the sum of the previous board's
                      *  firstChildId()+moves() fields to populate this board's firstChildId().
                      *
                      * <pre>
@@ -146,10 +153,11 @@ public class Main {
                      *           +         + --------/     + --------/     + --------/     + --------/     + ----> 199
                      *
                      *</pre>
+                     */
+                     /*
+                     *  So now each firstChildIdx in each board of this ply is ready for populating the next ply
                      *
-                     *  So now each firstChildId() in each board of this ply is now set up for populating the next ply
-                     *
-                     *  The ply(n+1) range is now defined as ply(n).toBoardIdx to ply(n).toBoardIdx+199
+                     *  ply(n+1) is now defined as ply(n).toBoardIdx to ply(n).toBoardIdx+199
                      *
                      */
                     int plyIdx = time("Prefix", () -> {
@@ -165,17 +173,13 @@ public class Main {
                         return nextPlyEndIdx;
                     });
                     int nextPlySize = plyIdx - ply.toBoardId();
-                    /*
-                     * createBoardsXXXX() requires that board.moves for each boards move field
-                     * (boardId between ply.fromBoardId() and ply.toBoardId()) be set appropriately
-                     * board initialization does this for the start of game
-                     * after that we depend on the previous loop's execution of plyMoves()
-                     */
+
                     time("Compute ", () -> {
                         if (useIntStream) {
-                            //Here we bypass compute on entrypoint.  This way we get to fully control execution from Java.
+                            //Here we use an IntStream to bypass compute on entrypoint.
+                            // This way we get to fully control execution from Java.
                             IntStream.range(0, ply.size())
-                                    .parallel()
+                                    .parallel() // consider commenting this out if debugging
                                     .forEach(id ->
                                             Compute.createBoardsForParentBoardId(chessData, (byte)ply.side(), weightTable, id+ply.fromBoardId())
                                     );
@@ -183,42 +187,42 @@ public class Main {
                             accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
                         }
                     });
-                    trace(on,o->o.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()));
-                    ply.init(ply.id() + 1, ply.side() ^ SIDE_MASK, ply.toBoardId(), nextPlySize);
-                    trace(on, o->o.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()+"  chessData="+chessData.length()));
 
+                    trace(on,o->o.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()));
+
+                    ply.init(ply.id() + 1, ply.side() ^ SIDE_MASK, ply.toBoardId(), nextPlySize);
+
+                    trace(on, o->o.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()+"  chessData="+chessData.length()));
                 }
             });
 
 
-            int minScore = Integer.MAX_VALUE;
-            int maxScore = Integer.MIN_VALUE;
-            int minBoardId = 0;
-            int maxBoardId = 0;
+            int bestScore = Compute.isWhite(side)?Integer.MAX_VALUE:Integer.MIN_VALUE;
+            int bestBoardId = 0;
 
             for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
                 ChessData.Board board = chessData.board(id);
                 if (sanity(chessData, board, id)) {
-                    var gameScore = board.score();
-                    if (gameScore < minScore) {
-                        minScore = gameScore;
-                        minBoardId = id;
-                    }
-                    if (gameScore > maxScore) {
-                        maxScore = gameScore;
-                        maxBoardId = id;
+                    int gameScore = board.score();
+                    if (   (Compute.isWhite(side) && (gameScore < bestScore))
+                        || (Compute.isBlack(side)) && (gameScore > bestScore)) {
+                        bestScore= gameScore;
+                        bestBoardId = id;
                     }
                 }else{
                     throw new IllegalStateException("failed sanity");
                 }
             }
-
-            var path = chessData.getPath((ply.side()!=WHITE_BIT)?maxBoardId:minBoardId);
+            int boardId = bestBoardId;
+            List<ChessData.Board> path = new ArrayList<>();
+            while (boardId != 0){
+                path.add(chessData.board(boardId));
+                boardId = path.getLast().parent();
+            }
             System.out.println(BoardRenderer.unicodeMin(path));
 
-            side = (byte)(side^SIDE_MASK);
-            System.out.println(side==WHITE_BIT?"WHITE":"BLACK");
-            ply.init(0, side, 0, 1); // this assumes we did odd plys!  fix this
+            side = Compute.otherSide(side);
+            ply.init(0, side, 0, 1);
             initBoard.select(path.getLast());
             System.out.println("---");
         }
