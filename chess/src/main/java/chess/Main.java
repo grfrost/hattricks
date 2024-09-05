@@ -168,7 +168,7 @@ public class Main {
                             ChessData.Board board = chessData.board(id);
                             board.firstChildIdx(nextPlyEndIdx);
                             trace(off,o->o.print(finalId + "{fc=" + board.firstChildIdx() + ",m=" + board.moves() + "} "));
-                            nextPlyEndIdx += board.moves(); // include current board
+                            nextPlyEndIdx += board.moves();
                         }
                         return nextPlyEndIdx;
                     });
@@ -179,7 +179,7 @@ public class Main {
                             //Here we use an IntStream to bypass compute on entrypoint.
                             // This way we get to fully control execution from Java.
                             IntStream.range(0, ply.size())
-                                    .parallel() // consider commenting this out if debugging
+                                    //.parallel() // consider commenting this out if debugging
                                     .forEach(id ->
                                             Compute.createBoardsForParentBoardId(chessData, (byte)ply.side(), weightTable, id+ply.fromBoardId())
                                     );
