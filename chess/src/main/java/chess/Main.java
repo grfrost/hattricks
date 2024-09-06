@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
+import static chess.ChessConstants.BLACK_BIT;
 import static chess.ChessConstants.SIDE_MASK;
 import static chess.ChessConstants.WHITE_BIT;
 
@@ -86,8 +87,8 @@ public class Main {
         ChessData.Board initBoard = chessData.board(0);
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
 
-        byte side = WHITE_BIT;
-        ply.init(0, side, 0, 1);
+
+        ply.init(0, BLACK_BIT, 0, 1);
         boolean useIntStream = true;
         if (!useIntStream) {
             accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
@@ -96,9 +97,9 @@ public class Main {
         PrintStream on = null;
 
 
-        for (int i = 0; i < 32; i++) {
+        for (int i = 0; i < 5; i++) {
             time("Move ", () -> {
-                while (ply.id() < 3) {
+                while (ply.id() < 4) {
                     trace(off, o->
                         o.println("Ply " + ply.id() + " side="+ply.side()+" boards=" + ply.fromBoardId() + "-" + ply.toBoardId() + " count=" + ply.size())
                     );
@@ -197,15 +198,15 @@ public class Main {
             });
 
 
-            int bestScore = Compute.isWhite(side)?Integer.MAX_VALUE:Integer.MIN_VALUE;
+            int bestScore = Compute.isWhite((byte)ply.side())?Integer.MAX_VALUE:Integer.MIN_VALUE;
             int bestBoardId = 0;
 
             for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
                 ChessData.Board board = chessData.board(id);
                 if (sanity(chessData, board, id)) {
                     int gameScore = board.score();
-                    if (   (Compute.isWhite(side) && (gameScore < bestScore))
-                        || (Compute.isBlack(side)) && (gameScore > bestScore)) {
+                    if (   (Compute.isWhite((byte)ply.side()) && (gameScore < bestScore))
+                        || (Compute.isBlack((byte)ply.side())) && (gameScore > bestScore)) {
                         bestScore= gameScore;
                         bestBoardId = id;
                     }
@@ -221,8 +222,7 @@ public class Main {
             }
             System.out.println(BoardRenderer.unicodeMin(path));
 
-            side = Compute.otherSide(side);
-            ply.init(0, side, 0, 1);
+            ply.init(0, Compute.otherSide((byte)ply.side()), 0, 1);
             initBoard.select(path.getLast());
             System.out.println("---");
         }

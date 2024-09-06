@@ -273,22 +273,12 @@ public class Compute {
         if (!areComrades(WHITE_PAWN, WHITE_PAWN)) {
             throw new RuntimeException("areComrades(WHITE_PAWN, WHITE_PAWN) failed  ");
         }
-        var rb0 = weight(weightTable,0,BLACK_ROOK);
-        var pb8 = weight(weightTable,8,BLACK_PAWN);
-        var pb9 = weight(weightTable,9,BLACK_PAWN);
-        var pb10 = weight(weightTable,10,BLACK_PAWN);
-        var pb11 = weight(weightTable,11,BLACK_PAWN);
-        var pb12 = weight(weightTable,12,BLACK_PAWN);
-        var pb13 = weight(weightTable,13,BLACK_PAWN);
-        var pb14 = weight(weightTable,14,BLACK_PAWN);
-        var pb15 = weight(weightTable,15,BLACK_PAWN);
         if (!(weight(weightTable,8, BLACK_PAWN ) == 105) ){
             throw new RuntimeException("weight(weightTable,8, BLACK_PAWN) == 105) failed");
         }
         if (!(weight(weightTable,0, BLACK_ROOK ) == 405) ){
             throw new RuntimeException("weight(weightTable,0, BLACK_ROOK) == 405) failed");
         }
-
     }
 
 
