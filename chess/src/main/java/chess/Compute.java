@@ -9,6 +9,7 @@ import static chess.ChessConstants.ALL_POINTS;
 import static chess.ChessConstants.BISHOP;
 import static chess.ChessConstants.BLACK_BIT;
 import static chess.ChessConstants.BLACK_PAWN;
+import static chess.ChessConstants.BLACK_QUEEN;
 import static chess.ChessConstants.BLACK_ROOK;
 import static chess.ChessConstants.CHECK;
 import static chess.ChessConstants.COLROWS;
@@ -276,9 +277,13 @@ public class Compute {
         if (!(weight(weightTable,8, BLACK_PAWN ) == 105) ){
             throw new RuntimeException("weight(weightTable,8, BLACK_PAWN) == 105) failed");
         }
-        if (!(weight(weightTable,0, BLACK_ROOK ) == 405) ){
-            throw new RuntimeException("weight(weightTable,0, BLACK_ROOK) == 405) failed");
+        if (!(weight(weightTable,0, BLACK_ROOK ) == 500) ){
+            throw new RuntimeException("weight(weightTable,0, BLACK_ROOK) == 500) failed");
         }
+        if (!(weight(weightTable,3, BLACK_QUEEN ) == 895) ){
+            throw new RuntimeException("weight(weightTable,3, BLACK_QUEEN) == 895) failed");
+        }
+
     }
 
 
@@ -388,16 +393,27 @@ public class Compute {
 
         return moves;
     }
+    // https://github.com/Kyle-L/Simple-Chess-Engine
+    // p100, n300, b300, r500, q900
+
+    public static final int pieceWeights=0x0953310;
 
     @CodeReflection
     public static int weight(WeightTable weightTable, int sqId, byte sqBits) {
-        // https://github.com/Kyle-L/Simple-Chess-Engine
-        // p100, n300, b300, r500, q900 why are we not just adding these values to all slots the weightTables?
 
         byte pV = pieceValue(sqBits);
+        int pieceWeight = ((pieceWeights>>>(pV*4))&0xf)*100;
         int bankOffset = (pV - 1) * 64; // Banks of 64 so  pawn1=(1-1)*64=0 night2=(2-1)*64=64 rook4=(4-1)*64=192 etc
-        int adj = isWhite(sqBits) ? 63 - sqId : sqId;// remember sqid 0 = black last row.
-        int pW = (pV * 100) + weightTable.weight(adj + bankOffset);
+        int forwardSqId = isWhite(sqBits) ? (63 - sqId) : sqId;// remember sqid 0 = black last row.
+        int weightTableValue =  weightTable.weight(bankOffset+forwardSqId);
+        int pW = pieceWeight + weightTableValue;
+        int a254=weightTable.weight(254);
+        int a255=weightTable.weight(255);
+        int a256=weightTable.weight(256);
+        int a257=weightTable.weight(257);
+        int a258=weightTable.weight(258);
+        int a259=weightTable.weight(259);
+        int a260=weightTable.weight(260);
         return pW;
     }
 
@@ -581,15 +597,18 @@ public class Compute {
     }
 
     @CodeReflection
-    public static void createBoardsKernel(KernelContext kc, ChessData chessData, Ply ply, WeightTable weightTable) {
+    public static void createBoardsKernel(KernelContext kc, ChessData chessData, PlyTable plyTable,int plyId, WeightTable weightTable) {
+        PlyTable.Ply ply = plyTable.ply(plyId);
+
         if ((kc.x + ply.fromBoardId()) < ply.toBoardId()) {
             createBoardsForParentBoardId(chessData, (byte) ply.side(), weightTable, kc.x + ply.fromBoardId());
         }
     }
 
     @CodeReflection
-    static public void createBoardsCompute(final ComputeContext cc, ChessData chessData, Ply ply, WeightTable weightTable) {
-        cc.dispatchKernel(ply.size(), kc -> createBoardsKernel(kc, chessData, ply, weightTable));
+    static public void createBoardsCompute(final ComputeContext cc, ChessData chessData, PlyTable plyTable,int plyId, WeightTable weightTable) {
+        PlyTable.Ply ply = plyTable.ply(plyId);
+        cc.dispatchKernel(ply.size(), kc -> createBoardsKernel(kc, chessData,plyTable, plyId, weightTable));
     }
 
 

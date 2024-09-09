@@ -78,20 +78,23 @@ public class Main {
         WeightTable weightTable = WeightTable.create(accelerator);
         // From chess wikipedia we learned that each board needs 5.5 bits to
         // encode moves for the next ply so 32-64 approx 48
-        ChessData chessData = ChessData.create(accelerator, 96, 5);
 
-        Ply ply = Ply.create(accelerator);
+        PlyTable plyTable = PlyTable.create(accelerator,5);
+
+        ChessData chessData = ChessData.create(accelerator, 96, plyTable.length());
+
+
 
         Compute.test(chessData,weightTable);
         System.out.println(Buffer.getMemorySegment(chessData).byteSize() + " bytes ");
         ChessData.Board initBoard = chessData.board(0);
         initBoard.firstPositions(); // This sets up the board and initializes 'as if' we had run plyMoves.
 
-
-        ply.init(0, BLACK_BIT, 0, 1);
+        PlyTable.Ply initPly = plyTable.ply(0);
+        initPly.init(0, BLACK_BIT, 0, 1);
         boolean useIntStream = true;
         if (!useIntStream) {
-            accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
+            accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, plyTable,initPly.id(), weightTable));
         }
         PrintStream off = null;
         PrintStream on = null;
@@ -99,7 +102,8 @@ public class Main {
 
         for (int i = 0; i < 5; i++) {
             time("Move ", () -> {
-                while (ply.id() < 4) {
+                for (int id = 0; id < plyTable.length()-1; id++) {
+                   final PlyTable.Ply ply = plyTable.ply(id);
                     trace(off, o->
                         o.println("Ply " + ply.id() + " side="+ply.side()+" boards=" + ply.fromBoardId() + "-" + ply.toBoardId() + " count=" + ply.size())
                     );
@@ -164,9 +168,9 @@ public class Main {
                     int plyIdx = time("Prefix", () -> {
                         int nextPlyEndIdx = ply.toBoardId();
                         trace(off,o->o.print("prefix -> "));
-                        for (int id = ply.fromBoardId(); id < ply.toBoardId(); id++) {
-                            int finalId = id;
-                            ChessData.Board board = chessData.board(id);
+                        for (int boardId = ply.fromBoardId(); boardId < ply.toBoardId(); boardId++) {
+                            int finalId = boardId;
+                            ChessData.Board board = chessData.board(finalId);
                             board.firstChildIdx(nextPlyEndIdx);
                             trace(off,o->o.print(finalId + "{fc=" + board.firstChildIdx() + ",m=" + board.moves() + "} "));
                             nextPlyEndIdx += board.moves();
@@ -181,22 +185,23 @@ public class Main {
                             // This way we get to fully control execution from Java.
                             IntStream.range(0, ply.size())
                                     //.parallel() // consider commenting this out if debugging
-                                    .forEach(id ->
-                                            Compute.createBoardsForParentBoardId(chessData, (byte)ply.side(), weightTable, id+ply.fromBoardId())
+                                    .forEach(kid ->
+                                            Compute.createBoardsForParentBoardId(chessData, (byte)ply.side(), weightTable, kid+ply.fromBoardId())
                                     );
                         } else {
-                            accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, ply, weightTable));
+                            accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, plyTable, ply.id(), weightTable));
                         }
                     });
 
                     trace(on,o->o.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()));
+                    PlyTable.Ply newPly = plyTable.ply(ply.id()+1);
+                    newPly.init(ply.id() + 1, ply.side() ^ SIDE_MASK, ply.toBoardId(), nextPlySize);
 
-                    ply.init(ply.id() + 1, ply.side() ^ SIDE_MASK, ply.toBoardId(), nextPlySize);
-
-                    trace(on, o->o.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()+"  chessData="+chessData.length()));
+                    trace(on, o->o.println("ply id="+newPly.id()+" side="+newPly.side()+" from="+newPly.fromBoardId()+" to="+newPly.toBoardId()+"  chessData="+chessData.length()));
                 }
             });
 
+            PlyTable.Ply ply = plyTable.ply(plyTable.length()-1);
 
             int bestScore = Compute.isWhite((byte)ply.side())?Integer.MAX_VALUE:Integer.MIN_VALUE;
             int bestBoardId = 0;
