@@ -37,12 +37,13 @@ public interface PlyTable extends Buffer {
 
     int length();
     Ply ply(long idx);
-
+    int currentId();
+    void currentId(int currentId);
 
     Schema<PlyTable> schema = Schema.of(PlyTable.class, plyTable -> plyTable
-            .arrayLen("length").array("ply",ply->ply
+            .arrayLen("length").array("ply", ply->ply
                 .fields("id", "side", "fromBoardId", "toBoardId", "size")
-            )
+            ).field("currentId")
     );
 
     static PlyTable create(Accelerator acc, int length) {
