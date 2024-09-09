@@ -198,11 +198,27 @@ And we are now ready to prefix sum the next ply and repeat the process.
 
 I forgot that C99 (unlike Java) can't distinguish between function and var identifiers.
 
-So 
+So we need to be careful not to confuse function and variable declarations/names.
+
 ```
 var pieceValue = pieceValue(bits);
 ```
 Would really confuse the OpenCL compiler :)   We might consider a '_fn_' prefix for all functions
+
+Maybe we need to consider name mangling functions anyway so that we 
+can approximate overloading/overriding?
+
+But at least something like 
+
+```java
+@CodeReflection
+public static final int add(int lhs, int rhs, MyIface iface ){} 
+
+```
+as say 
+```java
+int add_I_I_MyIface(int lhs, int rhs, MyIface myIface);
+```
 
 ### Prefix sum is 'integral' to many parallel solutions ;)
 [Prefix Sum](https://en.wikipedia.org/wiki/Prefix_sum)
@@ -215,8 +231,18 @@ From Guy Steel's paper
 ![From wikipedia](https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Prefix_sum_16.svg/600px-Prefix_sum_16.svg.png)
 -->
 
-At present HAT does not provide a prefix sum, it should provide both exclusive and inclusive.
+At present HAT does not provide a prefix sum, it should 
+provide both exclusive and inclusive, and possibly a device variant and an off device variant
 
+So maybe 
+```java
+ComputeContext.prefixSumInclusive(T extends Buffer or Struct, long offset, long stride, long count );
+```
+and 
+```java
+KernelContext.prefixSumExclusive(....);
+
+```              
 Possibly also integral image intrinsics.
 
 * [Data parallel algorithms, Authors: W. Daniel Hillis, Guy L. Steele, Jr.](https://dl.acm.org/doi/pdf/10.1145/7902.7903)
@@ -224,6 +250,41 @@ Possibly also integral image intrinsics.
 * [SSE/AVX](https://www.intel.com/content/www/us/en/developer/articles/technical/optimize-scan-operations-explicit-vectorization.html)
 * [Kogge Stone](https://gwern.net/doc/cs/algorithm/1973-kogge.pdf)
 * [ButterFly](https://jtristan.github.io/papers/topc19.pdf)
+
+###  Avoiding Unnecessary Copies
+
+This workload really needs us to avoid unnecessary copies. 
+
+Sloshing ChessData back and forth for each kernel dispatch is expensive. 
+
+It also speaks a little to have iface tracking to at least capture the min and max offsets
+for mutations or reads
+
+### Allowing iface helper methods to be reflected 
+
+Sometimes the logical place to add methods that update or access 
+mapped ifaces is in the iface itself.  Either static or default methods.  
+
+So we might add accessor for linear accesses 
+
+We can of course do this from the java side, but cannot do this from the device side. 
+
+What if we allowed default methods which are marked using `@CodeReflection` so that these
+can also be reflected on from the GPU side. 
+
+```java
+interface GridTable extends Buffer{
+    int width();
+    int height();
+    int grid(long idx);
+    void grid(long idx, int gridValue);
+    @CodeReflection int grid(int x, int y){
+       return grid(y*width()+x);    
+    }
+}
+```
+
+
 
 ## Links
 [GPU Notes From www.chessprogramming.org](https://www.chessprogramming.org/GPU#:~:text=There%20are%20in%20main%20four,and%20position%20evaluation%20on%20GPU)

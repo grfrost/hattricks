@@ -92,6 +92,7 @@ public class Main {
 
         PlyTable.Ply initPly = plyTable.ply(0);
         initPly.init(0, BLACK_BIT, 0, 1);
+        plyTable.currentId(0);
         boolean useIntStream = true;
         if (!useIntStream) {
             accelerator.compute(cc -> Compute.createBoardsCompute(cc, chessData, plyTable,initPly.id(), weightTable));
@@ -102,8 +103,8 @@ public class Main {
 
         for (int i = 0; i < 5; i++) {
             time("Move ", () -> {
-                for (int id = 0; id < plyTable.length()-1; id++) {
-                   final PlyTable.Ply ply = plyTable.ply(id);
+                while (plyTable.currentId()<5) {
+                   final PlyTable.Ply ply = plyTable.ply(plyTable.currentId());
                     trace(off, o->
                         o.println("Ply " + ply.id() + " side="+ply.side()+" boards=" + ply.fromBoardId() + "-" + ply.toBoardId() + " count=" + ply.size())
                     );
@@ -195,8 +196,8 @@ public class Main {
 
                     trace(on,o->o.println("ply id="+ply.id()+" side="+ply.side()+" from="+ply.fromBoardId()+" to="+ply.toBoardId()));
                     PlyTable.Ply newPly = plyTable.ply(ply.id()+1);
+                    plyTable.currentId(ply.id()+1);
                     newPly.init(ply.id() + 1, ply.side() ^ SIDE_MASK, ply.toBoardId(), nextPlySize);
-
                     trace(on, o->o.println("ply id="+newPly.id()+" side="+newPly.side()+" from="+newPly.fromBoardId()+" to="+newPly.toBoardId()+"  chessData="+chessData.length()));
                 }
             });

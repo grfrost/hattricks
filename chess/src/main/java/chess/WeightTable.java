@@ -37,7 +37,6 @@ public interface WeightTable extends Buffer {
             50, 50, 50, 50, 50, 50, 50, 50,           // 48
             0, 0, 0, 0, 0, 0, 0, 0,                   // 56
 
-
             //64 * (KNIGHT - 1) = 64
             -50, -40, -30, -30, -30, -30, -40, -50,   //  0
             -40, -20, 0, 0, 0, 0, -20, -40,           //  8
@@ -47,6 +46,7 @@ public interface WeightTable extends Buffer {
             -30, 5, 10, 15, 15, 10, 5, -30,           // 40
             -40, -20, 0, 5, 5, 0, -20, -40,           // 48
             -50, -40, -30, -30, -30, -30, -40, -50,   // 56
+
             //64 * (BISHOP - 1) = 128
             -20, -10, -10, -10, -10, -10, -10, -20,   //  0
             -10, 0, 0, 0, 0, 0, 0, -10,               //  8
@@ -56,6 +56,7 @@ public interface WeightTable extends Buffer {
             -10, 10, 10, 10, 10, 10, 10, -10,         // 40
             -10, 5, 0, 0, 0, 0, 5, -10,               // 48
             -20, -10, -10, -10, -10, -10, -10, -20,   // 56
+
             //64 * (ROOK - 1) = 192
             0, 0, 0, 0, 0, 0, 0, 0,                   //  0
             5, 10, 10, 10, 10, 10, 10, 5,             //  8
@@ -65,6 +66,7 @@ public interface WeightTable extends Buffer {
             -5, 0, 0, 0, 0, 0, 0, -5,                 // 40
             -5, 0, 0, 0, 0, 0, 0, -5,                 // 48
             0, 0, 0, 5, 5, 0, 0, 0,                   // 56
+
             //64 * (QUEEN - 1) = 256
             -20, -10, -10, -5, -5, -10, -10, -20,     //  0
             -10, 0, 0, 0, 0, 0, 0, -10,               //  8
@@ -74,6 +76,7 @@ public interface WeightTable extends Buffer {
             -10, 5, 5, 5, 5, 5, 0, -10,               // 40
             -10, 0, 5, 0, 0, 0, 0, -10,               // 48
             -20, -10, -10, -5, -5, -10, -10, -20,     // 56
+
             //64 * (KING - 1) = 320
             -30, -40, -40, -50, -50, -40, -40, -30,   //  0
             -30, -40, -40, -50, -50, -40, -40, -30,   //  8
@@ -90,14 +93,14 @@ public interface WeightTable extends Buffer {
     void weight(long idx, byte weight);
 
     Schema<WeightTable> schema = Schema.of(WeightTable.class, control -> control
-            .array("weight", 64*6)
+       .array("weight", 64*6)
     );
 
     static WeightTable create(Accelerator acc) {
-        var weightTable = schema.allocate(acc);
-           for (int i = 0; i < pnbrqk.length; i++) {
-               weightTable.weight(i, pnbrqk[i]);
-           }
+        WeightTable weightTable = schema.allocate(acc);
+        for (int i = 0; i < pnbrqk.length; i++) {
+            weightTable.weight(i, pnbrqk[i]);
+        }
         return weightTable;
     }
 }

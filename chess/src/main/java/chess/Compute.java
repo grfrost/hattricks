@@ -28,6 +28,7 @@ import static chess.ChessConstants.PawnDxDyMap;
 import static chess.ChessConstants.ROOK;
 import static chess.ChessConstants.ROW_SHIFT;
 import static chess.ChessConstants.SIDE_MASK;
+import static chess.ChessConstants.WHITE_BISHOP;
 import static chess.ChessConstants.WHITE_BIT;
 import static chess.ChessConstants.WHITE_BIT_SHIFT;
 import static chess.ChessConstants.WHITE_PAWN;
@@ -285,7 +286,10 @@ public class Compute {
             throw new RuntimeException("weight(weightTable,3, BLACK_QUEEN) == 895) failed");
         }
         if (!(weight(weightTable,3, WHITE_QUEEN ) == 895) ){
-            throw new RuntimeException("weight(weightTable,5, WHITE_QUEEN) == 895) failed");
+            throw new RuntimeException("weight(weightTable,3, WHITE_QUEEN) == 895) failed");
+        }
+        if (!(weight(weightTable,17, WHITE_BISHOP ) == 310) ){
+            throw new RuntimeException("weight(weightTable,5, WHITE_BISHOP) == 310) failed");
         }
     }
 
