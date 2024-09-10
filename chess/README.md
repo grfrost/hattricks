@@ -269,22 +269,24 @@ So we might add accessor for linear accesses
 
 We can of course do this from the java side, but cannot do this from the device side. 
 
-What if we allowed default methods which are marked using `@CodeReflection` so that these
-can also be reflected on from the GPU side. 
+What if we allowed default methods on iface mapped buffers 
+annotated with `@CodeReflection` to be turned into kernel 
+accessible code from the GPU side. 
 
 ```java
-interface GridTable extends Buffer{
+interface Table extends Buffer{
     int width();
     int height();
-    int grid(long idx);
-    void grid(long idx, int gridValue);
-    @CodeReflection int grid(int x, int y){
-       return grid(y*width()+x);    
+    int arr(long idx);
+    void arr(long idx, int value);
+    @CodeReflection int getXY(int x, int y){
+       return arr(y*width()+x);    
+    }
+    @CodeReflection void setXY(int x, int y, int value){
+        arr(y*width()+x, value);
     }
 }
 ```
-
-
 
 ## Links
 [GPU Notes From www.chessprogramming.org](https://www.chessprogramming.org/GPU#:~:text=There%20are%20in%20main%20four,and%20position%20evaluation%20on%20GPU)
