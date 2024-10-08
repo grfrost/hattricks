@@ -41,8 +41,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
    <modules>
      <module>view</module>
-     <!--<module>heal</module>
-     <module>life</module>-->
+     <!--<module>nbody</module>-->
      <module>chess</module>
    </modules>
 </project>
