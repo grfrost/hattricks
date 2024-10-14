@@ -31,7 +31,6 @@
 
 package nbody;
 
-import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.util.stream.IntStream;
@@ -86,79 +85,81 @@ public class Main extends GLWrap.GLWindow {
 
     public enum Mode {
         OpenCL("""
-                    __kernel void nbody( __global float *xyzPos ,__global float* xyzVel, float mass, float delT, float espSqr ){
-                        int body = get_global_id(0);
-                        int STRIDE=4;
-                        int Xidx=0;
-                        int Yidx=1;
-                        int Zidx=2;
-                        int bodyStride = body*STRIDE;
-                        int bodyStrideX = bodyStride+Xidx;
-                        int bodyStrideY = bodyStride+Yidx;
-                        int bodyStrideZ = bodyStride+Zidx;
-                        
-                        float accx = 0.0;
-                        float accy = 0.0;
-                        float accz = 0.0;
-                        float myPosx = xyzPos[bodyStrideX];
-                        float myPosy = xyzPos[bodyStrideY];
-                        float myPosz = xyzPos[bodyStrideZ];
-                        for (int i = 0; i < get_global_size(0); i++) {
-                            int iStride = i*STRIDE;
-                            float dx = xyzPos[iStride+Xidx] - myPosx;
-                            float dy = xyzPos[iStride+Yidx] - myPosy;
-                            float dz = xyzPos[iStride+Zidx] - myPosz;
-                            float invDist =  (float) 1.0/sqrt((float)((dx * dx) + (dy * dy) + (dz * dz) + espSqr));
-                            float s = mass * invDist * invDist * invDist;
-                            accx = accx + (s * dx);
-                            accy = accy + (s * dy);
-                            accz = accz + (s * dz);
-                        }
-                        accx = accx * delT;
-                        accy = accy * delT;
-                        accz = accz * delT;
-                        xyzPos[bodyStrideX] = myPosx + (xyzVel[bodyStrideX] * delT) + (accx * 0.5 * delT);
-                        xyzPos[bodyStrideY] = myPosy + (xyzVel[bodyStrideY] * delT) + (accy * 0.5 * delT);
-                        xyzPos[bodyStrideZ] = myPosz + (xyzVel[bodyStrideZ] * delT) + (accz * 0.5 * delT);
-                     
-                        xyzVel[bodyStrideX] = xyzVel[bodyStrideX] + accx;
-                        xyzVel[bodyStrideY] = xyzVel[bodyStrideY] + accy;
-                        xyzVel[bodyStrideZ] = xyzVel[bodyStrideZ] + accz;
-                        
+                __kernel void nbody( __global float *xyzPos ,__global float* xyzVel, float mass, float delT, float espSqr ){
+                    int body = get_global_id(0);
+                    int STRIDE=4;
+                    int Xidx=0;
+                    int Yidx=1;
+                    int Zidx=2;
+                    int bodyStride = body*STRIDE;
+                    int bodyStrideX = bodyStride+Xidx;
+                    int bodyStrideY = bodyStride+Yidx;
+                    int bodyStrideZ = bodyStride+Zidx;
+                    
+                    float accx = 0.0;
+                    float accy = 0.0;
+                    float accz = 0.0;
+                    float myPosx = xyzPos[bodyStrideX];
+                    float myPosy = xyzPos[bodyStrideY];
+                    float myPosz = xyzPos[bodyStrideZ];
+                    for (int i = 0; i < get_global_size(0); i++) {
+                        int iStride = i*STRIDE;
+                        float dx = xyzPos[iStride+Xidx] - myPosx;
+                        float dy = xyzPos[iStride+Yidx] - myPosy;
+                        float dz = xyzPos[iStride+Zidx] - myPosz;
+                        float invDist =  (float) 1.0/sqrt((float)((dx * dx) + (dy * dy) + (dz * dz) + espSqr));
+                        float s = mass * invDist * invDist * invDist;
+                        accx = accx + (s * dx);
+                        accy = accy + (s * dy);
+                        accz = accz + (s * dz);
                     }
-                    """),
+                    accx = accx * delT;
+                    accy = accy * delT;
+                    accz = accz * delT;
+                    xyzPos[bodyStrideX] = myPosx + (xyzVel[bodyStrideX] * delT) + (accx * 0.5 * delT);
+                    xyzPos[bodyStrideY] = myPosy + (xyzVel[bodyStrideY] * delT) + (accy * 0.5 * delT);
+                    xyzPos[bodyStrideZ] = myPosz + (xyzVel[bodyStrideZ] * delT) + (accz * 0.5 * delT);
+                 
+                    xyzVel[bodyStrideX] = xyzVel[bodyStrideX] + accx;
+                    xyzVel[bodyStrideY] = xyzVel[bodyStrideY] + accy;
+                    xyzVel[bodyStrideZ] = xyzVel[bodyStrideZ] + accz;
+                    
+                }
+                """),
         OpenCL4("""
-                    __kernel void nbody( __global float4 *xyzPos ,__global float4* xyzVel, float mass, float delT, float espSqr ){
-                        float4 acc = (0.0,0.0,0.0,0.0);
-                        float4 myPos = xyzPos[get_global_id(0)];
-                        float4 myVel = xyzVel[get_global_id(0)];
-                        for (int i = 0; i < get_global_size(0); i++) {
-                               float4 delta =  xyzPos[i] - myPos;
-                               float invDist =  (float) 1.0/sqrt((float)((delta.x * delta.x) + (delta.y * delta.y) + (delta.z * delta.z) + espSqr));
-                               float s = mass * invDist * invDist * invDist;
-                               acc= acc + (s * delta);
-                        }
-                        acc = acc*delT;
-                        myPos = myPos + (myVel * delT) + (acc * delT)/2;
-                        myVel = myVel + acc;
-                        xyzPos[get_global_id(0)] = myPos;
-                        xyzVel[get_global_id(0)] = myVel;
-                  
+                __kernel void nbody( __global float4 *xyzPos ,__global float4* xyzVel, float mass, float delT, float espSqr ){
+                    float4 acc = (0.0,0.0,0.0,0.0);
+                    float4 myPos = xyzPos[get_global_id(0)];
+                    float4 myVel = xyzVel[get_global_id(0)];
+                    for (int i = 0; i < get_global_size(0); i++) {
+                           float4 delta =  xyzPos[i] - myPos;
+                           float invDist =  (float) 1.0/sqrt((float)((delta.x * delta.x) + (delta.y * delta.y) + (delta.z * delta.z) + espSqr));
+                           float s = mass * invDist * invDist * invDist;
+                           acc= acc + (s * delta);
                     }
-                    """),
+                    acc = acc*delT;
+                    myPos = myPos + (myVel * delT) + (acc * delT)/2;
+                    myVel = myVel + acc;
+                    xyzPos[get_global_id(0)] = myPos;
+                    xyzVel[get_global_id(0)] = myVel;
+                                  
+                }
+                """),
         JavaSeq(false),
         JavaMT(true);
         final public String code;
         final public boolean isOpenCL;
         final public boolean isJava;
         final public boolean isMultiThreaded;
-        Mode(String code){
+
+        Mode(String code) {
             this.code = code;
             this.isOpenCL = true;
             this.isJava = false;
-            this.isMultiThreaded =false;
+            this.isMultiThreaded = false;
         }
-        Mode(boolean isMultiThreaded){
+
+        Mode(boolean isMultiThreaded) {
             this.code = null;
             this.isOpenCL = false;
             this.isJava = true;
@@ -209,10 +210,10 @@ public class Main extends GLWrap.GLWindow {
             var context = selectedDevice[0].createContext();
             var program = context.buildProgram(mode.code);
             kernel = program.getKernel("nbody");
-        }else{
+        } else {
             kernel = null;
-            xyzPosSeg=null;
-            xyzVelSeg=null;
+            xyzPosSeg = null;
+            xyzVelSeg = null;
         }
     }
 
@@ -223,20 +224,20 @@ public class Main extends GLWrap.GLWindow {
         float accx = 0.f;
         float accy = 0.f;
         float accz = 0.f;
-        int bodyStride = body*STRIDE;
-        int bodyStrideX = bodyStride+Xidx;
-        int bodyStrideY = bodyStride+Yidx;
-        int bodyStrideZ = bodyStride+Zidx;
+        int bodyStride = body * STRIDE;
+        int bodyStrideX = bodyStride + Xidx;
+        int bodyStrideY = bodyStride + Yidx;
+        int bodyStrideZ = bodyStride + Zidx;
 
         final float myPosx = xyzPos[bodyStrideX];
         final float myPosy = xyzPos[bodyStrideY];
         final float myPosz = xyzPos[bodyStrideZ];
 
         for (int i = 0; i < size; i++) {
-            int iStride = i*STRIDE;
-            int iStrideX = iStride+Xidx;
-            int iStrideY = iStride+Yidx;
-            int iStrideZ = iStride+Zidx;
+            int iStride = i * STRIDE;
+            int iStrideX = iStride + Xidx;
+            int iStrideY = iStride + Yidx;
+            int iStrideZ = iStride + Zidx;
             final float dx = xyzPos[iStrideX] - myPosx;
             final float dy = xyzPos[iStrideY] - myPosy;
             final float dz = xyzPos[iStrideZ] - myPosz;
@@ -271,18 +272,18 @@ public class Main extends GLWrap.GLWindow {
         glScalef(.01f, .01f, .01f);
         glColor3f(1f, 1f, 1f);
 
-        if (mode.isJava){
+        if (mode.isJava) {
             if (mode.isMultiThreaded) {
                 IntStream.range(0, count).parallel().forEach(
                         i -> run(i, count, xyzPos, xyzVel, mass, delT, espSqr)
                 );
-            }else {
+            } else {
                 IntStream.range(0, count).forEach(
                         i -> run(i, count, xyzPos, xyzVel, mass, delT, espSqr)
                 );
             }
         } else {
-            kernel.run(count,  xyzPosSeg, xyzVelSeg, mass, delT, espSqr);
+            kernel.run(count, xyzPosSeg, xyzVelSeg, mass, delT, espSqr);
         }
         glBegin(GL_QUADS());
         {
@@ -313,8 +314,8 @@ public class Main extends GLWrap.GLWindow {
         glPopMatrix();
         glutSwapBuffers();
         frames++;
-        long elapsed = System.currentTimeMillis()-startTime;
-        if (elapsed >200 || (frames % 100) == 0) {
+        long elapsed = System.currentTimeMillis() - startTime;
+        if (elapsed > 200 || (frames % 100) == 0) {
             float secs = elapsed / 1000f;
             System.out.println((frames / secs) + "fps");
         }
@@ -325,20 +326,20 @@ public class Main extends GLWrap.GLWindow {
         super.onIdle();
     }
 
-public static void main(String[] args) throws IOException {
-    int particleCount = args.length>2?Integer.parseInt(args[2]):32768;
-    Main.Mode mode = args.length>3?switch(args[3]){
-        case "OpenCL" -> Main.Mode.OpenCL;
-        case "JavaSeq" -> Main.Mode.JavaSeq;
-        case "JavaMT" -> Main.Mode.JavaMT;
-        case "OpenCL4" -> Main.Mode.OpenCL4;
-        default -> throw new IllegalStateException("No mode "+args[3]);
-    }:Main.Mode.OpenCL;
-    System.out.println("mode"+mode);
-    try (var arena = Arena.ofConfined()) {
-        var particleTexture = new GLWrap.GLTexture(arena, Main.class.getResourceAsStream("/particle.png"));
-        new Main(arena, 1000, 1000, particleTexture, particleCount, mode).mainLoop();
+    public static void main(String[] args) {
+        int particleCount = args.length > 2 ? Integer.parseInt(args[2]) : 32768;
+        Main.Mode mode = args.length > 3 ? switch (args[3]) {
+            case "OpenCL" -> Main.Mode.OpenCL;
+            case "JavaSeq" -> Main.Mode.JavaSeq;
+            case "JavaMT" -> Main.Mode.JavaMT;
+            case "OpenCL4" -> Main.Mode.OpenCL4;
+            default -> throw new IllegalStateException("No mode " + args[3]);
+        } : Main.Mode.OpenCL;
+        System.out.println("mode" + mode);
+        try (var arena = Arena.ofConfined()) {
+            var particleTexture = new GLWrap.GLTexture(arena, Main.class.getResourceAsStream("/particle.png"));
+            new Main(arena, 1000, 1000, particleTexture, particleCount, mode).mainLoop();
+        }
     }
-}
 }
 
