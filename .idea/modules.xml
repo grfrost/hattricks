@@ -6,6 +6,8 @@
       <module fileurl="file://$PROJECT_DIR$/chess.iml" filepath="$PROJECT_DIR$/chess.iml" />
       <module fileurl="file://$PROJECT_DIR$/view.iml" filepath="$PROJECT_DIR$/view.iml" />
       <module fileurl="file://$PROJECT_DIR$/nbody.iml" filepath="$PROJECT_DIR$/nbody.iml" />
+      <module fileurl="file://$PROJECT_DIR$/nbody-extracted-cl.iml" filepath="$PROJECT_DIR$/nbody-extracted-cl.iml" />
+      <module fileurl="file://$PROJECT_DIR$/nbody-extracted-cuda.iml" filepath="$PROJECT_DIR$/nbody-extracted-cuda.iml" />
     </modules>
   </component>
 </project>
