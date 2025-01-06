@@ -265,52 +265,45 @@ public class Main {
       }
       MPEGAudioData audioData = new MPEGAudioData(file);
 
-      String[] possibilities = {
+      String[] opts = {
             "8192",
             "16384",
-            "32768"
+            "32768",
+              "65536"
       };
-      String s = (String) JOptionPane.showInputDialog(null, "Choose Sample Rate", "Customized Dialog", JOptionPane.PLAIN_MESSAGE,
-            null, possibilities, "ham");
-      String radix2Opt = possibilities[0];
+      int radix2 = Integer.parseInt((String)JOptionPane.showInputDialog(
+              null, "Choose Radix2 Buf size", "Radix2 Buf", JOptionPane.PLAIN_MESSAGE, null, opts, opts[0]));
 
-      // Now we have a float array of all samples for stereo this would be channel0, channel1, channel0, channel1 etc
 
       DataLine.Info outInfo = new DataLine.Info(SourceDataLine.class, audioData.audioFormat);
-
       SourceDataLine outLine = (SourceDataLine) AudioSystem.getLine(outInfo);
       outLine.open(audioData.audioFormat);
       outLine.start();
-      int bytesPerChannel = audioData.audioFormat.getSampleSizeInBits() / 8;
 
-      // we will txfer floats to this byte buffer on the way out
-      // each buffer will correspond to one second 
-
-      int radix2 = Integer.parseInt(radix2Opt);//32768;//(int)audioData.audioFormat.getFrameRate()*audioData.audioFormat.getChannels();
-      final byte[] byteBuffer = new byte[radix2 * bytesPerChannel];
-
+      int sampleSizeInBytes = audioData.audioFormat.getSampleSizeInBits() / 8;
+      final byte[] byteBuffer = new byte[radix2 * sampleSizeInBytes];
       float[] real = new float[radix2];
       float[] imaginary = new float[radix2];
       CooleyTukey2Channel fft = new CooleyTukey2Channel(real, imaginary, 2);
 
       NoteHistogram histo = new NoteHistogram(audioData.audioFormat.getFrameRate(), radix2 / 2, 2);
-      //  fft.fwd();
 
-      int frames = audioData.data.length / byteBuffer.length;
-      System.out.println("frames " + frames);
-      for (int frame = 0; frame < frames; frame++) {
-         System.arraycopy(audioData.data, frame * (byteBuffer.length / bytesPerChannel), real, 0, real.length);
+      int totalFrameCount = audioData.data.length / byteBuffer.length;
+      System.out.println("frames " + totalFrameCount);
+      for (int frameIndex = 0; frameIndex < totalFrameCount; frameIndex++) {
+         // Copy audio pcm info into real
+         System.arraycopy(audioData.data, frameIndex * (byteBuffer.length / sampleSizeInBytes), real, 0, real.length);
+         // clean imaginary
          Arrays.fill(imaginary, 0f);
          long start = System.currentTimeMillis();
          fft.fwd();
-         histo.add(real);
+         NoteHistogram.Frame frame = histo.add(start, frameIndex,real);
+         System.out.println(frameIndex + " " + (System.currentTimeMillis() - start) + "ms " + frame);
 
-         System.out.println(frame + " " + (System.currentTimeMillis() - start) + " " + histo);
-         histo.clean();
-         for (int i = 0; i < byteBuffer.length / bytesPerChannel; i++) {
-            short value = (short) audioData.data[frame * (byteBuffer.length / bytesPerChannel) + i];
-            byteBuffer[i * bytesPerChannel + 1] = (byte) ((value >> 8) % 0xff);
-            byteBuffer[i * bytesPerChannel + 0] = (byte) (value % 0xff);
+         for (int i = 0; i < byteBuffer.length / sampleSizeInBytes; i++) {
+            short value = (short) audioData.data[frameIndex * (byteBuffer.length / sampleSizeInBytes) + i];
+            byteBuffer[i * sampleSizeInBytes + 1] = (byte) ((value >> 8) % 0xff);
+            byteBuffer[i * sampleSizeInBytes + 0] = (byte) (value % 0xff);
          }
          outLine.write(byteBuffer, 0, byteBuffer.length);
       }
