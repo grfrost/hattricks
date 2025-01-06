@@ -265,12 +265,7 @@ public class Main {
       }
       MPEGAudioData audioData = new MPEGAudioData(file);
 
-      String[] opts = {
-            "8192",
-            "16384",
-            "32768",
-              "65536"
-      };
+      String[] opts = {"512","1024", "2048", "4096", "8192", "16384", "32768", "65536"};
       int radix2 = Integer.parseInt((String)JOptionPane.showInputDialog(
               null, "Choose Radix2 Buf size", "Radix2 Buf", JOptionPane.PLAIN_MESSAGE, null, opts, opts[0]));
 

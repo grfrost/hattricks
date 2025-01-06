@@ -27,9 +27,6 @@ public class FFTCooleyTukeyReference extends FFTCooleyTukeyAbstract {
             }
             a += 1 << (m - i - 1);
          }
-
       }
    }
-
-
 }
