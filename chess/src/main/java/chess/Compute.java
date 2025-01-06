@@ -2,8 +2,8 @@ package chess;
 
 import hat.ComputeContext;
 import hat.KernelContext;
+import jdk.incubator.code.CodeReflection;
 
-import java.lang.runtime.CodeReflection;
 
 import static chess.ChessConstants.ALL_POINTS;
 import static chess.ChessConstants.BISHOP;

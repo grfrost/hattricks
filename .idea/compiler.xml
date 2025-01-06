@@ -2,7 +2,8 @@
 <project version="4">
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-          <module name="hat.hattricks" options="--add-exports=java.base/jdk.internal=ALL-UNNAMED --add-exports=java.base/jdk.internal.vm.annotation=ALL-UNNAMED" />
+      <module name="fft" options="--add-modules java.desktop" />
+      <module name="hat.hattricks" options="--add-exports=java.base/jdk.internal=ALL-UNNAMED --add-exports=java.base/jdk.internal.vm.annotation=ALL-UNNAMED" />
     </option>
   </component>
 </project>
