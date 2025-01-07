@@ -404,19 +404,7 @@ public class Main {
 
 
         public void execute(int  range) {
-
             IntStream.range(0,range).parallel().forEach(i->accept(i));
-        }
-    }
-
-
-    @SuppressWarnings("serial")
-    public static void main(String[] _args) {
-        final View view = new View(1024 + 256, 1024 + 256);
-        final RasterKernel kernel = new RasterKernel(view);
-        ViewFrame vf = new ViewFrame("View", kernel);
-        for (Point point = vf.waitForPoint(0); point != null; point = vf.waitForPoint(10)) {
-            System.out.println("You pressed " + point);
         }
     }
 
