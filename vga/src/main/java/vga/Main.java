@@ -57,29 +57,7 @@ public class Main {
         VerilogBuilder verilogBuilder = new VerilogBuilder();
         verilogBuilder.module(javaFunc);
         var code = verilogBuilder.toString();
-/*
-
-        CoreOp.FuncOp transformed = javaFunc.transform((builder, op) -> {
-            if (op instanceof CoreOp.InvokeOp invokeOp) {
-                builder.op(op);
-                //  CopyContext cc = builder.context();
-                //  Block.Builder bb = builder;
-                // var invokePre = CoreOp.invoke(PRE);
-                //  RootOp rootOp = new RootOp();
-                // builder.op(rootOp);
-                //  builder.op(invokeOp);
-                //  builder.op(CoreOp.invoke(POST));
-            } else {
-                builder.op(op);
-            }
-            return builder;
-        }); */
-
-
-        //  for (Point point = vf.waitForPoint(1000 / 60); point != null; point = vf.waitForPoint(10)) {
-        //    System.out.println("You pressed " + point);
-        // }
-System.out.println(code);
+        System.out.println(code);
 
     }
 
