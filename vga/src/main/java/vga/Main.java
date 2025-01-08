@@ -6,11 +6,7 @@ import jdk.incubator.code.op.CoreOp;
 
 import java.lang.reflect.Method;
 
-import static vga.Verilog.Btn;
-import static vga.Verilog.Clk;
-import static vga.Verilog.Vga;
-import static vga.Verilog.onPosEdge;
-import static vga.Verilog.wire;
+import static vga.Verilog.*;
 
 public class Main {
     static class Compute {
@@ -23,18 +19,36 @@ public class Main {
             //}
         }
 
-
         @CodeReflection
-        public static void vga(Clk clk, Btn btnU, Btn btnD, Btn btnC, Vga vga) {
-            var x = wire(10);   /* 0..(640)..1024 */    // wire[9:0] x;
-            var y = wire(9);    /* 0..(480).. 512 */    // wire[8:0] y;
-            var xcur = wire(8); /* 0..(80) .. 128 */  xcur.assign(x.range(9, 3));  // wire[6:0] curX; assign curX= x[9:3];
-            var ycur = wire(5); /* 0..(60) .. 64  */  ycur.assign(y.range(8, 3));
+        public static void vga(
+                input<clk> clk,
+                input<btn> btnU,
+                input<btn> btnD,
+                input<btn> btnC,
+                output<wire> vga_hs,
+                output<wire> vga_vs,
+                output<reg_4> vga_r,
+                output<reg_4> vga_g,
+                output<reg_4> vga_b
+           ) {
+            wire_9 x = wire_9();   /* 0..(640)..1024 */    // wire[9:0] x;
+            wire_9 y = wire_9();    /* 0..(480).. 512 */    // wire[8:0] y;
+            wire_8 xcur = wire_8(); /* 0..(80) .. 128 */
+
+            xcur.v = x.range(9, 3);  // wire[6:0] curX; assign curX= x[9:3];
+            wire_5 ycur = wire_5(); /* 0..(60) .. 64  */
+            ycur.v = y.range(8, 3);
+            wire_8 vga_x = wire_8();
+            wire_8 vga_y = wire_8();
             onPosEdge(clk,_ -> {
-                if (vga.pos().x() == xcur && vga.pos().y() == ycur) {
-                    vga.rgb().set(0b0000_0000_0000);
+                if (vga_x.v == xcur.v && vga_y.v == ycur.v) {
+                    vga_r.wire().v = 0b1000;
+                    vga_g.wire().v = 0b1000;
+                    vga_b.wire().v = 0b1000;
                 } else {
-                    vga.rgb().set(0);
+                    vga_r.wire().v = 0b0000;
+                    vga_g.wire().v = 0b0000;
+                    vga_b.wire().v = 0b0000;
                 }
             });
 
@@ -46,7 +60,16 @@ public class Main {
         //  vf.setShader(Compute::top);
         Method method = null;
         try {
-            method = Compute.class.getDeclaredMethod("vga", Clk.class, Btn.class,Btn.class,Btn.class, Vga.class);
+            method = Compute.class.getDeclaredMethod("vga",
+                    input.class,
+                    input.class,
+                    input.class,
+                    input.class,
+                    output.class,
+                    output.class,
+                    output.class,
+                    output.class,
+                    output.class);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
