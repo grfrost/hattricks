@@ -11,6 +11,7 @@ import hat.optools.FieldLoadOpWrapper;
 import hat.optools.FieldStoreOpWrapper;
 import hat.optools.ForOpWrapper;
 import hat.optools.FuncCallOpWrapper;
+import hat.optools.FuncOpWrapper;
 import hat.optools.IfOpWrapper;
 import hat.optools.InvokeOpWrapper;
 import hat.optools.JavaBreakOpWrapper;
@@ -33,8 +34,15 @@ import hat.optools.YieldOpWrapper;
 import hat.util.StreamCounter;
 import jdk.incubator.code.Op;
 import jdk.incubator.code.op.CoreOp;
+import jdk.incubator.code.type.ClassType;
 import jdk.incubator.code.type.JavaType;
+
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.function.Consumer;
+
 
 public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> implements HATCodeBuilder.CodeBuilderInterface<VerilogBuilder> {
 
@@ -47,7 +55,6 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
     public VerilogBuilder varStore(CodeBuilderContext codeBuilderContext, VarStoreOpWrapper varStoreOpWrapper) {
         return null;
     }
-
 
 
     @Override
@@ -89,7 +96,6 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
     public VerilogBuilder conv(CodeBuilderContext codeBuilderContext, ConvOpWrapper convOpWrapper) {
         return null;
     }
-
 
 
     @Override
@@ -143,12 +149,10 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
     }
 
 
-
     @Override
     public VerilogBuilder ternary(CodeBuilderContext codeBuilderContext, TernaryOpWrapper ternaryOpWrapper) {
         return null;
     }
-
 
 
     @Override
@@ -222,8 +226,22 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
     public VerilogBuilder inputWire() {
         return input().space().wire();
     }
+
+    public VerilogBuilder outputWire() {
+        return output().space().wire();
+    }
+
+    public VerilogBuilder outputReg() {
+        return input().space().reg();
+    }
+
     public VerilogBuilder inputWire(CoreOp.VarOp varOp) {
         return inputWire().space().varName(varOp);
+    }
+
+
+    public VerilogBuilder outputWire(CoreOp.VarOp varOp) {
+        return outputWire().space().varName(varOp);
     }
 
     public VerilogBuilder range(int hi, int lo) {
@@ -237,19 +255,26 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
     public VerilogBuilder varName(CoreOp.VarOp varOp) {
         return this.identifier(varOp.varName());
     }
+
     public VerilogBuilder varName(CoreOp.VarOp varOp, String suffix) {
-        return this.identifier(varOp.varName()+suffix);
+        return this.identifier(varOp.varName() + suffix);
     }
-    public VerilogBuilder outputReg(int hi, int lo,CoreOp.VarOp varOp) {
+
+    public VerilogBuilder outputReg(int hi, int lo, CoreOp.VarOp varOp) {
         return outputReg(hi, lo).space().varName(varOp);
     }
-    public VerilogBuilder outputReg(int hi, int lo,CoreOp.VarOp varOp, String suffix) {
-        return outputReg(hi, lo).space().varName(varOp,suffix);
+
+    public VerilogBuilder outputReg(CoreOp.VarOp varOp) {
+        return outputReg().space().varName(varOp);
+    }
+
+    public VerilogBuilder outputReg(int hi, int lo, CoreOp.VarOp varOp, String suffix) {
+        return outputReg(hi, lo).space().varName(varOp, suffix);
     }
 
     public VerilogBuilder type(JavaType type) {
         return switch (type.toString()) {
-                case "vga.Verilog$Wire" -> wire();
+            case "vga.Verilog$Wire" -> wire();
             default -> append(type.toString());
         };
     }
@@ -258,34 +283,124 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
         return always().space().at().paren(_ -> posedge().space().append(edge)).space().beginEnd(consumer);
     }
 
-    public VerilogBuilder varDeclaration(CodeBuilderContext context,VarDeclarationOpWrapper opWrapper) {
+    public VerilogBuilder varDeclaration(CodeBuilderContext context, VarDeclarationOpWrapper opWrapper) {
         type(opWrapper.javaType()).space().varName(opWrapper.op());
         equals().space();
         parencedence(context, opWrapper, opWrapper.operandNAsResult(0).op());
         return self();
     }
+
     public VerilogBuilder constant(CodeBuilderContext context, ConstantOpWrapper opWrapper) {
         append((opWrapper.op()).value().toString());
         return self();
     }
-    public VerilogBuilder methodCall(CodeBuilderContext  buildContext, InvokeOpWrapper invokeOpWrapper) {
 
-            var name = invokeOpWrapper.name();
-               // var operandCount = invokeOpWrapper.operandCount();
-               // var returnType = invokeOpWrapper.javaReturnType();
-                identifier(name);
-                        paren(_ ->
-                        commaSeparated(invokeOpWrapper.operands(), (op) -> {
-                            if (op instanceof Op.Result result) {
-                                recurse(buildContext, OpWrapper.wrap(result.op()));
-                            } else {
-                                throw new IllegalStateException("wtf?");
-                            }
-                        })
-                );
+    public VerilogBuilder methodCall(CodeBuilderContext buildContext, InvokeOpWrapper invokeOpWrapper) {
 
-            return self();
+        var name = invokeOpWrapper.name();
+        // var operandCount = invokeOpWrapper.operandCount();
+        // var returnType = invokeOpWrapper.javaReturnType();
+        identifier(name);
+        paren(_ ->
+                commaSeparated(invokeOpWrapper.operands(), (op) -> {
+                    if (op instanceof Op.Result result) {
+                        recurse(buildContext, OpWrapper.wrap(result.op()));
+                    } else {
+                        throw new IllegalStateException("wtf?");
+                    }
+                })
+        );
 
+        return self();
+
+    }
+
+    public Type resolve(JavaType javaType) {
+        try {
+            Type type = javaType.resolve(MethodHandles.lookup());
+            Type owner = null;
+            Type raw = null;
+            if (type instanceof ParameterizedType parameterizedType) {
+                owner = parameterizedType.getOwnerType();
+                raw = parameterizedType.getRawType();
+                return raw;
+            } else if (type instanceof Class<?>) {
+                return type;
+            } else {
+                throw new RuntimeException("Failed to resolve type: " + type);
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public VerilogBuilder moduleInputOutputArg(FuncOpWrapper.ParamTable.Info info) {
+        Type type = resolve(info.javaType);
+        final boolean in = type.equals(Verilog.Input.class);
+
+        var typeArgs = ((ClassType) info.javaType).typeArguments();
+
+        var ta = typeArgs.getFirst();
+
+        var actualType = resolve(ta);
+        Class<?> actualClass = (Class<?>) actualType;
+
+        // we need to deal with the bus width > 1
+        if (Verilog.range.class.isAssignableFrom(actualClass)) {
+            Arrays.stream(actualClass.getInterfaces()).toList().forEach(iface -> {
+                     if (
+                             Verilog.WireMarker.class.isAssignableFrom(iface)
+             ||   Verilog.RegisterMarker.class.isAssignableFrom(iface)
+                     ){}else {
+                         try {
+                             var maxField = iface.getDeclaredField("max");
+                             //   maxField.setAccessible(true);
+                             int max = maxField.getInt(null);
+                             var minField = iface.getDeclaredField("min");
+                             int min = minField.getInt(null);
+                             // minField.setAccessible(true);
+                             if (Verilog.RegisterMarker.class.isAssignableFrom(actualClass)) {
+                                 if (max == min) {
+                                     if (in) {
+                                        // inputReg(info.varOp);
+                                     } else {
+                                         outputReg( info.varOp);
+                                     }
+                                 }else{
+                                     if (in) {
+                                         //inputReg(info.varOp);
+                                     } else {
+                                         outputReg(max, min, info.varOp);
+                                     }
+                                 }
+                             } else {
+                                 if (max == min) {
+                                     if (in){
+                                         inputWire(info.varOp);
+                                     }else {
+                                         outputWire(info.varOp);
+                                     }
+                                 } else {
+                                     if (in){
+                                         //inputWire(max, min,   info.varOp)
+                                     }else {
+                                         //  outputWire(max, min, info.varOp);
+                                     }
+                                 }
+                             }
+                         } catch (NoSuchFieldException e) {
+                             System.err.println(iface.toString() + " " + e.getMessage());
+                             throw new RuntimeException(e);
+                         } catch (IllegalAccessException e) {
+                             throw new RuntimeException(e);
+                         }
+                     }
+                    }
+            );
+        } else {
+            append(info.javaType.toString()).space().varName(info.varOp);
+        }
+        return self();
     }
 
     public VerilogBuilder module(CoreOp.FuncOp javaFunc) {
@@ -293,27 +408,19 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
         CodeBuilderContext buildContext = new CodeBuilderContext(OpWrapper.wrap(javaFunc));
         buildContext.scope(buildContext.funcOpWrapper, () -> {
             moduleDeclaration(buildContext.funcOpWrapper.functionName(), _ -> {
-                var list = buildContext.funcOpWrapper.paramTable.list();
+                // Here we deal with the i/o pins/connections
                 paren(_ ->
-                        indent(_ -> commaNlSeparated(list.stream().toList(), info -> {
-                                    switch (info.javaType.toString()) {
-                                        case "vga.Verilog$Clk" -> inputWire(info.varOp);
-                                        case "vga.Verilog$Btn" -> inputWire(info.varOp);
-                                        case "vga.Verilog$Vga" ->
-                                                outputReg(3, 0,info.varOp,"_r").comma().nl()
-                                                        .outputReg(3, 0,info.varOp,"_g").comma().nl()
-                                                        .outputReg(3, 0,info.varOp,"_b");
-                                        default -> append(info.javaType.toString()).space().varName(info.varOp);
-                                    }
-                                }
+                        nl().indent(_ -> commaNlSeparated(buildContext.funcOpWrapper.paramTable.list(), info ->
+                                moduleInputOutputArg(info)
                         ).nl())
                 ).semicolon();
+                // Here is the body of the module.
                 nl();
-                indent(_-> {
+                indent(_ -> {
                     StreamCounter.of(buildContext.funcOpWrapper.wrappedRootOpStream(), (c, root) ->
                             nlIf(c.isNotFirst()).recurse(buildContext, root).semicolonIf(!(root instanceof StructuralOpWrapper<?>))
                     );
-                    alwaysAtPosEdge("clk",_->{
+                    alwaysAtPosEdge("clk", _ -> {
                         nl();
                     });
                     nl();

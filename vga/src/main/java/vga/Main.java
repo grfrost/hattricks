@@ -21,25 +21,25 @@ public class Main {
 
         @CodeReflection
         public static void vga(
-                input<clk> clk,
-                input<btn> btnU,
-                input<btn> btnD,
-                input<btn> btnC,
-                output<wire> vga_hs,
-                output<wire> vga_vs,
-                output<reg_4> vga_r,
-                output<reg_4> vga_g,
-                output<reg_4> vga_b
+                Input<Clk> clk,
+                Input<Btn> btnU,
+                Input<Btn> btnD,
+                Input<Btn> btnC,
+                Output<Wire> vga_hs,
+                Output<Wire> vga_vs,
+                Output<Reg_4> vga_r,
+                Output<Reg_4> vga_g,
+                Output<Reg_4> vga_b
            ) {
-            wire_9 x = wire_9();   /* 0..(640)..1024 */    // wire[9:0] x;
-            wire_9 y = wire_9();    /* 0..(480).. 512 */    // wire[8:0] y;
-            wire_8 xcur = wire_8(); /* 0..(80) .. 128 */
+            Wire_9 x = wire_9();   /* 0..(640)..1024 */    // wire[9:0] x;
+            Wire_9 y = wire_9();    /* 0..(480).. 512 */    // wire[8:0] y;
+            Wire_8 xcur = wire_8(); /* 0..(80) .. 128 */
 
             xcur.v = x.range(9, 3);  // wire[6:0] curX; assign curX= x[9:3];
-            wire_5 ycur = wire_5(); /* 0..(60) .. 64  */
+            Wire_5 ycur = wire_5(); /* 0..(60) .. 64  */
             ycur.v = y.range(8, 3);
-            wire_8 vga_x = wire_8();
-            wire_8 vga_y = wire_8();
+            Wire_8 vga_x = wire_8();
+            Wire_8 vga_y = wire_8();
             onPosEdge(clk,_ -> {
                 if (vga_x.v == xcur.v && vga_y.v == ycur.v) {
                     vga_r.wire().v = 0b1000;
@@ -61,15 +61,15 @@ public class Main {
         Method method = null;
         try {
             method = Compute.class.getDeclaredMethod("vga",
-                    input.class,
-                    input.class,
-                    input.class,
-                    input.class,
-                    output.class,
-                    output.class,
-                    output.class,
-                    output.class,
-                    output.class);
+                    Input.class,
+                    Input.class,
+                    Input.class,
+                    Input.class,
+                    Output.class,
+                    Output.class,
+                    Output.class,
+                    Output.class,
+                    Output.class);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
