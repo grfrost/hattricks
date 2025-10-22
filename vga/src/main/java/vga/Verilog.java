@@ -3,6 +3,16 @@ package vga;
 import java.util.function.Consumer;
 
 public class Verilog {
+    public static boolean isConnection(Class<?> clazz) {
+        return Verilog.Connection.class.isAssignableFrom(clazz);
+    }
+
+    public static boolean isInOrOut(Class<?> inOutClass) {
+        return Verilog.Input.isAssignable(inOutClass) || Verilog.Output.isAssignable(inOutClass);
+    }
+
+    public static void assign(WireMarker xcur, range range) {
+    }
    /* static abstract class Connection {
         public int v;
 
@@ -17,8 +27,10 @@ public class Verilog {
             this.hi = hi;
             this.lo = lo;
         }
-        public int range(int hi, int low) {
-            return v >> low & (v << (hi - low) - 1);
+        public range range(int hi, int low) {
+           return new range(){
+
+           };// return v >> low & (v << (hi - low) - 1);
         }
     }
 
@@ -27,14 +39,20 @@ public class Verilog {
 
 
     record Output<T extends Connection>(T wire) {
+        public static boolean isAssignable(Class<?> test) {
+            return Verilog.Output.class.isAssignableFrom(test);
+        }
     }
 
     record Input<T extends Connection>(T wire) {
+        public static boolean isAssignable(Class<?> test) {
+            return Verilog.Input.class.isAssignableFrom(test);
+        }
     }
 
 
     interface range{
-
+        default void assign(range r) {}
     }
 
     interface range_1_0 extends range{
@@ -60,6 +78,8 @@ public class Verilog {
     interface range_6_0 extends range{
         static final int max =5;
         static final int min =0;
+
+       ;
     }
     interface range_7_0 extends range{
         static final int max =6;

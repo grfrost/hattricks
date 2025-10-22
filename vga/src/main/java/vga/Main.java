@@ -31,15 +31,14 @@ public class Main {
                 Output<Reg_4> vga_g,
                 Output<Reg_4> vga_b
            ) {
-            Wire_9 x = wire_9();   /* 0..(640)..1024 */    // wire[9:0] x;
-            Wire_9 y = wire_9();    /* 0..(480).. 512 */    // wire[8:0] y;
-            Wire_8 xcur = wire_8(); /* 0..(80) .. 128 */
-
-            xcur.v = x.range(9, 3);  // wire[6:0] curX; assign curX= x[9:3];
-            Wire_5 ycur = wire_5(); /* 0..(60) .. 64  */
-            ycur.v = y.range(8, 3);
-            Wire_8 vga_x = wire_8();
-            Wire_8 vga_y = wire_8();
+            var x = wire_9();   /* 0..(640)..1024 */    // wire[9:0] x;
+            var y = wire_9();    /* 0..(480).. 512 */    // wire[8:0] y;
+            var xcur= wire_6(); /* 0..(80) .. 128 */ //wire[6:0] curX;
+            assign(xcur, x.range(9, 3));// assign curX= x[9:3];
+            var ycur = wire_5(); /* 0..(60) .. 64  */
+            assign(ycur, y.range(8, 3));
+            var vga_x = wire_8();
+            var vga_y = wire_8();
             onPosEdge(clk,_ -> {
                 if (vga_x.v == xcur.v && vga_y.v == ycur.v) {
                     vga_r.wire().v = 0b1000;

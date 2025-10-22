@@ -43,6 +43,8 @@ import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
+import static jdk.incubator.code.interpreter.Interpreter.resolveToClass;
+
 
 public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> implements HATCodeBuilder.CodeBuilderInterface<VerilogBuilder> {
 
@@ -69,6 +71,19 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
 
     @Override
     public VerilogBuilder fieldStore(CodeBuilderContext codeBuilderContext, FieldStoreOpWrapper fieldStoreOpWrapper) {
+
+        // The only store we should see is a fake assignment to '.v in a Bus.
+
+      //  if (fieldStoreOpWrapper.isKernelContextAccess()) {
+            identifier(fieldStoreOpWrapper.toText()).dot().identifier(fieldStoreOpWrapper.fieldName());
+     //   } else if (fieldStoreOpWrapper.isStaticFinalPrimitive()) {
+       //     Object value = fieldStoreOpWrapper.getStaticFinalPrimitiveValue();
+         //   literal(value.toString());
+       // } else {
+         //   throw new IllegalStateException("What is this field load ?" + fieldStoreOpWrapper.fieldRef());
+       // }
+
+        lineComment("In field store operation");
         return null;
     }
 
@@ -223,33 +238,9 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
         return keyword("reg");
     }
 
-    public VerilogBuilder inputWire() {
-        return input().space().wire();
-    }
-
-    public VerilogBuilder outputWire() {
-        return output().space().wire();
-    }
-
-    public VerilogBuilder outputReg() {
-        return input().space().reg();
-    }
-
-    public VerilogBuilder inputWire(CoreOp.VarOp varOp) {
-        return inputWire().space().varName(varOp);
-    }
-
-
-    public VerilogBuilder outputWire(CoreOp.VarOp varOp) {
-        return outputWire().space().varName(varOp);
-    }
 
     public VerilogBuilder range(int hi, int lo) {
         return append(Integer.toString(hi)).colon().append(Integer.toString(lo));
-    }
-
-    public VerilogBuilder outputReg(int hi, int low) {
-        return output().space().reg().sbrace(_ -> range(hi, low));
     }
 
     public VerilogBuilder varName(CoreOp.VarOp varOp) {
@@ -260,23 +251,28 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
         return this.identifier(varOp.varName() + suffix);
     }
 
-    public VerilogBuilder outputReg(int hi, int lo, CoreOp.VarOp varOp) {
-        return outputReg(hi, lo).space().varName(varOp);
+
+    public VerilogBuilder ioRegOrWire(IORegWireInfo ioRegWireInfo, CoreOp.VarOp varOp) {
+
+        return either(ioRegWireInfo.isIn(),
+                _ -> input(),
+                _ -> output()
+        ).space().either(ioRegWireInfo.isWire(),
+                _ -> wire(),
+                _ -> reg()
+        ).when((ioRegWireInfo.max() != ioRegWireInfo.min()), _ ->
+                sbrace(_ -> range(ioRegWireInfo.max(), ioRegWireInfo.min()))
+        ).space().varName(varOp);
     }
 
-    public VerilogBuilder outputReg(CoreOp.VarOp varOp) {
-        return outputReg().space().varName(varOp);
-    }
+    public VerilogBuilder type(JavaType javaType) {
+        var ioRegWireInfo = IORegWireInfo.from(javaType);
+        either(ioRegWireInfo.isWire(), _ -> wire(), _ -> reg());
+        if (ioRegWireInfo.min() != ioRegWireInfo.max()) {
+            sbrace(_ -> range(ioRegWireInfo.max(), ioRegWireInfo.min()));
+        }
 
-    public VerilogBuilder outputReg(int hi, int lo, CoreOp.VarOp varOp, String suffix) {
-        return outputReg(hi, lo).space().varName(varOp, suffix);
-    }
-
-    public VerilogBuilder type(JavaType type) {
-        return switch (type.toString()) {
-            case "vga.Verilog$Wire" -> wire();
-            default -> append(type.toString());
-        };
+        return self();
     }
 
     public VerilogBuilder alwaysAtPosEdge(String edge, Consumer<VerilogBuilder> consumer) {
@@ -284,9 +280,26 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
     }
 
     public VerilogBuilder varDeclaration(CodeBuilderContext context, VarDeclarationOpWrapper opWrapper) {
+
+
         type(opWrapper.javaType()).space().varName(opWrapper.op());
-        equals().space();
-        parencedence(context, opWrapper, opWrapper.operandNAsResult(0).op());
+        // We intercept when rhs is a factory call.
+        // So var w = wire_9(); -> wire [8:0] w;
+        if (Verilog.isConnection(resolveToClass(opWrapper.javaType()))){
+            var zeroth = opWrapper.operandNAsResult(0).op();
+            var wrapped = OpWrapper.wrap(zeroth);
+            // is the rhs a factory call?
+
+            if (wrapped.hasNoOperands()){
+               // blockComment(" factory culled ");
+            }else {
+                equals().space();
+                parencedence(context, opWrapper, opWrapper.operandNAsResult(0).op());
+            }
+        }else {
+            equals().space();
+            parencedence(context, opWrapper, opWrapper.operandNAsResult(0).op());
+        }
         return self();
     }
 
@@ -315,17 +328,14 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
 
     }
 
-    public Type resolve(JavaType javaType) {
+
+    static public Class<?> resolveToClass(JavaType javaType) {
         try {
             Type type = javaType.resolve(MethodHandles.lookup());
-            Type owner = null;
-            Type raw = null;
             if (type instanceof ParameterizedType parameterizedType) {
-                owner = parameterizedType.getOwnerType();
-                raw = parameterizedType.getRawType();
-                return raw;
+                return (Class<?>) parameterizedType.getRawType();
             } else if (type instanceof Class<?>) {
-                return type;
+                return (Class<?>) type;
             } else {
                 throw new RuntimeException("Failed to resolve type: " + type);
             }
@@ -334,72 +344,54 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
         }
     }
 
-    public VerilogBuilder moduleInputOutputArg(FuncOpWrapper.ParamTable.Info info) {
-        Type type = resolve(info.javaType);
-        final boolean in = type.equals(Verilog.Input.class);
+    record IORegWireInfo(Class<?> inOut, Class<?> wireReg, int max, int min) {
 
-        var typeArgs = ((ClassType) info.javaType).typeArguments();
+        static IORegWireInfo from(JavaType javaType) {
+            // JavaType might be an input with type args
+            // or a real reg or wire
+            Class<?> inOutClass = resolveToClass(javaType);
+            Class<?> finalActualClass =Verilog.isInOrOut(inOutClass)?
+                resolveToClass(((ClassType) javaType).typeArguments().getFirst()): inOutClass;
 
-        var ta = typeArgs.getFirst();
+            final Class<?> finalInOutClass = inOutClass;
 
-        var actualType = resolve(ta);
-        Class<?> actualClass = (Class<?>) actualType;
+            var result = new IORegWireInfo[]{null};
+            if (Verilog.range.class.isAssignableFrom(finalActualClass)) {
+                Arrays.stream(finalActualClass.getInterfaces())
+                        .filter(iface -> !Verilog.isConnection(iface))
+                        .forEach(iface -> {
+                            try {
+                                var maxField = iface.getDeclaredField("max");
+                                var minField = iface.getDeclaredField("min");
+                                result[0] = new IORegWireInfo(finalInOutClass, finalActualClass, maxField.getInt(null),
+                                        minField.getInt(null));
 
-        // we need to deal with the bus width > 1
-        if (Verilog.range.class.isAssignableFrom(actualClass)) {
-            Arrays.stream(actualClass.getInterfaces()).toList().forEach(iface -> {
-                     if (
-                             Verilog.WireMarker.class.isAssignableFrom(iface)
-             ||   Verilog.RegisterMarker.class.isAssignableFrom(iface)
-                     ){}else {
-                         try {
-                             var maxField = iface.getDeclaredField("max");
-                             //   maxField.setAccessible(true);
-                             int max = maxField.getInt(null);
-                             var minField = iface.getDeclaredField("min");
-                             int min = minField.getInt(null);
-                             // minField.setAccessible(true);
-                             if (Verilog.RegisterMarker.class.isAssignableFrom(actualClass)) {
-                                 if (max == min) {
-                                     if (in) {
-                                        // inputReg(info.varOp);
-                                     } else {
-                                         outputReg( info.varOp);
-                                     }
-                                 }else{
-                                     if (in) {
-                                         //inputReg(info.varOp);
-                                     } else {
-                                         outputReg(max, min, info.varOp);
-                                     }
-                                 }
-                             } else {
-                                 if (max == min) {
-                                     if (in){
-                                         inputWire(info.varOp);
-                                     }else {
-                                         outputWire(info.varOp);
-                                     }
-                                 } else {
-                                     if (in){
-                                         //inputWire(max, min,   info.varOp)
-                                     }else {
-                                         //  outputWire(max, min, info.varOp);
-                                     }
-                                 }
-                             }
-                         } catch (NoSuchFieldException e) {
-                             System.err.println(iface.toString() + " " + e.getMessage());
-                             throw new RuntimeException(e);
-                         } catch (IllegalAccessException e) {
-                             throw new RuntimeException(e);
-                         }
-                     }
-                    }
-            );
-        } else {
-            append(info.javaType.toString()).space().varName(info.varOp);
+                            } catch (NoSuchFieldException e) {
+                                System.err.println(iface.toString() + " " + e.getMessage());
+                                throw new RuntimeException(e);
+                            } catch (IllegalAccessException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+            }
+
+            return result[0];
         }
+
+        public boolean isWire() {
+            return (Verilog.WireMarker.class.isAssignableFrom(wireReg));
+        }
+
+        public boolean isIn() {
+            return (Verilog.Input.class.isAssignableFrom(inOut));
+        }
+    }
+
+    public VerilogBuilder moduleIOArg(FuncOpWrapper.ParamTable.Info info) {
+        var ioRegWireInfo = IORegWireInfo.from(info.javaType);
+        ioRegOrWire(ioRegWireInfo, info.varOp);
+
+
         return self();
     }
 
@@ -411,7 +403,7 @@ public class VerilogBuilder extends HATCodeBuilderWithContext<VerilogBuilder> im
                 // Here we deal with the i/o pins/connections
                 paren(_ ->
                         nl().indent(_ -> commaNlSeparated(buildContext.funcOpWrapper.paramTable.list(), info ->
-                                moduleInputOutputArg(info)
+                                moduleIOArg(info)
                         ).nl())
                 ).semicolon();
                 // Here is the body of the module.
