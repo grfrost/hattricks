@@ -62,11 +62,12 @@ public class Main {
         public enum ColourMode {NORMALIZED_COLOUR, NORMALIZED_INV_COLOUR, COLOUR, NORMALIZED_WHITE, NORMALIZED_INV_WHITE, WHITE}
         public enum DisplayMode {FILL, WIRE, WIRE_SHOW_HIDDEN, WIRE_AND_FILL}
 
-        public static final ColourMode colourMode = ColourMode.COLOUR;
+        public static final ColourMode colourMode = ColourMode.WHITE;
         public static final DisplayMode displayMode = DisplayMode.WIRE;
         public static final float deltaSquare = 10000f;
-        public static final String eliteAsset = "CONSTRICTOR";// null;//"COBRA";//"CONSTRICTOR";//COBRAMK1";
-        public static final float thetaDelta = 0.001f;
+        public static final String eliteAsset = "DODO";
+        // null;//"COBRA";//"CONSTRICTOR";//COBRAMK1";
+        public static final float thetaDelta = 0.0002f;
     }
 
     public static class View {
@@ -164,23 +165,29 @@ public class Main {
             });
 
 
-             (new F32Mesh3D("rubric")).rubric(.49f);
-            (new F32Mesh3D("cubeoctahedron")).cubeoctahedron(0, 0, 0, 4).fin();
-            if (Config.eliteAsset != null) {
-                EliteMeshReader.load(Config.eliteAsset);
-            } else {
-                (new F32Mesh3D("cube")).cube(0, 0, 0, 2f);
-            }
-            //   Triangle3D.load(new File("/home/gfrost/github/grfrost/aparapi-build/foo.obj"));
+           //  (new F32Mesh3D("rubric")).rubric(1f);
+           // (new F32Mesh3D("cubeoctahedron")).cubeoctahedron(0, 0, 0, 2).fin();
+           // (new F32Mesh3D("cubeoctahedron")).cubeoctahedron(1f, 1, 0, 2).fin();
+           // (new F32Mesh3D("cubeoctahedron")).cubeoctahedron(1f, -1, 0, 2).fin();
+           // (new F32Mesh3D("cubeoctahedron")).cubeoctahedron(-1f, -1, 0, 2).fin();
+          //  (new F32Mesh3D("cubeoctahedron")).cubeoctahedron(0f, 1, 1, 2).fin();
+           // (new F32Mesh3D("cubeoctahedron")).cubeoctahedron(0f, -1, -1, 2).fin();
 
-            cameraVec3 = new vec3(0f, 0f, 0f);
+            //if (Config.eliteAsset != null) {
+                EliteMeshReader.load(Config.eliteAsset);
+            //} else {
+            //(new F32Mesh3D("cube")).cube(0, 0, 0, 2f);
+            //}
+
+
+            cameraVec3 = new vec3(0f, 0f, .0f);
             lookDirVec3 = new vec3(0f, 0f, 0f);//F32Vec3.createVec3(0, 0, 0);
             projectionMat4 = new projectionMat4(view.image.getWidth(), view.image.getHeight(), 0.1f, 1000f, 60f);
             projectionMat4 = projectionMat4.mul(new scaleMat4((float) view.image.getHeight() /4));
             projectionMat4 = projectionMat4.mul(new translateMat4((float) view.image.getHeight() /2));
 
             centerVec3 = new vec3((float) view.image.getWidth() / 2, (float) view.image.getHeight() / 2, 0);
-            moveAwayVec3 = new vec3(0f, 0f, 20f);
+            moveAwayVec3 = new vec3(0f, 0f, 50f);
             mark = new Mark();
 
         }
@@ -404,7 +411,18 @@ public class Main {
 
 
         public void execute(int  range) {
-            IntStream.range(0,range).parallel().forEach(i->accept(i));
+            IntStream.range(0,range)
+                    .parallel()
+            .forEach(i->accept(i));
+        }
+    }
+
+    public static void main(String[] args){
+        View view = new View(1024,1024);
+        var vf = new ViewFrame("elite", new RasterKernel(view));
+        while (true) {
+            vf.update();
+           // vf.waitForPoint(10000);
         }
     }
 
